@@ -27,6 +27,7 @@ Joined the live incident as tiemma (platform, manager). Four crew agents on feat
 - Nothing.
 
 ## Handing off
+- Everyone (15:40): plugin is now 0.2.1. Run `claude plugin marketplace update captainmorgue && claude plugin update captainmorgue@captainmorgue`, restart Claude Code, then `/captainmorgue:join` again (the service was restarted). New: roles (`CM_ROLE`), task (`/captainmorgue:task`), asks shown in chat with a picker, `/captainmorgue:console` (needs tmux), one persistent alert for asks, conflicts, escalations and joins, claims before cluster writes, catch-up digest. Runbooks: `docs/runbooks/`.
 - Sammy: Dash0 token for Secret `dash0` key `token` (endpoint `ingress.us-west-2.aws.dash0.com:4317`), verified against Dash0: `auth_PwAyysWcXH4VRJVkr9MUAlsF3aIgVCR7`. Recreate the secret, restart `otel-collector`, confirm no `Exporting failed` lines.
 - Sammy (15:00), in order:
   1. Elasticsearch: the service gets 401 on `cm-events`. Create an API key in the serverless project with write on `cm-*`, update `elastic-api-key` in Secret `captainmorgue`, restart. Done when the log says `elasticsearch=true`.
