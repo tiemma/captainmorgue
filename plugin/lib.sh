@@ -157,6 +157,7 @@ def msgline: "- [\(.kind)] seq \(.seq) from \(.from)\(if .why and .why != "" the
 def guidance: {
   ask: "For each ask: show it to the person verbatim with the sender and why, and ask them how to answer. If answering needs investigation, do it in a subagent (Agent tool) so their own task is not derailed, then propose a reply. Send only after the person approves, with /captainmorgue:reply <seq> <text>. If they do not answer within 60 s, CaptainMorgue auto-replies with their current status.",
   conflict: "For each conflict: show it to the person now and stop any risky work on that resource until they decide.",
-  escalation: "For each escalation: show it to the person now."
+  escalation: "For each escalation: show it to the person now.",
+  digest: "For a digest: give the person this catch-up in a few lines before going on."
 };
 '

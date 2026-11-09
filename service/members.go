@@ -18,6 +18,7 @@ type actorState struct {
 	joined   bool
 	lastSeen time.Time
 	cursor   int
+	digested int
 	status   string
 	inbox    []Envelope
 	wake     chan struct{}
@@ -271,6 +272,7 @@ func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
 	inc.mu.Lock()
 	c := &inc.coord
 	a := c.actor(req.Actor)
+	since, due := inc.digestDue(a, req.Actor, 0)
 	a.team, a.joined, a.lastSeen, a.status = req.Team, true, now, "online"
 	tc := c.team(req.Team)
 	text := "joined " + inc.id
@@ -291,6 +293,9 @@ func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
 	inc.mu.Unlock()
 
 	inc.append(Event{Actor: req.Actor, Team: req.Team, Type: "join", Text: text, Term: resp.Term, To: others, Why: "everyone already in " + inc.id})
+	if due {
+		go inc.sendDigest(req.Actor, since)
+	}
 	writeJSON(w, resp)
 }
 
@@ -346,10 +351,17 @@ func (inc *Incident) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	}
 	a.lastSeen = time.Now().UTC()
 	changed := a.status != "online"
+	since, due := 0, false
+	if threshold, ok := returnThreshold[a.status]; ok {
+		since, due = inc.digestDue(a, req.Actor, threshold)
+	}
 	a.status = "online"
 	inc.mu.Unlock()
 	if changed {
 		inc.publishState()
+	}
+	if due {
+		go inc.sendDigest(req.Actor, since)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
