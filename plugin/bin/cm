@@ -259,6 +259,15 @@ status-set | state)
   esac
   set_status "$body"
   ;;
+open)
+  read_args
+  service=${args%%[[:space:]]*}
+  summary=${args#"$service"}
+  summary=${summary#"${summary%%[![:space:]]*}"}
+  [ -n "$service" ] && [ -n "$summary" ] || { echo "Usage: /captainmorgue:open <service> <what is wrong> (service: checkin, kiosk, payments, confdb, otel-collector, captainmorgue)"; exit 0; }
+  api POST /alerts "$(jq -nc --arg s "$service" --arg m "$summary" --arg a "$ACTOR" '{service: $s, summary: $m, severity: "critical", source: $a}')" >/dev/null || fail "Opening the incident"
+  echo "Opened: $service: $summary. The owning team is paged. Live view: ${CM_URL%/}/"
+  ;;
 close)
   read_args
   set_status "$(jq -nc --arg a "$ACTOR" --arg w "$args" '{actor: $a, status: "closed", why: $w}')"
