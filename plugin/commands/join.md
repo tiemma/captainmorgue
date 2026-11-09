@@ -1,6 +1,6 @@
 ---
-description: Join the incident, start the heartbeat and inbox poller
-argument-hint: [team]
+description: Join the incident with your team, role and task, start the heartbeat and inbox poller
+argument-hint: [team] [commander|responder|scribe] [task]
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/cm:*)
 ---
 

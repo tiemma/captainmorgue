@@ -16,13 +16,22 @@ fail() {
   exit 0
 }
 
+split_args() {
+  first="${args%%[[:space:]]*}"
+  rest="${args#"$first"}"
+  rest="${rest#"${rest%%[![:space:]]*}"}"
+}
+
 read_args() {
   args=$(cat)
   args="${args#"${args%%[![:space:]]*}"}"
   args="${args%"${args##*[![:space:]]}"}"
-  first="${args%%[[:space:]]*}"
-  rest="${args#"$first"}"
-  rest="${rest#"${rest%%[![:space:]]*}"}"
+  split_args
+}
+
+is_role() {
+  case "$1" in commander | manager | responder | scribe) return 0 ;; esac
+  return 1
 }
 
 send() {
@@ -48,7 +57,7 @@ unread_lines() {
 stop_poller() {
   local pid
   pid=$(cat "$CM_DIR/poll.pid" 2>/dev/null)
-  ps -p "${pid:-0}" -o command= 2>/dev/null | grep -q cm-poll || return 0
+  poller_alive "$pid" || return 0
   kill "$pid"
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     kill -0 "$pid" 2>/dev/null || return 0
@@ -58,13 +67,36 @@ stop_poller() {
 
 case "$1" in
 join)
-  team=$(cat | tr -d '[:space:]')
+  read_args
+  team=${CM_TEAM:-} role=${CM_ROLE:-} task=${CM_TASK:-}
+  if [ -n "$first" ] && ! is_role "$first"; then
+    team=$first args=$rest
+    split_args
+  fi
+  if is_role "$first"; then
+    role=$first args=$rest
+  fi
+  [ -n "$args" ] && task=$args
+  if [ "$role" = manager ]; then
+    echo "Team managers are elected, not chosen. Join as commander, responder or scribe."
+    exit 0
+  fi
   stop_poller
-  resp=$(join_incident "${team:-${CM_TEAM:-}}") || fail "Joining $INCIDENT"
+  resp=$(join_incident "$team" "$role" "$task") || fail "Joining $INCIDENT"
   nohup "$BIN/cm-poll" </dev/null >>"$CM_DIR/poll.log" 2>&1 &
-  jq -r --arg a "$ACTOR" --arg inc "$INCIDENT" "$JQ_DEFS"'
-    "Joined \($inc) as \($a) on team \(.team), manager \(.manager | name_or_none), term \(.term // "?").",
+  jq -r --arg a "$ACTOR" --arg inc "$INCIDENT" --arg want "$role" "$JQ_DEFS"'
+    "Joined \($inc) as \($a) on team \(.team), role \(.role), manager \(.manager | name_or_none), term \(.term // "?").",
+    (if $want == "commander" and .role != "commander" then "Commander is already \(.commander); you joined as \(.role)." else "Commander: \(.commander | name_or_none)." end),
     "Online: " + ([.members[]? | "\(.actor) (\(.status))"] | join(", "))' <<<"$resp"
+  ;;
+task)
+  read_args
+  if [ -z "$args" ]; then
+    echo "Usage: /captainmorgue:task <what you are working on>"
+    exit 0
+  fi
+  CM_MAX_TIME=5 api POST "/incidents/$INCIDENT/task" "$(jq -nc --arg a "$ACTOR" --arg t "$args" '{actor: $a, task: $t}')" >/dev/null 2>>"$LOG" || fail "Setting your task"
+  echo "Working on: $args"
   ;;
 leave)
   stop_poller
@@ -87,11 +119,13 @@ status)
   else
     snapshot 3 | jq -r --slurpfile s "$SESSION" --arg me "$ACTOR" --arg inc "$INCIDENT" "$JQ_DEFS"'
       $s[0] as $s
-      | "\($inc): \($me) on team \($s.team), manager \($s.manager | name_or_none), term \($s.term // "?").",
-        "Team:", teammates($s; $me)'
+      | "\($inc): \($me) on team \($s.team), manager \($s.manager | name_or_none), term \($s.term // "?"), commander \(commander).",
+        "You: \(roles($me)), working on \(task_of($me))" + (kit($me) | if . == "" then "" else "; " + . end),
+        "Team:", teammates($s; $me),
+        "Claims:", ((.state.claims // []) | if . == [] then "- none" else .[] | "- \(.key) held by \(.actor) (\(.text)) until \(.expires[11:19])" end)'
   fi
   echo "Unread: $(unread_lines | wc -l | tr -d ' ')"
-  if ps -p "$(cat "$CM_DIR/poll.pid" 2>/dev/null || echo 0)" >/dev/null 2>&1; then
+  if poller_alive "$(cat "$CM_DIR/poll.pid" 2>/dev/null)"; then
     echo "Poller: running"
   else
     echo "Poller: stopped"
@@ -134,6 +168,6 @@ reply)
   esac
   ;;
 *)
-  echo "Usage: cm join|leave|status|inbox|broadcast|ask|reply"
+  echo "Usage: cm join|leave|task|status|inbox|broadcast|ask|reply"
   ;;
 esac

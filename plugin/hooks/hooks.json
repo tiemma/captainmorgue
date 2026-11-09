@@ -3,15 +3,23 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/receive.sh\"", "timeout": 5 }
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/receive.sh\"", "timeout": 5 }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/send.sh\"", "async": true, "timeout": 5 },
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/receive.sh\"", "timeout": 5 }
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/send.sh\"", "async": true, "timeout": 5 },
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/receive.sh\"", "timeout": 5 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|mcp__.*)$",
+        "hooks": [
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/claim.sh\"", "timeout": 5 }
         ]
       }
     ],
@@ -19,12 +27,12 @@
       {
         "matcher": "^(Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*)$",
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/send.sh\"", "async": true, "timeout": 5 }
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/send.sh\"", "async": true, "timeout": 5 }
         ]
       },
       {
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/receive.sh\"", "timeout": 5 }
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/receive.sh\"", "timeout": 5 }
         ]
       }
     ],
@@ -32,14 +40,14 @@
       {
         "matcher": "^(Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*)$",
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/send.sh\"", "async": true, "timeout": 5 }
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/send.sh\"", "async": true, "timeout": 5 }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/receive.sh\"", "timeout": 5 }
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/receive.sh\"", "timeout": 5 }
         ]
       }
     ]

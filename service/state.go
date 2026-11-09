@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 )
@@ -56,17 +55,20 @@ type State struct {
 	Conflict  *Event            `json:"conflict"`
 	Signals   map[string]Signal `json:"signals"`
 	PastMatch *PastMatch        `json:"past_match"`
+	Claims    []Claim           `json:"claims"`
 
 	Deliveries map[int]map[string]string `json:"deliveries"`
 }
 
 func (inc *Incident) state() State {
+	now := time.Now().UTC()
 	s := State{
 		Incident:  IncidentSummary{ID: inc.id, Title: inc.title, Status: "open"},
-		People:    inc.people(time.Now().UTC()),
+		People:    inc.people(now),
 		Parts:     []Part{},
 		Signals:   map[string]Signal{},
 		PastMatch: inc.pastMatch,
+		Claims:    inc.activeClaims(now),
 
 		Deliveries: inc.coord.deliveries,
 	}
@@ -74,11 +76,8 @@ func (inc *Incident) state() State {
 		s.Incident.Opened = &inc.events[0].TS
 	}
 	inIncident := inc.teamsInIncident()
-	for _, t := range inc.roster.Teams {
-		tc := inc.coord.team(t.ID)
-		t.Manager = tc.manager
-		t.Members = slices.DeleteFunc(inc.teamPeople(t.ID), func(name string) bool { return name == tc.manager })
-		s.Teams = append(s.Teams, TeamState{Team: t, Term: tc.term, PulledIn: inIncident[t.ID]})
+	for _, t := range inc.liveRoster().Teams {
+		s.Teams = append(s.Teams, TeamState{Team: t, Term: inc.coord.team(t.ID).term, PulledIn: inIncident[t.ID]})
 	}
 	for i := range inc.events {
 		ev := &inc.events[i]
@@ -165,12 +164,13 @@ func (inc *Incident) writeRecord() {
 	inc.mu.Lock()
 	events := append([]Event(nil), inc.events...)
 	rec := inc.record()
+	roster := inc.liveRoster()
 	inc.mu.Unlock()
 
 	written := writtenRecord{Summary: incidentText(inc.title, events), Parts: []RecordPart{}, Improvements: []Improvement{}}
 	if inc.brain != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), recordTimeout)
-		w, err := inc.brain.writeRecord(ctx, inc.title, inc.roster, events)
+		w, err := inc.brain.writeRecord(ctx, inc.title, roster, events)
 		cancel()
 		if err != nil {
 			slog.Error("write record with model", "err", err)

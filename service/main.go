@@ -23,7 +23,7 @@ func main() {
 	}
 	br := newBrain()
 	slog.Info("intelligence", "elasticsearch", st != nil, "claude", br != nil, "loaded_events", len(events))
-	inc := newIncident(id, env("INCIDENT_TITLE", "Check-in kiosks failing at Hall B"), roster, st, br)
+	inc := newIncident(id, env("INCIDENT_TITLE", "Conference operations"), roster, st, br)
 	inc.events = events
 	if st != nil {
 		go inc.matchLoop()
@@ -43,10 +43,12 @@ func main() {
 	mux.HandleFunc("POST /incidents/{id}/join", inc.handleJoin)
 	mux.HandleFunc("POST /incidents/{id}/leave", inc.handleLeave)
 	mux.HandleFunc("POST /incidents/{id}/vote", inc.handleVote)
+	mux.HandleFunc("POST /incidents/{id}/task", inc.handleTask)
 	mux.HandleFunc("POST /heartbeat", inc.handleHeartbeat)
 	mux.HandleFunc("GET /inbox/{actor}", inc.handleInbox)
 	mux.HandleFunc("POST /inbox/{actor}/ack", inc.handleAck)
 	mux.HandleFunc("POST /messages", inc.handleMessages)
+	mux.HandleFunc("POST /claims", inc.handleClaim)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /", http.FileServer(http.Dir(env("WEB_DIR", "web"))))
 

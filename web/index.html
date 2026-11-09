@@ -5,7 +5,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* layout: wall-screen console. header strip, then tree | live log | side panels; Record and Teams views swap in place of the log */
+/* layout: wall-screen console. header strip, then tree | live log | side panels; the Record view swaps in place of the log */
 :root {
   color-scheme: light;
   --font-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
@@ -103,6 +103,7 @@ button { font: inherit; color: inherit; }
 .tree .who { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .tree .team-row .who { font-family: var(--font-display); font-weight: 600; }
 .tree .d1 { padding-left: 20px; } .tree .d2 { padding-left: 38px; }
+.tree .task { color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; }
 .mgr { font-family: var(--font-mono); font-size: 9.5px; color: var(--tag-ink); background: var(--tag-paper); padding: 0 5px; border-radius: 3px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--quiet); }
 .dot.on { background: var(--resolved); box-shadow: 0 0 0 3px var(--resolved-bg); }
@@ -179,29 +180,6 @@ button { font: inherit; color: inherit; }
 .rec-cols ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
 .match { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--surface-2); display: grid; gap: 4px; }
 
-.graph-wrap { overflow-x: auto; }
-.graph-wrap svg { display: block; width: 100%; min-width: 760px; height: auto; }
-.g-team rect { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1.2; transition: opacity var(--dur-base) ease; }
-.g-team text, .g-svc text, .g-root text { fill: var(--fg); font-family: var(--font-body); }
-.g-team .nm { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
-.g-team .sub, .g-svc .sub { font-size: 11px; fill: var(--fg-3); }
-.g-svc rect { fill: var(--surface); stroke: var(--line); }
-.g-root rect { fill: var(--tag-paper); stroke: var(--tag-string); }
-.g-root text { fill: var(--tag-ink); font-family: var(--font-display); font-weight: 700; }
-.tree-line { stroke: var(--line-strong); stroke-width: 1.2; fill: none; }
-.arc { fill: none; stroke-width: 2; opacity: 0; transition: opacity var(--dur-base) ease; }
-.arc-label { font-family: var(--font-mono); font-size: 10.5px; opacity: 0; transition: opacity var(--dur-base) ease; }
-.m-depends_on { stroke: var(--critical); } .l-depends_on { fill: var(--critical); }
-.m-messaged { stroke: var(--info); stroke-dasharray: 5 4; } .l-messaged { fill: var(--info); }
-.m-shared_incident { stroke: var(--brass); stroke-dasharray: 2 4; stroke-linecap: round; } .l-shared_incident { fill: var(--brass); }
-.m-calls, .m-uses { stroke: var(--fg-3); } .l-calls, .l-uses { fill: var(--fg-3); }
-svg.show-all .arc, svg.show-all .arc-label { opacity: 0.85; }
-svg .arc.hot, svg .arc-label.hot { opacity: 1; }
-svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacity: 0.4; }
-.g-team, .g-svc { cursor: pointer; }
-.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12.5px; color: var(--fg-2); }
-.legend span { display: inline-flex; align-items: center; gap: 7px; }
-.sw { width: 22px; height: 0; border-top: 2px solid; }
 .note { font-size: 12px; color: var(--fg-3); }
 </style>
 
@@ -221,7 +199,6 @@ svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacit
       <div class="tabs" role="tablist" aria-label="View">
         <button class="btn" role="tab" id="tabLive" aria-pressed="true">Live</button>
         <button class="btn" role="tab" id="tabRecord" aria-pressed="false" disabled>Record</button>
-        <button class="btn" role="tab" id="tabTeams" aria-pressed="false">Teams</button>
       </div>
       <span id="conn" class="pill p-quiet" role="status">connecting</span>
     </div>
@@ -243,49 +220,6 @@ svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacit
 
       <section class="view record" id="viewRecord" hidden aria-label="The record"></section>
 
-      <section class="view" id="viewTeams" hidden aria-label="How teams relate">
-        <h2 style="margin-bottom:8px">How teams relate <span class="label">Hover a team</span></h2>
-        <div class="legend" style="margin-bottom:10px">
-          <span><i class="sw" style="border-color:var(--critical)"></i>depends on</span>
-          <span><i class="sw" style="border-top-style:dashed;border-color:var(--info)"></i>messaged</span>
-          <span><i class="sw" style="border-top-style:dotted;border-color:var(--brass)"></i>shared an incident</span>
-          <span><i class="sw" style="border-color:var(--fg-3)"></i>calls / uses</span>
-          <button class="btn" id="showAll" aria-pressed="false" style="padding:3px 9px;font-size:12px">Show all lines</button>
-        </div>
-        <div class="graph-wrap">
-          <svg id="graph" viewBox="0 0 980 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Team tree with relationship arcs">
-            <path class="tree-line" d="M490,62 L170,120 M490,62 L490,120 M490,62 L810,120"/>
-            <path class="tree-line" d="M130,186 L110,310 M210,186 L250,310 M450,186 L420,310 M530,186 L560,310 M810,186 L790,370"/>
-            <g class="g-root"><rect x="400" y="14" width="180" height="48" rx="8"/><text x="490" y="44" text-anchor="middle" font-size="15">CaptainMorgue</text></g>
-
-            <g class="g-team" data-id="reg"><rect x="70" y="120" width="200" height="66" rx="10"/><text class="nm" x="86" y="146">Registration</text><text class="sub" x="86" y="166">Dana, Ana, Cal</text></g>
-            <g class="g-team" data-id="tix"><rect x="390" y="120" width="200" height="66" rx="10"/><text class="nm" x="406" y="146">Ticketing and Payments</text><text class="sub" x="406" y="166">Eli, Gus, Fay</text></g>
-            <g class="g-team" data-id="plat"><rect x="710" y="120" width="200" height="66" rx="10"/><text class="nm" x="726" y="146">Platform</text><text class="sub" x="726" y="166">Dev (manager), Ben</text></g>
-
-            <g class="g-svc" data-id="checkin"><rect x="50" y="310" width="120" height="46" rx="8"/><text x="66" y="331" font-size="13">checkin</text><text class="sub" x="66" y="347">owned by Registration</text></g>
-            <g class="g-svc" data-id="schedule"><rect x="190" y="310" width="120" height="46" rx="8"/><text x="206" y="331" font-size="13">schedule</text><text class="sub" x="206" y="347">owned by Registration</text></g>
-            <g class="g-svc" data-id="tickets"><rect x="360" y="310" width="120" height="46" rx="8"/><text x="376" y="331" font-size="13">tickets</text><text class="sub" x="376" y="347">owned by Ticketing</text></g>
-            <g class="g-svc" data-id="payments"><rect x="500" y="310" width="120" height="46" rx="8"/><text x="516" y="331" font-size="13">payments</text><text class="sub" x="516" y="347">owned by Ticketing</text></g>
-            <g class="g-svc" data-id="confdb"><rect x="730" y="370" width="120" height="46" rx="8"/><text x="746" y="391" font-size="13">confdb</text><text class="sub" x="746" y="407">owned by Platform</text></g>
-
-            <path class="arc m-depends_on" data-a="reg" data-b="plat" d="M270,140 C 470,40 560,40 710,140"/>
-            <text class="arc-label l-depends_on" data-a="reg" data-b="plat" x="490" y="66" text-anchor="middle">depends on: checkin uses confdb</text>
-            <path class="arc m-depends_on" data-a="tix" data-b="plat" d="M590,170 C 640,210 670,210 710,170"/>
-            <text class="arc-label l-depends_on" data-a="tix" data-b="plat" x="650" y="226" text-anchor="middle">depends on: payments uses confdb</text>
-            <path class="arc m-messaged" data-a="tix" data-b="reg" d="M390,176 C 340,236 300,236 270,176"/>
-            <text class="arc-label l-messaged" data-a="tix" data-b="reg" x="330" y="248" text-anchor="middle">messaged: 4 today</text>
-            <path class="arc m-shared_incident" data-a="reg" data-b="tix" d="M260,120 C 310,96 360,96 400,120"/>
-            <text class="arc-label l-shared_incident" data-a="reg" data-b="tix" x="330" y="94" text-anchor="middle">shared incidents: 2</text>
-            <path class="arc m-calls" data-a="checkin" data-b="tickets" d="M170,333 C 250,290 300,290 360,333"/>
-            <text class="arc-label l-calls" data-a="checkin" data-b="tickets" x="265" y="290" text-anchor="middle">calls</text>
-            <path class="arc m-uses" data-a="checkin" data-b="confdb" d="M110,356 C 140,450 600,450 730,400"/>
-            <text class="arc-label l-uses" data-a="checkin" data-b="confdb" x="420" y="440" text-anchor="middle">uses</text>
-            <path class="arc m-uses" data-a="payments" data-b="confdb" d="M620,340 C 680,345 700,380 730,388"/>
-            <text class="arc-label l-uses" data-a="payments" data-b="confdb" x="690" y="352" text-anchor="middle">uses</text>
-          </svg>
-        </div>
-        <p class="note">Layout in the product comes from elkjs; positions here are fixed for the demo. Counts come from the service, the page only draws them.</p>
-      </section>
     </main>
 
     <div class="side">
@@ -305,6 +239,10 @@ svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacit
         <h2>Conflicts</h2>
         <div id="conflict"><p class="empty">None so far.</p></div>
       </section>
+      <section class="panel" aria-label="Claims">
+        <h2>Claims <span class="label">Who holds what</span></h2>
+        <div id="claims"><p class="empty">Nothing claimed.</p></div>
+      </section>
       <section class="panel" aria-label="Investigation">
         <h2>Radar AI investigation</h2>
         <div id="inv"><p class="empty">Not started.</p></div>
@@ -316,7 +254,7 @@ svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacit
 <script>
 const NAMES = { captainmorgue: "CaptainMorgue", dash0: "Dash0", radar: "Radar", gitar: "Gitar", argo: "Argo CD" };
 const ROLES = { captainmorgue: "root", dash0: "alert", radar: "cluster", gitar: "pull request", argo: "via Radar" };
-const KIND = { alert: "Alert", join: "Joined", leave: "Left", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", ship: "Shipped", election: "Election", investigation: "Investigation", signal: "Signal", close: "Closed" };
+const KIND = { alert: "Alert", join: "Joined", leave: "Left", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", claim: "Claimed", ship: "Shipped", election: "Election", investigation: "Investigation", signal: "Signal", close: "Closed" };
 const STATUS = {
   online: ["on", "online", "p-resolved"],
   in_incident: ["on", "in incident", "p-resolved"],
@@ -390,7 +328,7 @@ function appendRow(ev) {
 }
 
 function renderAll() {
-  renderHeader(); renderTree(); renderParts(); renderMessage(); renderConflict(); renderInvestigation(); renderSignals();
+  renderHeader(); renderTree(); renderParts(); renderMessage(); renderConflict(); renderClaims(); renderInvestigation(); renderSignals();
   document.querySelectorAll("[data-team]").forEach(el => { el.textContent = teamName(el.dataset.team); });
 }
 
@@ -409,7 +347,11 @@ function personRow(id, isMgr, teamOn) {
   if (!id) return "";
   const [dot, label, pill] = statusOf(id);
   const flash = lastEvent && lastEvent.actor === id ? " flash" : "";
-  return '<li class="d2' + (teamOn ? "" : " off") + flash + '"><span class="who"><i class="dot ' + dot + '"></i>' + esc(nameOf(id)) + (isMgr ? '<span class="mgr">MGR</span>' : "") + '</span><span class="pill ' + pill + '">' + esc(label) + '</span></li>';
+  const p = (state.people || {})[id];
+  const prof = p && typeof p === "object" ? p : {};
+  const role = prof.role && prof.role !== "responder" ? '<span class="mgr">' + esc(prof.role.toUpperCase()) + '</span>' : "";
+  const detail = [prof.task, prof.repo && "repo " + prof.repo, prof.tools && prof.tools.length && "tools " + prof.tools.join(", ")].filter(Boolean).join(" | ");
+  return '<li class="d2' + (teamOn ? "" : " off") + flash + '"' + (detail ? ' title="' + esc(detail) + '"' : "") + '><span class="who"><i class="dot ' + dot + '"></i>' + esc(nameOf(id)) + (isMgr ? '<span class="mgr">MGR</span>' : "") + role + (prof.task ? '<small class="task">' + esc(prof.task) + '</small>' : "") + '</span><span class="pill ' + pill + '">' + esc(label) + '</span></li>';
 }
 
 function renderTree() {
@@ -459,6 +401,11 @@ function renderConflict() {
     (c.text ? '<div>' + esc(c.text) + '</div>' : "") + (c.why ? '<div class="why">' + esc(c.why) + '</div>' : "") + '</div>';
 }
 
+function renderClaims() {
+  const claims = state.claims || [];
+  $("claims").innerHTML = claims.length ? claims.map(c => '<div class="part"><div class="part-top"><span class="mono" style="font-size:12px">' + esc(c.key) + '</span><span class="pill p-investigating">' + esc(nameOf(c.actor)) + '</span></div><small>' + esc(c.text) + ', since ' + timeOf(c.since) + ', until ' + timeOf(c.expires) + '</small></div>').join("") : '<p class="empty">Nothing claimed.</p>';
+}
+
 function renderInvestigation() {
   const v = lastInvestigation;
   $("inv").innerHTML = v ? '<div class="inv"><span class="pill p-investigating">' + esc(nameOf(v.actor)) + ' at ' + timeOf(v.ts) + '</span><span>' + esc(v.text) + '</span>' + artifacts(v.artifacts) + '</div>' : '<p class="empty">Not started.</p>';
@@ -505,7 +452,7 @@ function renderRecord(r) {
 }
 
 function showView(name) {
-  for (const v of ["Live", "Record", "Teams"]) { $("view" + v).hidden = v !== name; $("tab" + v).setAttribute("aria-pressed", String(v === name)); }
+  for (const v of ["Live", "Record"]) { $("view" + v).hidden = v !== name; $("tab" + v).setAttribute("aria-pressed", String(v === name)); }
 }
 
 function setConnection(live) {
@@ -526,23 +473,7 @@ function connect() {
 
 $("tabLive").onclick = () => showView("Live");
 $("tabRecord").onclick = () => showView("Record");
-$("tabTeams").onclick = () => showView("Teams");
 
-const svg = $("graph");
-svg.querySelectorAll(".g-team, .g-svc").forEach(g => {
-  const id = g.dataset.id;
-  g.addEventListener("mouseenter", () => {
-    svg.classList.add("hovering"); g.classList.add("hot");
-    svg.querySelectorAll(".arc, .arc-label").forEach(a => {
-      if (a.dataset.a === id || a.dataset.b === id) {
-        a.classList.add("hot");
-        svg.querySelectorAll('[data-id="' + (a.dataset.a === id ? a.dataset.b : a.dataset.a) + '"]').forEach(n => n.classList.add("hot"));
-      }
-    });
-  });
-  g.addEventListener("mouseleave", () => { svg.classList.remove("hovering"); svg.querySelectorAll(".hot").forEach(n => n.classList.remove("hot")); });
-});
-$("showAll").onclick = e => { const on = svg.classList.toggle("show-all"); e.currentTarget.setAttribute("aria-pressed", String(on)); };
 
 function tick() { $("clock").textContent = new Date().toLocaleTimeString([], { hourCycle: "h23" }); }
 tick();

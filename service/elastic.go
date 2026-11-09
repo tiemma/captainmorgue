@@ -39,17 +39,6 @@ type storedRecord struct {
 	Improvements []Improvement `json:"improvements"`
 }
 
-var seedRecord = storedRecord{
-	PastMatch: PastMatch{
-		ID:      "INC-1877",
-		Summary: "Check-in kiosks slowed to a crawl at last year's event right after a release of the Registration service. A new check-in lookup query ran without an index and the database scanned the attendee table on every badge scan. Priya on Registration added an index on the check-in lookup and latency recovered within minutes.",
-		FixedBy: "Priya (Registration)",
-	},
-	Title:        "Slow check-in query after a release",
-	Parts:        []RecordPart{{Name: "Check-in slow", How: "Added an index on the check-in lookup query"}},
-	Improvements: []Improvement{{Text: "Run EXPLAIN on new queries before release", Owner: "priya"}},
-}
-
 func newStore(ctx context.Context) (*store, error) {
 	url, key := os.Getenv("ELASTIC_URL"), os.Getenv("ELASTIC_API_KEY")
 	if url == "" || key == "" {
@@ -64,9 +53,6 @@ func newStore(ctx context.Context) (*store, error) {
 		return nil, err
 	}
 	if err := s.ensureIndex(ctx, recordsIndex, recordsMapping()); err != nil {
-		return nil, err
-	}
-	if err := s.seed(ctx); err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -144,17 +130,6 @@ func (s *store) ensureIndex(ctx context.Context, name string, mapping *types.Typ
 	}
 	slog.Info("created index", "index", name)
 	return nil
-}
-
-func (s *store) seed(ctx context.Context) error {
-	res, err := s.es.Count().Index(recordsIndex).Do(ctx)
-	if err != nil {
-		return fmt.Errorf("count records: %w", err)
-	}
-	if res.Count > 0 {
-		return nil
-	}
-	return s.saveRecord(ctx, seedRecord)
 }
 
 func (s *store) saveRecord(ctx context.Context, rec storedRecord) error {

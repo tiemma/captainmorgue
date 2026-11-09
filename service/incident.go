@@ -66,6 +66,7 @@ type Incident struct {
 	written   *writtenRecord
 	matchReq  chan struct{}
 	coord     coord
+	claims    map[string]*Claim
 }
 
 func newIncident(id, title string, roster Roster, st *store, br *brain) *Incident {
@@ -210,13 +211,14 @@ func (inc *Incident) relay(from, text string) {
 		inc.mu.Lock()
 		recent := inc.events[max(0, len(inc.events)-relayContext):]
 		recent = append([]Event(nil), recent...)
+		roster := inc.liveRoster()
 		inc.mu.Unlock()
 		ctx, cancel := context.WithTimeout(context.Background(), modelTimeout)
-		pick, err := inc.brain.pickRecipients(ctx, inc.roster, from, text, recent)
+		pick, err := inc.brain.pickRecipients(ctx, roster, from, text, recent)
 		cancel()
 		if err != nil {
 			slog.Warn("relay pick failed, using managers", "err", err)
-		} else if known := inc.roster.known(pick.To, from); len(known) > 0 {
+		} else if known := inc.knownActors(pick.To, from); len(known) > 0 {
 			to, why = known, pick.Why
 		}
 	}
@@ -226,12 +228,12 @@ func (inc *Incident) relay(from, text string) {
 func (inc *Incident) managersOfOtherTeams(from string) []string {
 	inc.mu.Lock()
 	defer inc.mu.Unlock()
-	fromTeam, _ := inc.roster.teamOf(from)
+	fromTeam := inc.teamOf(from)
 	inIncident := inc.teamsInIncident()
 	var to []string
 	for _, t := range inc.roster.Teams {
-		if t.ID != fromTeam.ID && inIncident[t.ID] {
-			to = append(to, t.Manager)
+		if m := inc.coord.team(t.ID).manager; t.ID != fromTeam && inIncident[t.ID] && m != "" {
+			to = append(to, m)
 		}
 	}
 	return to

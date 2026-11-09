@@ -42,10 +42,11 @@ Docs live in the repo. Anything written about the design (plans, specs, diagrams
 When the service is deployed (Sammy's ledger says so), everyone does this once and ticks it in their ledger:
 
 1. In Claude Code: `/plugin marketplace add tiemma/captainmorgue`, then `/plugin install captainmorgue@captainmorgue`.
-2. In your shell profile: `export CM_URL=https://captainmorgue.cnh.radarhq.io CM_ACTOR=<your github login> CM_TEAM=<registration|ticketing|platform> CM_TOKEN=<team token> CM_LEDGER=<your ledger name>`. The team token comes from Emmanuel directly, never through git.
+2. In your shell profile: `export CM_URL=https://captainmorgue.cnh.radarhq.io CM_ACTOR=<your github login> CM_TEAM=<registration|platform> CM_TOKEN=<team token> CM_LEDGER=<your ledger name>`, plus optionally `CM_ROLE=<commander|responder|scribe> CM_TASK=<what you are on> CM_REPO=<repo> CM_TOOLS=<comma list>`. The team token comes from Emmanuel directly, never through git.
 3. Restart Claude Code, run `/captainmorgue:join`, then `/captainmorgue:status`.
 4. Ask someone else something with `/captainmorgue:ask @<login> ...` and answer the one you get with `/captainmorgue:reply`.
 5. Tick "Set up on my agent" in your ledger and push it. When all three are ticked, we start the rehearsal.
+6. Test messaging for real, all three together, with the runbooks in [docs/runbooks/](docs/runbooks/README.md): join and see each other, ask and reply, broadcast, busy auto-reply and escalation, silent laptop and election, conflict.
 
 ## Branches and merging
 
@@ -58,7 +59,6 @@ When the service is deployed (Sammy's ledger says so), everyone does this once a
 ```bash
 docker compose up -d elasticsearch          # optional; add --profile kibana for Kibana on :5601
 cd service && ROSTER=../roster.yaml WEB_DIR=../web go run .
-CM_URL=http://localhost:8080 scripts/replay.sh   # plays the demo incident into it
 open http://localhost:8080
 ```
 
