@@ -9,16 +9,17 @@ const meta = {
     initialView: { control: 'select', options: ['incident', 'messages', 'crew', 'record', 'join'] },
     scenario: { control: 'select', options: ['active', 'conflict', 'reconnecting', 'resolved', 'empty'] },
     wallMode: { control: 'boolean' },
+    initialConversation: { control: 'select', options: ['Payment verification', 'Database coordination', 'Connection recovery', 'Canary rollback', 'Platform handoff'] },
   },
   args: { initialView: 'incident', scenario: 'active', wallMode: false },
-  render: (args) => <CaptainWorkspace key={`${args.initialView}-${args.scenario}-${args.wallMode}`} {...args} />,
+  render: (args) => <CaptainWorkspace key={`${args.initialView}-${args.scenario}-${args.wallMode}-${args.initialConversation}`} {...args} />,
 } satisfies Meta<typeof CaptainWorkspace>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Incident: Story = {};
-export const Messages: Story = { args: { initialView: 'messages' } };
+export const Messages: Story = { name: 'Requests', args: { initialView: 'messages' } };
 export const Crew: Story = { args: { initialView: 'crew' } };
 export const Record: Story = { args: { initialView: 'record', scenario: 'resolved' } };
 export const Join: Story = { args: { initialView: 'join' } };

@@ -281,9 +281,9 @@ const nav: {
   count?: string;
 }[] = [
   { id: "incident", label: "Incident", icon: Activity },
-  { id: "messages", label: "Coordination", icon: Bot, count: "2" },
+  { id: "messages", label: "Requests", icon: Bot, count: "2" },
   { id: "crew", label: "Crew", icon: Users },
-  { id: "record", label: "The record", icon: BookOpen },
+  { id: "record", label: "Record", icon: BookOpen },
 ];
 
 export function CaptainWorkspace({
@@ -334,7 +334,7 @@ export function CaptainWorkspace({
   } | null>(null);
   const [reason, setReason] = useState("");
   const [toast, setToast] = useState("");
-  const [filter, setFilter] = useState("Highlights");
+  const [filter, setFilter] = useState("Decisions");
   const [selectedThread, setSelectedThread] =
     useState<string>(initialConversation);
   const [threadStatuses, setThreadStatuses] = useState<
@@ -534,9 +534,9 @@ export function CaptainWorkspace({
   }
   const visibleEvents = events.filter(
     (event) =>
-      filter === "All activity" ||
-      (filter === "Highlights"
-        ? event.kind !== "Action" && event.kind !== "Crew assembled"
+      filter === "All" ||
+      (filter === "Decisions"
+        ? event.kind === "Decision"
         : Boolean(event.evidence)),
   );
 
@@ -725,25 +725,16 @@ export function CaptainWorkspace({
               <>
                 <div className="cm-page-title">
                   <div>
-                    <div className="cm-eyebrow">
-                      {view === "incident"
-                        ? "INCIDENT DESK"
-                        : view === "messages"
-                          ? "AGENTS WORK. PEOPLE DECIDE."
-                          : view === "crew"
-                            ? "PEOPLE BEHIND THE WORK"
-                            : "THE INCIDENT, REMEMBERED"}
-                    </div>
                     <h1>
                       {view === "incident"
                         ? isEmpty
                           ? "The incident desk"
                           : "Check-in kiosks failing at Hall B"
                         : view === "messages"
-                          ? "Coordination"
+                          ? "Requests"
                           : view === "crew"
-                            ? "One incident. One crew."
-                            : "The record"}
+                            ? "Crew"
+                            : "Record"}
                     </h1>
                     <p>
                       {view === "incident"
@@ -751,10 +742,10 @@ export function CaptainWorkspace({
                           ? "Your crew is ready when something needs attention."
                           : "Attendees are waiting at check-in. Card payments at the merch stand are also affected."
                         : view === "messages"
-                          ? "Follow the asks your agents are handling. Step in where a person is needed."
+                          ? "Review replies and unblock your agents."
                           : view === "crew"
-                            ? "Know who is working, what they own, and where they need a hand."
-                            : "Built from what happened. Ready for the next crew."}
+                            ? "Responders, agents and assignments."
+                            : "Decisions, evidence and resolution."}
                     </p>
                   </div>
                   {view === "incident" && !isEmpty && !wall && (
@@ -942,7 +933,7 @@ export function CaptainWorkspace({
                         <div className="cm-incident-columns">
                           <section className="cm-activity-panel">
                             <div className="cm-section-heading">
-                              <h2>Decisions and findings</h2>
+                              <h2>Activity</h2>
                               <Badge tone="neutral">
                                 <Radio size={12} />
                                 Sample timeline
@@ -951,14 +942,12 @@ export function CaptainWorkspace({
                             <div className="cm-agent-quiet-traffic">
                               <Bot size={16} />
                               <span>
-                                Agents are investigating across 3 teams. Tool
-                                activity stays in the timeline; decisions stay
-                                in view.
+                                Agents investigating across 3 teams
                               </span>
                             </div>
                             <div className="cm-feed-toolbar">
                               <div className="cm-filter-tabs">
-                                {["Highlights", "All activity", "Evidence"].map(
+                                {["All", "Decisions", "Evidence"].map(
                                   (name) => (
                                     <button
                                       className={
@@ -1032,7 +1021,7 @@ export function CaptainWorkspace({
                           </section>
                           <aside className="cm-situation">
                             <Panel
-                              title="Parts of the incident"
+                              title="Tasks"
                               action={
                                 <span className="cm-mono cm-muted">
                                   {openParts.length} open
@@ -1112,6 +1101,8 @@ export function CaptainWorkspace({
                                 </div>
                               ))}
                             </Panel>
+                            <details className="cm-disclosure cm-signals-disclosure">
+                              <summary>Signals</summary>
                             <Panel
                               title="Recovery signals"
                               action={
@@ -1150,6 +1141,7 @@ export function CaptainWorkspace({
                                 Snapshot at 14:46
                               </div>
                             </Panel>
+                            </details>
                             <button
                               className="cm-crew-summary"
                               onClick={() => navigate("crew")}
@@ -1184,7 +1176,7 @@ export function CaptainWorkspace({
                             <span>{coordinationThreads.length}</span>
                           </div>
                           <div className="cm-agent-inbox-group">
-                            YOUR ATTENTION <span>{unreadRequests}</span>
+                            NEEDS YOU <span>{unreadRequests}</span>
                           </div>
                           {coordinationThreads.map((thread) => (
                             <button
@@ -1193,17 +1185,6 @@ export function CaptainWorkspace({
                               aria-pressed={selectedThread === thread.title}
                               onClick={() => chooseThread(thread.title)}
                             >
-                              <div className="cm-agent-thread-top">
-                                <span>ASK #{thread.seq}</span>
-                                <span>
-                                  {threadStatuses[thread.title] ===
-                                  "answered" ? (
-                                    <CheckCheck size={13} />
-                                  ) : (
-                                    <Bot size={14} />
-                                  )}
-                                </span>
-                              </div>
                               <strong>{thread.title}</strong>
                               <span className="cm-agent-thread-owner">
                                 {thread.owner}'s agent <span>/</span>{" "}
@@ -1225,13 +1206,6 @@ export function CaptainWorkspace({
                               </Badge>
                             </button>
                           ))}
-                          <div className="cm-agent-inbox-note">
-                            <ShieldAlert size={15} />
-                            <p>
-                              Agents investigate in context. Proposed answers
-                              wait for a person to approve.
-                            </p>
-                          </div>
                         </aside>
                         <section
                           className="cm-agent-detail"
@@ -1249,30 +1223,6 @@ export function CaptainWorkspace({
                               {coordinationLabels[threadStatus]}
                             </Badge>
                           </header>
-                          <div className="cm-agent-route">
-                            <div>
-                              <Avatar small name={currentThread.sender} />
-                              <span>
-                                {currentThread.sender}
-                                <small>Asked</small>
-                              </span>
-                            </div>
-                            <ArrowRight size={13} />
-                            <div>
-                              <Ship size={17} />
-                              <span>
-                                CaptainMorgue<small>Routes every message</small>
-                              </span>
-                            </div>
-                            <ArrowRight size={13} />
-                            <div>
-                              <Bot size={18} />
-                              <span>
-                                {currentThread.owner}'s agent
-                                <small>Works for {currentThread.owner}</small>
-                              </span>
-                            </div>
-                          </div>
                           <div className="cm-agent-detail-body">
                             <div className="cm-agent-original-ask">
                               <span className="cm-eyebrow">
@@ -1295,67 +1245,6 @@ export function CaptainWorkspace({
                                 <GitBranch size={13} />
                                 Why this agent? <ArrowUpRight size={12} />
                               </button>
-                            </div>
-                            <div className="cm-agent-stage-heading">
-                              <h3>
-                                <Bot size={16} />
-                                {currentThread.owner}'s agent
-                              </h3>
-                              <span>Claude Code / investigation worker</span>
-                            </div>
-                            <div className="cm-agent-task">
-                              <div className="cm-agent-task-title">
-                                <Terminal size={15} />
-                                <strong>{currentThread.task}</strong>
-                              </div>
-                              <div className="cm-agent-task-meta">
-                                <span>Owner: {currentThread.owner}</span>
-                                <span>Original task stays in progress</span>
-                              </div>
-                              <div className="cm-agent-tool-steps">
-                                <div>
-                                  <Check size={12} />
-                                  <span>
-                                    {threadStatus === "escalated"
-                                      ? "Ask queued / agent context not yet received"
-                                      : "Ask received in agent context"}
-                                  </span>
-                                  <time>14:44:12</time>
-                                </div>
-                                {threadStatus !== "escalated" && (
-                                  <>
-                                    <div>
-                                      <Check size={12} />
-                                      <span>
-                                        Read {currentThread.resource} through
-                                        Radar
-                                      </span>
-                                      <time>14:45:03</time>
-                                    </div>
-                                    <div>
-                                      <Link2 size={12} />
-                                      <button
-                                        onClick={() =>
-                                          setInspector({
-                                            id: `evidence-${currentThread.seq}`,
-                                            actor:
-                                              currentThread.owner + "'s agent",
-                                            kind: "Agent finding",
-                                            text: currentThread.finding,
-                                            time: "14:46",
-                                            evidence: currentThread.evidence,
-                                            tone: "info",
-                                          })
-                                        }
-                                      >
-                                        {currentThread.evidence}
-                                        <ArrowUpRight size={11} />
-                                      </button>
-                                      <time>14:46:08</time>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
                             </div>
                             {threadStatus === "escalated" && (
                               <div className="cm-agent-escalation">
@@ -1460,7 +1349,7 @@ export function CaptainWorkspace({
                                 <div className="cm-agent-proposal-to">
                                   From {currentThread.owner}'s agent{" "}
                                   <ArrowRight size={12} /> To{" "}
-                                  {currentThread.sender} via CaptainMorgue
+                                  {currentThread.sender}
                                 </div>
                                 {editingProposal === selectedThread ? (
                                   <label className="cm-field">
@@ -1485,8 +1374,7 @@ export function CaptainWorkspace({
                                 <div className="cm-agent-review-note">
                                   <ShieldAlert size={13} />
                                   <span>
-                                    Not sent. Agent context received does not
-                                    mean a human approved.
+                                    Review before sending.
                                   </span>
                                 </div>
                                 {feedbackThread === selectedThread ? (
@@ -1598,6 +1486,72 @@ export function CaptainWorkspace({
                                 </Receipt>
                               </div>
                             )}
+                            <details className="cm-disclosure" key={`evidence-${selectedThread}`}>
+                              <summary>Evidence</summary>
+                            <div className="cm-agent-stage-heading">
+                              <h3>
+                                <Bot size={16} />
+                                {currentThread.owner}'s agent
+                              </h3>
+                              <span>Claude Code / investigation worker</span>
+                            </div>
+                            <div className="cm-agent-task">
+                              <div className="cm-agent-task-title">
+                                <Terminal size={15} />
+                                <strong>{currentThread.task}</strong>
+                              </div>
+                              <div className="cm-agent-task-meta">
+                                <span>Owner: {currentThread.owner}</span>
+                                <span>Original task stays in progress</span>
+                              </div>
+                              <div className="cm-agent-tool-steps">
+                                <div>
+                                  <Check size={12} />
+                                  <span>
+                                    {threadStatus === "escalated"
+                                      ? "Ask queued / agent context not yet received"
+                                      : "Ask received in agent context"}
+                                  </span>
+                                  <time>14:44:12</time>
+                                </div>
+                                {threadStatus !== "escalated" && (
+                                  <>
+                                    <div>
+                                      <Check size={12} />
+                                      <span>
+                                        Read {currentThread.resource} through
+                                        Radar
+                                      </span>
+                                      <time>14:45:03</time>
+                                    </div>
+                                    <div>
+                                      <Link2 size={12} />
+                                      <button
+                                        onClick={() =>
+                                          setInspector({
+                                            id: `evidence-${currentThread.seq}`,
+                                            actor:
+                                              currentThread.owner + "'s agent",
+                                            kind: "Agent finding",
+                                            text: currentThread.finding,
+                                            time: "14:46",
+                                            evidence: currentThread.evidence,
+                                            tone: "info",
+                                          })
+                                        }
+                                      >
+                                        {currentThread.evidence}
+                                        <ArrowUpRight size={11} />
+                                      </button>
+                                      <time>14:46:08</time>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            </details>
+                            <details className="cm-disclosure" key={`history-${selectedThread}`}>
+                              <summary>History</summary>
                             <div className="cm-agent-ack-row">
                               <span>
                                 <CheckCheck size={13} />
@@ -1649,6 +1603,34 @@ export function CaptainWorkspace({
                                   </span>
                                 </div>
                               ))}
+                            </details>
+                            <details className="cm-disclosure" key={`details-${selectedThread}`}>
+                              <summary>Details</summary>
+                          <div className="cm-agent-route">
+                            <div>
+                              <Avatar small name={currentThread.sender} />
+                              <span>
+                                {currentThread.sender}
+                                <small>Asked</small>
+                              </span>
+                            </div>
+                            <ArrowRight size={13} />
+                            <div>
+                              <Ship size={17} />
+                              <span>
+                                CaptainMorgue<small>Routes every message</small>
+                              </span>
+                            </div>
+                            <ArrowRight size={13} />
+                            <div>
+                              <Bot size={18} />
+                              <span>
+                                {currentThread.owner}'s agent
+                                <small>Works for {currentThread.owner}</small>
+                              </span>
+                            </div>
+                          </div>
+                            </details>
                           </div>
                           {!wall && (
                             <div className="cm-agent-secondary-compose">
