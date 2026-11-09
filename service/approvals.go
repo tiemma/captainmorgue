@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -34,6 +35,10 @@ func init() {
 	trackedKinds["approval_request"] = true
 	keyEvents["approval_request"] = true
 	keyEvents["approval"] = true
+}
+
+func deniedApproval(ev Event) bool {
+	return ev.Type == "approval" && strings.Contains(ev.Text, " denied approval ")
 }
 
 func (a Approval) at(now time.Time) Approval {

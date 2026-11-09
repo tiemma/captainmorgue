@@ -318,7 +318,7 @@ func incidentErrors(events []Event) []Moment {
 		case "alert", "page", "signal", "conflict", "escalation":
 			return true
 		case "approval":
-			return strings.Contains(ev.Text, " denied approval ")
+			return deniedApproval(ev)
 		}
 		return failedAction(ev)
 	})
