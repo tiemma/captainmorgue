@@ -178,6 +178,7 @@ Design in [dispatch.md](dispatch.md) sections 3d-1 (joining), 5 (getting message
 | Service: `POST /incidents/{id}/join`, `/leave`, `POST /heartbeat`, `GET /inbox/{actor}?after=`, `POST /inbox/{actor}/ack` | Join returns team, manager, term, cursor; inbox long-polls; broadcast to a team delivers to every connected member of that subtree |
 | Plugin commands: `join`, `leave`, `status`, `inbox`, `broadcast [team]`, `ask @who`, `take`, `resolve`, `open`, `close` | Each command posts to the service and prints what happened |
 | Plugin receive path: `SessionStart` briefing, unread messages injected on `UserPromptSubmit` and `PostToolUse`, `Stop` blocks while a conflict is unread | Verified in a real session with two laptops |
+| Auto mode: `/captainmorgue:auto on` registers the plugin's MCP server as a channel and pushes inbox messages into the session; auto-reply with current status for asks unseen after 60 s; team token header on every call | In auto mode, Dev's agent reacts to a conflict with no one typing |
 | Poller (plugin monitor, fallback `cm poll &`): heartbeat every 5 s, held `/inbox`, desktop notification, local inbox cache the hooks read | Closing a laptop shows amber at 15 s, election at 30 s |
 
 ## 6. Checkpoints

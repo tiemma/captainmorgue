@@ -206,7 +206,8 @@ sequenceDiagram
 | `/captainmorgue:leave` | Hand over parts, stop poller, election if you manage. |
 | `/captainmorgue:status` | Incident, your team, manager and term, who is online, your unread count, your open parts. |
 | `/captainmorgue:inbox` | Show and ack unread messages. |
-| `/captainmorgue:broadcast [team] <text>` | Broadcast to a team subtree; no team = your own team; `root` = everyone (managers only). |
+| `/captainmorgue:broadcast [team] <text>` | Broadcast to a team subtree; no team = your own team; `root` = everyone. Anyone can broadcast to everyone: that is how the room talks. |
+| `/captainmorgue:auto on|off` | Auto mode: messages are pushed straight into the session and the agent acts on them without waiting for the person. Off: notify and wait. |
 | `/captainmorgue:ask @who <text>` | Direct ask; `@who` can be a person, a team, or omitted to let CaptainMorgue pick. |
 | `/captainmorgue:take <part>` | Claim a part of the incident. |
 | `/captainmorgue:resolve <part> <how>` | Mark a part resolved; CaptainMorgue checks signals before tagging it. |
@@ -308,7 +309,9 @@ Where this design itself can go wrong, how we notice, and what we do about it. S
 | 13 | **Context flooding**: injecting every message into every session | Claude loses track of its own task; token cost | Long hook outputs | Inject only `interrupt` and `inject` kinds for that person; cap per turn, link the rest to `/captainmorgue:inbox` |
 | 14 | **Hook latency** on every prompt | Typing feels slow | Prompt delay | Inbox read is a local cache filled by the poller; the hook reads the file, not the network |
 | 15 | **Idle sessions never see messages** (hooks cannot start a turn) | Ask goes unanswered while the person is in another window | `delivered` but not `seen` | Desktop notification from the monitor; escalation after 60 s / channels push |
-| 16 | **Monitors and channels are experimental / research preview** | Feature missing on a teammate's Claude Code version | Join reports no poller | Fallback: a plain background `cm poll &` started by the join command |
+| 16 | **Monitors and channels are experimental / research preview** | Feature missing on a teammate's Claude Code version; auto mode unavailable | Join reports no poller / no channel | Fallback: a plain background `cm poll &` started by the join command; auto mode degrades to notify-and-inject |
+| 21 | **Auto mode acts on a bad message** (wrong recipient, stale term, spoofed sender) | An agent changes the cluster on someone else's word | Record shows an action triggered by a message | Auto mode never acts on `stale_term` or unknown senders; destructive actions still go through Claude Code's own permission prompts |
+| 22 | **Everyone broadcasts to everyone** | Noise; real asks lost | Broadcast rate per person | Root broadcasts are `inject`, not `interrupt`; wall screen groups them |
 | 17 | **Model-picked recipients are wrong** for an unscoped ask | Wrong people interrupted | Recipients reply "not me" | Scoped broadcasts need no model; model pick shows `why`, falls back to managers on error |
 | 18 | **Conflict rule false positives** (read + write on the same object) | Warnings people learn to ignore | Many conflicts per incident | Read verbs marked by the plugin (`Checked:`); model confirms before sending |
 | 19 | **Stale manager acts after losing its lease** (laptop was asleep) | Orders from an old term | Term on every decision | Decisions with an old term are recorded as `stale_term` and not routed |
@@ -325,15 +328,17 @@ Where this design itself can go wrong, how we notice, and what we do about it. S
 | One sequencer, one replica | Lease-based failover; per-team logs if ever needed |
 | `ask` / `relay` / `conflict` delivered; everything else record-only | Full priority model, digests for returning people |
 
-## 9. Open questions for review
+## 9. Decisions (2026-11-09)
 
-1. **Channels as the push path:** worth the research-preview flags for the demo, or ship with monitor notifications only?
-2. Broker today: **A (Elasticsearch)** or **B (Postgres, already in the cluster)**? A keeps one store; B gives exact cursors and instant wake-up.
-3. Do conflicts **interrupt** (desktop notification) or only inject on the next prompt?
-4. Should a person's own agent auto-reply ("Dana is mid-rollback, will answer in 5 min") or always wait for the human?
-5. Root broadcast (everyone): managers only, as proposed in 3d-1?
-6. Team token per incident, or one shared token for the hackathon?
-7. Does the wall screen show delivery state (sent / seen) per recipient?
+| # | Question | Decision |
+|---|---|---|
+| 1 | Push into idle sessions | **Both.** The poller always raises a desktop notification. **Auto mode** (`/captainmorgue:auto on`) also pushes messages into the session through a Claude Code channel, so the agent acts without waiting for the person; the notification is then informational. Auto mode off, or channels unavailable on that laptop: notify and inject on the next prompt or tool call. |
+| 2 | Broker today | **Elasticsearch.** Inbox reads come from the service's in-memory tail; Elasticsearch holds history and cursors, so refresh lag does not matter. |
+| 3 | Conflicts | **Interrupt:** desktop notification, injected after the next tool call, and `Stop` blocks until Claude has handled it. |
+| 4 | Busy person | **Auto-reply.** An ask not seen within 60 s gets an automatic reply from CaptainMorgue built from that person's latest events ("Dana is mid-rollback on checkin, started 09:44"), then escalates to their manager. In auto mode the person's own agent may answer instead. |
+| 5 | Root broadcast | **Anyone** can broadcast to everyone. That is how the room communicates. |
+| 6 | Auth | **One team token** for the hackathon, in each laptop's keychain and the cluster Secret, sent as a header; the actor must be in the roster. |
+| 7 | Wall screen delivery state | **Yes:** relay and ask cards show each recipient as sent, delivered or seen; unseen asks turn amber before escalating. |
 
 ## 10. Impact on what is already in flight
 
