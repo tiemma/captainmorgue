@@ -173,10 +173,28 @@ func (inc *Incident) teamOf(actor string) string {
 	return t.ID
 }
 
+func (inc *Incident) liveRoster() Roster {
+	var r Roster
+	for _, t := range inc.roster.Teams {
+		t.Manager = inc.coord.team(t.ID).manager
+		t.Members = slices.DeleteFunc(inc.teamPeople(t.ID), func(name string) bool { return name == t.Manager })
+		r.Teams = append(r.Teams, t)
+	}
+	return r
+}
+
+func (inc *Incident) knownActors(logins []string, exclude string) []string {
+	inc.mu.Lock()
+	defer inc.mu.Unlock()
+	return inc.liveRoster().known(logins, exclude)
+}
+
 func (inc *Incident) teamPeople(id string) []string {
 	var people []string
 	if t, ok := inc.roster.team(id); ok {
-		people = append(people, t.Manager)
+		if t.Manager != "" {
+			people = append(people, t.Manager)
+		}
 		people = append(people, t.Members...)
 	}
 	for _, name := range inc.coord.joinedIn(id) {

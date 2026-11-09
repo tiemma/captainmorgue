@@ -39,7 +39,6 @@ type storedRecord struct {
 	Improvements []Improvement `json:"improvements"`
 }
 
-
 func newStore(ctx context.Context) (*store, error) {
 	url, key := os.Getenv("ELASTIC_URL"), os.Getenv("ELASTIC_API_KEY")
 	if url == "" || key == "" {
@@ -132,7 +131,6 @@ func (s *store) ensureIndex(ctx context.Context, name string, mapping *types.Typ
 	slog.Info("created index", "index", name)
 	return nil
 }
-
 
 func (s *store) saveRecord(ctx context.Context, rec storedRecord) error {
 	if _, err := s.es.Index(recordsIndex).Id(rec.ID).Document(rec).Do(ctx); err != nil {

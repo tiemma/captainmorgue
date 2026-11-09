@@ -33,6 +33,9 @@ func loadRoster(path string) (Roster, error) {
 }
 
 func (r Roster) teamOf(actor string) (Team, bool) {
+	if actor == "" {
+		return Team{}, false
+	}
 	for _, t := range r.Teams {
 		if t.Manager == actor {
 			return t, true

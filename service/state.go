@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 )
@@ -74,11 +73,8 @@ func (inc *Incident) state() State {
 		s.Incident.Opened = &inc.events[0].TS
 	}
 	inIncident := inc.teamsInIncident()
-	for _, t := range inc.roster.Teams {
-		tc := inc.coord.team(t.ID)
-		t.Manager = tc.manager
-		t.Members = slices.DeleteFunc(inc.teamPeople(t.ID), func(name string) bool { return name == tc.manager })
-		s.Teams = append(s.Teams, TeamState{Team: t, Term: tc.term, PulledIn: inIncident[t.ID]})
+	for _, t := range inc.liveRoster().Teams {
+		s.Teams = append(s.Teams, TeamState{Team: t, Term: inc.coord.team(t.ID).term, PulledIn: inIncident[t.ID]})
 	}
 	for i := range inc.events {
 		ev := &inc.events[i]
@@ -165,12 +161,13 @@ func (inc *Incident) writeRecord() {
 	inc.mu.Lock()
 	events := append([]Event(nil), inc.events...)
 	rec := inc.record()
+	roster := inc.liveRoster()
 	inc.mu.Unlock()
 
 	written := writtenRecord{Summary: incidentText(inc.title, events), Parts: []RecordPart{}, Improvements: []Improvement{}}
 	if inc.brain != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), recordTimeout)
-		w, err := inc.brain.writeRecord(ctx, inc.title, inc.roster, events)
+		w, err := inc.brain.writeRecord(ctx, inc.title, roster, events)
 		cancel()
 		if err != nil {
 			slog.Error("write record with model", "err", err)
