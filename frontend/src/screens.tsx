@@ -1,6 +1,10 @@
 import { useCallback, useState } from "react";
 import {
   Activity,
+  Bot,
+  Pencil,
+  RotateCcw,
+  Terminal,
   ArrowDown,
   ArrowRight,
   ArrowUpRight,
@@ -38,9 +42,11 @@ import {
   EmptyState,
   Panel,
   Receipt,
+  ProgressStatus,
 } from "./ui";
 import "./tokens.css";
 import "./styles.css";
+import "./agent-conversations.css";
 
 type View = "incident" | "messages" | "crew" | "record" | "join";
 type Scenario = "active" | "conflict" | "reconnecting" | "resolved" | "empty";
@@ -165,6 +171,109 @@ const crew = [
     time: "Updated just now",
   },
 ];
+type CoordinationStatus =
+  "approval" | "input" | "working" | "answered" | "escalated";
+const coordinationThreads = [
+  {
+    title: "Payment verification",
+    owner: "Jubril",
+    sender: "Emmanuel",
+    recipient: "Emmanuel",
+    status: "approval" as CoordinationStatus,
+    resource: "service/payments",
+    ask: "Can you confirm payments are recovering before we close the incident?",
+    why: "Jubril owns Ticketing. His agent can inspect payment telemetry without interrupting the check-in rollback.",
+    task: "Compare payment errors before and after the rollback",
+    finding:
+      "Payment errors fell from 9.1% to 0.3%. All sampled failures occurred before the rollback completed.",
+    proposal:
+      "Payment errors are back to 0.3% and the recent traces are clear. I still need a real card payment at the merch stand before confirming end-to-end recovery.",
+    evidence: "Payment recovery traces",
+    seq: 42,
+  },
+  {
+    title: "Database coordination",
+    owner: "Jubril",
+    sender: "Sammy",
+    recipient: "Sammy",
+    status: "input" as CoordinationStatus,
+    resource: "cluster/confdb",
+    ask: "Are you still seeing payment failures? I need to know before changing the database primary.",
+    why: "Sammy is watching confdb. Jubril can confirm whether Ticketing still sees user impact.",
+    task: "Check whether card payments are still failing at the venue",
+    finding:
+      "Telemetry is recovering, but the agent cannot verify a physical payment at the merch stand.",
+    proposal:
+      "Telemetry is improving. Please keep the primary running while we verify a real payment at the merch stand.",
+    evidence: "Shared database dependency",
+    seq: 45,
+  },
+  {
+    title: "Connection recovery",
+    owner: "Sammy",
+    sender: "Emmanuel",
+    recipient: "Sammy",
+    status: "working" as CoordinationStatus,
+    resource: "cluster/confdb",
+    ask: "Check whether the pool is draining after the canary abort.",
+    why: "Sammy owns Platform and has the database investigation context.",
+    task: "Inspect connection counts and active queries through Radar",
+    finding:
+      "Connections have fallen from 96 to 58. The agent is checking the remaining long-running queries.",
+    proposal:
+      "The pool is draining: 58 of 100 connections are active, down from 96. Keep watching until the remaining check-in queries finish.",
+    evidence: "Database connection snapshot",
+    seq: 38,
+  },
+  {
+    title: "Canary rollback",
+    owner: "Emmanuel",
+    sender: "Sammy",
+    recipient: "Sammy",
+    status: "answered" as CoordinationStatus,
+    resource: "rollout/checkin",
+    ask: "Has the check-in canary finished rolling back?",
+    why: "Emmanuel owns the rollout and can confirm the serving revision.",
+    task: "Read rollout status through Radar",
+    finding:
+      "Version v1.7 is serving all traffic. The canary is fully aborted.",
+    proposal:
+      "Confirmed: the canary is aborted and v1.7 is serving 100% of traffic. No additional rollout changes are in progress.",
+    evidence: "Rollout status",
+    seq: 35,
+  },
+  {
+    title: "Platform handoff",
+    owner: "Sammy",
+    sender: "Jubril",
+    recipient: "Sammy",
+    status: "escalated" as CoordinationStatus,
+    resource: "cluster/confdb",
+    ask: "Who can verify the remaining database connections?",
+    why: "The ask did not reach Sammy's agent context before the timeout. CaptainMorgue posted status and escalated it.",
+    task: "Awaiting the next agent context update",
+    finding:
+      "Latest activity: Sammy was inspecting active database queries at 14:45.",
+    proposal:
+      "I am checking the remaining queries and will send the connection breakdown shortly.",
+    evidence: "Latest agent activity",
+    seq: 47,
+  },
+];
+const coordinationLabels: Record<CoordinationStatus, string> = {
+  approval: "Awaiting approval",
+  input: "Needs your input",
+  working: "Agent working",
+  answered: "Answered",
+  escalated: "Escalated / no answer",
+};
+const coordinationTones = {
+  approval: "amber",
+  input: "danger",
+  working: "info",
+  answered: "success",
+  escalated: "amber",
+} as const;
 const nav: {
   id: View;
   label: string;
@@ -172,7 +281,7 @@ const nav: {
   count?: string;
 }[] = [
   { id: "incident", label: "Incident", icon: Activity },
-  { id: "messages", label: "Messages", icon: MessageSquare, count: "2" },
+  { id: "messages", label: "Coordination", icon: Bot, count: "2" },
   { id: "crew", label: "Crew", icon: Users },
   { id: "record", label: "The record", icon: BookOpen },
 ];
@@ -181,10 +290,17 @@ export function CaptainWorkspace({
   initialView = "incident",
   scenario = "active",
   wallMode = false,
+  initialConversation = "Payment verification",
 }: {
   initialView?: View;
   scenario?: Scenario;
   wallMode?: boolean;
+  initialConversation?:
+    | "Payment verification"
+    | "Database coordination"
+    | "Connection recovery"
+    | "Canary rollback"
+    | "Platform handoff";
 }) {
   const [view, setView] = useState<View>(wallMode ? "incident" : initialView);
   const [previousView, setPreviousView] = useState<View>(initialView);
@@ -205,10 +321,12 @@ export function CaptainWorkspace({
   const [scopes, setScopes] = useState<Record<string, string>>({
     "Database coordination": "Platform team",
     "Payment verification": "Emmanuel",
-    "Incident broadcast": "All responders",
+    "Platform handoff": "Sammy",
+    "Connection recovery": "Sammy",
+    "Canary rollback": "Sammy",
   });
   const [sent, setSent] = useState<
-    { text: string; scope: string; thread: string }[]
+    { text: string; scope: string; thread: string; kind?: "ask" | "reply" }[]
   >([]);
   const [dialog, setDialog] = useState<{
     kind: "resolve" | "close" | "decision" | "declare";
@@ -216,10 +334,34 @@ export function CaptainWorkspace({
   } | null>(null);
   const [reason, setReason] = useState("");
   const [toast, setToast] = useState("");
-  const [filter, setFilter] = useState("All activity");
-  const [selectedThread, setSelectedThread] = useState("Database coordination");
+  const [filter, setFilter] = useState("Highlights");
+  const [selectedThread, setSelectedThread] =
+    useState<string>(initialConversation);
+  const [threadStatuses, setThreadStatuses] = useState<
+    Record<string, CoordinationStatus>
+  >(
+    Object.fromEntries(
+      coordinationThreads.map((thread) => [thread.title, thread.status]),
+    ),
+  );
+  const [proposals, setProposals] = useState<Record<string, string>>(
+    Object.fromEntries(
+      coordinationThreads.map((thread) => [thread.title, thread.proposal]),
+    ),
+  );
+  const [editingProposal, setEditingProposal] = useState<string | null>(null);
+  const [feedbackThread, setFeedbackThread] = useState<string | null>(null);
+  const [agentFeedback, setAgentFeedback] = useState<Record<string, string>>(
+    {},
+  );
+  const [composerOpen, setComposerOpen] = useState(false);
+  const currentThread =
+    coordinationThreads.find((thread) => thread.title === selectedThread) ??
+    coordinationThreads[0];
+  const threadStatus = threadStatuses[currentThread.title];
+  const approvedPayment = threadStatuses["Payment verification"] === "answered";
   const draft = drafts[selectedThread] ?? "";
-  const scope = scopes[selectedThread];
+  const scope = scopes[selectedThread] ?? currentThread.recipient;
   function setScope(value: string) {
     setScopes((current) => ({ ...current, [selectedThread]: value }));
   }
@@ -227,11 +369,10 @@ export function CaptainWorkspace({
     setDrafts((current) => ({ ...current, [selectedThread]: value }));
   }
   const ack = acknowledged.includes(selectedThread);
-  const paymentAcknowledged = acknowledged.includes("Payment verification");
-  const unreadRequests = [
-    "Database coordination",
-    "Payment verification",
-  ].filter((thread) => !acknowledged.includes(thread)).length;
+
+  const unreadRequests = Object.values(threadStatuses).filter(
+    (status) => status === "approval" || status === "input",
+  ).length;
   const [events, setEvents] = useState(starterEvents);
   const closeDialog = useCallback(() => {
     setDialog(null);
@@ -271,6 +412,7 @@ export function CaptainWorkspace({
       setDrafts((current) => ({ ...current, [thread]: prefill }));
     }
     chooseThread(thread);
+    setComposerOpen(true);
     navigate("messages");
   }
   function toggleWall() {
@@ -320,11 +462,65 @@ export function CaptainWorkspace({
     if (!draft.trim() || isStale || wall) return;
     setSent((current) => [
       ...current,
-      { text: draft.trim(), scope, thread: selectedThread },
+      { text: draft.trim(), scope, thread: selectedThread, kind: "ask" },
     ]);
-    addEvent(`Message to ${scope}: ${draft.trim()}`, "Message");
+    addEvent(
+      `Asked through Jubril's agent, to ${scope}: ${draft.trim()}`,
+      "Agent ask",
+    );
     setDraft("");
-    notify("Sample message added locally.");
+    notify(
+      "Ask queued through your agent in this preview. No real message was sent.",
+    );
+  }
+  function approveReply() {
+    if (isStale || wall || !proposals[selectedThread]?.trim()) return;
+    const text = proposals[selectedThread].trim();
+    setSent((current) => [
+      ...current,
+      {
+        text,
+        scope: currentThread.sender,
+        thread: selectedThread,
+        kind: "reply",
+      },
+    ]);
+    setThreadStatuses((current) => ({
+      ...current,
+      [selectedThread]: "answered",
+    }));
+    setEditingProposal(null);
+    addEvent(
+      `Approved reply to ${currentThread.sender}'s ask #${currentThread.seq}: ${text}`,
+      "Decision",
+    );
+    notify(
+      "Reply approved by Jubril and routed in the sample timeline. No real message was sent.",
+    );
+  }
+  function returnToAgent() {
+    if (isStale || wall || !agentFeedback[selectedThread]?.trim()) return;
+    setThreadStatuses((current) => ({
+      ...current,
+      [selectedThread]: "working",
+    }));
+    addEvent(
+      `Returned ${selectedThread} to ${currentThread.owner}'s agent: ${agentFeedback[selectedThread]}`,
+      "Agent instruction",
+    );
+    setFeedbackThread(null);
+    setEditingProposal(null);
+    notify(
+      "Feedback saved locally. The sample agent is working; no reply was sent.",
+    );
+  }
+  function acknowledgeThread() {
+    if (isStale || wall || ack) return;
+    setAcknowledged((current) => [...current, selectedThread]);
+    addEvent(
+      `Human acknowledgement of ask #${currentThread.seq}. An answer is still required.`,
+      "Acknowledgement",
+    );
   }
   function copyRecord() {
     const text =
@@ -339,8 +535,8 @@ export function CaptainWorkspace({
   const visibleEvents = events.filter(
     (event) =>
       filter === "All activity" ||
-      (filter === "Decisions"
-        ? event.kind.includes("Decision") || event.kind === "Conflict flagged"
+      (filter === "Highlights"
+        ? event.kind !== "Action" && event.kind !== "Crew assembled"
         : Boolean(event.evidence)),
   );
 
@@ -533,7 +729,7 @@ export function CaptainWorkspace({
                       {view === "incident"
                         ? "INCIDENT DESK"
                         : view === "messages"
-                          ? "KEEP THE CREW IN SYNC"
+                          ? "AGENTS WORK. PEOPLE DECIDE."
                           : view === "crew"
                             ? "PEOPLE BEHIND THE WORK"
                             : "THE INCIDENT, REMEMBERED"}
@@ -544,7 +740,7 @@ export function CaptainWorkspace({
                           ? "The incident desk"
                           : "Check-in kiosks failing at Hall B"
                         : view === "messages"
-                          ? "Messages"
+                          ? "Coordination"
                           : view === "crew"
                             ? "One incident. One crew."
                             : "The record"}
@@ -555,7 +751,7 @@ export function CaptainWorkspace({
                           ? "Your crew is ready when something needs attention."
                           : "Attendees are waiting at check-in. Card payments at the merch stand are also affected."
                         : view === "messages"
-                          ? "A clear route, a named recipient, and a reason for every message."
+                          ? "Follow the asks your agents are handling. Step in where a person is needed."
                           : view === "crew"
                             ? "Know who is working, what they own, and where they need a hand."
                             : "Built from what happened. Ready for the next crew."}
@@ -647,7 +843,8 @@ export function CaptainWorkspace({
                             <div className="cm-section-label">
                               <span>NEEDS ATTENTION</span>
                               <span className="cm-count">
-                                {conflictDecision ? "1" : "2"}
+                                {(conflictDecision ? 0 : 1) +
+                                  (approvedPayment ? 0 : 1)}
                               </span>
                             </div>
                             <div className="cm-attention-grid">
@@ -705,14 +902,19 @@ export function CaptainWorkspace({
                                 </span>
                                 <div className="cm-attention-content">
                                   <div className="cm-attention-kicker">
-                                    {paymentAcknowledged
-                                      ? "ACKNOWLEDGED BY YOU"
-                                      : "DIRECT ASK / FOR YOU"}
+                                    {approvedPayment
+                                      ? "REPLY APPROVED BY YOU"
+                                      : "YOUR AGENT / AWAITING APPROVAL"}
                                   </div>
-                                  <h2>Can you verify card payments?</h2>
+                                  <h2>
+                                    {approvedPayment
+                                      ? "Your agent has answered Emmanuel."
+                                      : "Your agent has a reply ready."}
+                                  </h2>
                                   <p>
-                                    Emmanuel needs a real payment checked at the
-                                    merch stand before calling recovery.
+                                    Your agent checked payment telemetry for
+                                    Emmanuel. Review its evidence and approve
+                                    the reply before it goes back.
                                   </p>
                                   <div className="cm-attention-footer">
                                     <span>
@@ -727,7 +929,8 @@ export function CaptainWorkspace({
                                           navigate("messages");
                                         }}
                                       >
-                                        Open message <ArrowUpRight size={14} />
+                                        Review proposed reply{" "}
+                                        <ArrowUpRight size={14} />
                                       </button>
                                     )}
                                   </div>
@@ -739,15 +942,23 @@ export function CaptainWorkspace({
                         <div className="cm-incident-columns">
                           <section className="cm-activity-panel">
                             <div className="cm-section-heading">
-                              <h2>Across the incident</h2>
+                              <h2>Decisions and findings</h2>
                               <Badge tone="neutral">
                                 <Radio size={12} />
                                 Sample timeline
                               </Badge>
                             </div>
+                            <div className="cm-agent-quiet-traffic">
+                              <Bot size={16} />
+                              <span>
+                                Agents are investigating across 3 teams. Tool
+                                activity stays in the timeline; decisions stay
+                                in view.
+                              </span>
+                            </div>
                             <div className="cm-feed-toolbar">
                               <div className="cm-filter-tabs">
-                                {["All activity", "Decisions", "Evidence"].map(
+                                {["Highlights", "All activity", "Evidence"].map(
                                   (name) => (
                                     <button
                                       className={
@@ -963,256 +1174,541 @@ export function CaptainWorkspace({
                       </>
                     )}
                     {view === "messages" && (
-                      <div className="cm-messaging">
-                        <aside className="cm-thread-list">
-                          <div className="cm-thread-list-title">
-                            Incident conversations<span>3</span>
+                      <div className="cm-agent-workspace">
+                        <aside
+                          className="cm-agent-inbox"
+                          aria-label="Coordination threads"
+                        >
+                          <div className="cm-agent-inbox-heading">
+                            <h2>Incident asks</h2>
+                            <span>{coordinationThreads.length}</span>
                           </div>
-                          {[
-                            {
-                              title: "Database coordination",
-                              detail: "Sammy, Emmanuel, you",
-                              icon: ShieldAlert,
-                              preview:
-                                conflictDecision ||
-                                "Keep the primary running while we drain.",
-                              unread: !acknowledged.includes(
-                                "Database coordination",
-                              ),
-                            },
-                            {
-                              title: "Payment verification",
-                              detail: "Emmanuel to you",
-                              icon: MessageSquare,
-                              preview:
-                                "Can you check a payment at the merch stand?",
-                              unread: !paymentAcknowledged,
-                            },
-                            {
-                              title: "Incident broadcast",
-                              detail: "All responders",
-                              icon: Radio,
-                              preview: "Check-in canary is being rolled back.",
-                              unread: false,
-                            },
-                          ].map((thread) => (
+                          <div className="cm-agent-inbox-group">
+                            YOUR ATTENTION <span>{unreadRequests}</span>
+                          </div>
+                          {coordinationThreads.map((thread) => (
                             <button
-                              className={`cm-thread${selectedThread === thread.title ? " is-selected" : ""}`}
                               key={thread.title}
+                              className={`cm-agent-thread${selectedThread === thread.title ? " is-selected" : ""}`}
                               aria-pressed={selectedThread === thread.title}
                               onClick={() => chooseThread(thread.title)}
                             >
-                              <span className="cm-thread-icon">
-                                <thread.icon size={17} />
+                              <div className="cm-agent-thread-top">
+                                <span>ASK #{thread.seq}</span>
+                                <span>
+                                  {threadStatuses[thread.title] ===
+                                  "answered" ? (
+                                    <CheckCheck size={13} />
+                                  ) : (
+                                    <Bot size={14} />
+                                  )}
+                                </span>
+                              </div>
+                              <strong>{thread.title}</strong>
+                              <span className="cm-agent-thread-owner">
+                                {thread.owner}'s agent <span>/</span>{" "}
+                                {thread.sender} asked
                               </span>
-                              <span>
-                                <strong>
-                                  {thread.title}
-                                  {thread.unread && <i />}
-                                </strong>
-                                <small>{thread.detail}</small>
-                                <p>{thread.preview}</p>
-                              </span>
+                              <Badge
+                                tone={
+                                  coordinationTones[
+                                    threadStatuses[thread.title]
+                                  ]
+                                }
+                                dot
+                              >
+                                {
+                                  coordinationLabels[
+                                    threadStatuses[thread.title]
+                                  ]
+                                }
+                              </Badge>
                             </button>
                           ))}
-                          <div className="cm-thread-note">
-                            <CircleHelp size={15} />
+                          <div className="cm-agent-inbox-note">
+                            <ShieldAlert size={15} />
                             <p>
-                              Agent briefed means context reached the agent.
-                              Human acknowledgement is a separate action.
+                              Agents investigate in context. Proposed answers
+                              wait for a person to approve.
                             </p>
                           </div>
                         </aside>
-                        <section className="cm-conversation">
-                          <div className="cm-conversation-header">
+                        <section
+                          className="cm-agent-detail"
+                          aria-label="Selected coordination thread"
+                        >
+                          <header className="cm-agent-detail-heading">
                             <div>
-                              <h2>{selectedThread}</h2>
+                              <span className="cm-eyebrow">
+                                ASK #{currentThread.seq} /{" "}
+                                {currentThread.resource}
+                              </span>
+                              <h2>{currentThread.title}</h2>
+                            </div>
+                            <Badge tone={coordinationTones[threadStatus]} dot>
+                              {coordinationLabels[threadStatus]}
+                            </Badge>
+                          </header>
+                          <div className="cm-agent-route">
+                            <div>
+                              <Avatar small name={currentThread.sender} />
                               <span>
-                                INC-2041 <span className="cm-mid-dot">/</span>{" "}
-                                Shared incident context
+                                {currentThread.sender}
+                                <small>Asked</small>
                               </span>
                             </div>
-                            <Badge tone="info">
-                              <Users size={12} />
-                              {selectedThread === "Payment verification"
-                                ? "2 people"
-                                : "3 people"}
-                            </Badge>
+                            <ArrowRight size={13} />
+                            <div>
+                              <Ship size={17} />
+                              <span>
+                                CaptainMorgue<small>Routes every message</small>
+                              </span>
+                            </div>
+                            <ArrowRight size={13} />
+                            <div>
+                              <Bot size={18} />
+                              <span>
+                                {currentThread.owner}'s agent
+                                <small>Works for {currentThread.owner}</small>
+                              </span>
+                            </div>
                           </div>
-                          <div className="cm-message-history">
-                            <div className="cm-date-divider">
-                              <span />
-                              TODAY, 14:44
-                              <span />
+                          <div className="cm-agent-detail-body">
+                            <div className="cm-agent-original-ask">
+                              <span className="cm-eyebrow">
+                                THE ASK / 14:44
+                              </span>
+                              <p>{currentThread.ask}</p>
+                              <button
+                                className="cm-text-button"
+                                onClick={() =>
+                                  setInspector({
+                                    id: "route",
+                                    actor: "CaptainMorgue",
+                                    kind: "Routing reason",
+                                    text: currentThread.why,
+                                    time: "14:44",
+                                    tone: "info",
+                                  })
+                                }
+                              >
+                                <GitBranch size={13} />
+                                Why this agent? <ArrowUpRight size={12} />
+                              </button>
                             </div>
-                            <div className="cm-message">
-                              <Avatar name="Emmanuel Bakare" />
-                              <div>
-                                <div className="cm-message-byline">
-                                  <strong>Emmanuel</strong>
-                                  <span>Registration</span>
-                                  <time>14:44</time>
-                                </div>
-                                <div className="cm-message-bubble">
-                                  {selectedThread === "Payment verification"
-                                    ? "Jubril, can you verify a card payment at the merch stand? Errors look normal again, but I want a real check before we close."
-                                    : selectedThread === "Incident broadcast"
-                                      ? "I am aborting check-in canary v1.8. Please hold changes to confdb until connections have drained. I will post when the rollback is complete."
-                                      : "I am aborting the check-in canary now. Sammy, please keep the database primary running while the connections drain."}
-                                </div>
-                                <div className="cm-route-receipt">
-                                  <GitBranch size={13} />
-                                  <span>Routed through CaptainMorgue</span>
-                                  <button
-                                    onClick={() =>
-                                      setInspector({
-                                        id: "route",
-                                        actor: "CaptainMorgue",
-                                        kind: "Routing reason",
-                                        text:
-                                          selectedThread ===
-                                          "Payment verification"
-                                            ? "Emmanuel directly asked Jubril to verify payments because Jubril owns the downstream Ticketing experience."
-                                            : selectedThread ===
-                                                "Incident broadcast"
-                                              ? "This update was explicitly addressed to all responders in the incident."
-                                              : "Sammy owns confdb. Emmanuel is rolling back check-in, which holds its connections. Jubril is verifying the downstream payment flow.",
-                                        time: "14:44",
-                                        tone: "info",
-                                      })
-                                    }
-                                  >
-                                    Why these people?
-                                  </button>
-                                </div>
+                            <div className="cm-agent-stage-heading">
+                              <h3>
+                                <Bot size={16} />
+                                {currentThread.owner}'s agent
+                              </h3>
+                              <span>Claude Code / investigation worker</span>
+                            </div>
+                            <div className="cm-agent-task">
+                              <div className="cm-agent-task-title">
+                                <Terminal size={15} />
+                                <strong>{currentThread.task}</strong>
                               </div>
-                            </div>
-                            <div className="cm-route-status">
-                              {selectedThread !== "Payment verification" && (
+                              <div className="cm-agent-task-meta">
+                                <span>Owner: {currentThread.owner}</span>
+                                <span>Original task stays in progress</span>
+                              </div>
+                              <div className="cm-agent-tool-steps">
                                 <div>
-                                  <span className="cm-tiny-avatar">S</span>
-                                  <strong>Sammy</strong>
-                                  <span>Agent briefed</span>
-                                  <CheckCheck size={14} />
+                                  <Check size={12} />
+                                  <span>
+                                    {threadStatus === "escalated"
+                                      ? "Ask queued / agent context not yet received"
+                                      : "Ask received in agent context"}
+                                  </span>
+                                  <time>14:44:12</time>
                                 </div>
-                              )}
-                              <div>
-                                <span className="cm-tiny-avatar">J</span>
-                                <strong>You</strong>
-                                <span>
-                                  {ack
-                                    ? "Acknowledged by Jubril"
-                                    : "Awaiting acknowledgement"}
-                                </span>
-                                {ack ? (
-                                  <Check size={14} />
-                                ) : (
-                                  <Button
-                                    disabled={isStale || wall}
-                                    onClick={() => {
-                                      if (isStale || wall) return;
-                                      setAcknowledged((current) => [
-                                        ...current,
-                                        selectedThread,
-                                      ]);
-                                      addEvent(
-                                        `Acknowledged ${selectedThread}`,
-                                        "Acknowledgement",
-                                      );
-                                    }}
-                                  >
-                                    Acknowledge
-                                  </Button>
+                                {threadStatus !== "escalated" && (
+                                  <>
+                                    <div>
+                                      <Check size={12} />
+                                      <span>
+                                        Read {currentThread.resource} through
+                                        Radar
+                                      </span>
+                                      <time>14:45:03</time>
+                                    </div>
+                                    <div>
+                                      <Link2 size={12} />
+                                      <button
+                                        onClick={() =>
+                                          setInspector({
+                                            id: `evidence-${currentThread.seq}`,
+                                            actor:
+                                              currentThread.owner + "'s agent",
+                                            kind: "Agent finding",
+                                            text: currentThread.finding,
+                                            time: "14:46",
+                                            evidence: currentThread.evidence,
+                                            tone: "info",
+                                          })
+                                        }
+                                      >
+                                        {currentThread.evidence}
+                                        <ArrowUpRight size={11} />
+                                      </button>
+                                      <time>14:46:08</time>
+                                    </div>
+                                  </>
                                 )}
                               </div>
                             </div>
-                            {selectedThread === "Database coordination" && (
-                              <div className="cm-message">
-                                <Avatar name="Sammy" />
+                            {threadStatus === "escalated" && (
+                              <div className="cm-agent-escalation">
                                 <div>
-                                  <div className="cm-message-byline">
-                                    <strong>Sammy</strong>
-                                    <span>Platform</span>
-                                    <time>14:45</time>
-                                  </div>
-                                  <div className="cm-message-bubble">
-                                    Understood. I have not restarted the
-                                    primary. Connections are down to 58 now; I
-                                    will keep watching.
-                                  </div>
-                                  <Receipt>
-                                    Sammy explicitly acknowledged at 14:45
-                                  </Receipt>
+                                  <Clock3 size={18} />
+                                  <strong>
+                                    Automated status update. Not an answer.
+                                  </strong>
+                                </div>
+                                <p>{currentThread.finding}</p>
+                                <span>
+                                  CaptainMorgue posted the last known activity
+                                  and escalated the unanswered ask. A reply is
+                                  still needed.
+                                </span>
+                                <Badge tone="amber">Ask remains open</Badge>
+                              </div>
+                            )}
+                            {threadStatus === "working" && (
+                              <div className="cm-agent-working">
+                                <Bot size={23} />
+                                <div>
+                                  <ProgressStatus state="working">
+                                    Agent is investigating
+                                  </ProgressStatus>
+                                  <p>
+                                    {agentFeedback[selectedThread]
+                                      ? `Your instruction: ${agentFeedback[selectedThread]}`
+                                      : currentThread.finding}
+                                  </p>
+                                  <span>
+                                    No answer has been sent. A proposed reply
+                                    will appear here for review.
+                                  </span>
+                                  <Button
+                                    disabled={isStale}
+                                    onClick={() => {
+                                      if (isStale) return;
+                                      setThreadStatuses((current) => ({
+                                        ...current,
+                                        [selectedThread]: "approval",
+                                      }));
+                                      notify(
+                                        "Showing the next sample finding. No tool was run.",
+                                      );
+                                    }}
+                                  >
+                                    Show sample proposed reply{" "}
+                                    <ArrowRight size={13} />
+                                  </Button>
                                 </div>
                               </div>
                             )}
+                            {threadStatus === "input" && (
+                              <div className="cm-agent-human-input">
+                                <div className="cm-agent-proposal-label">
+                                  <CircleHelp size={17} />
+                                  <ProgressStatus state="waiting">
+                                    A person needs to check this
+                                  </ProgressStatus>
+                                  <Badge tone="danger">
+                                    For {currentThread.owner}
+                                  </Badge>
+                                </div>
+                                <p>{currentThread.finding}</p>
+                                <label className="cm-field">
+                                  What should your agent know?
+                                  <textarea
+                                    rows={3}
+                                    aria-label="Input for agent"
+                                    value={agentFeedback[selectedThread] ?? ""}
+                                    onChange={(event) =>
+                                      setAgentFeedback((current) => ({
+                                        ...current,
+                                        [selectedThread]: event.target.value,
+                                      }))
+                                    }
+                                    placeholder="Tell your agent what you observed at the merch stand..."
+                                  />
+                                </label>
+                                <Button
+                                  tone="amber"
+                                  disabled={
+                                    isStale ||
+                                    !agentFeedback[selectedThread]?.trim()
+                                  }
+                                  onClick={returnToAgent}
+                                >
+                                  Give input to agent <ArrowRight size={14} />
+                                </Button>
+                              </div>
+                            )}
+                            {threadStatus === "approval" && (
+                              <div className="cm-agent-proposal">
+                                <div className="cm-agent-proposal-label">
+                                  <Sparkles size={17} />
+                                  <strong>Proposed reply</strong>
+                                  <ProgressStatus state="waiting">
+                                    Awaiting your approval
+                                  </ProgressStatus>
+                                </div>
+                                <div className="cm-agent-proposal-to">
+                                  From {currentThread.owner}'s agent{" "}
+                                  <ArrowRight size={12} /> To{" "}
+                                  {currentThread.sender} via CaptainMorgue
+                                </div>
+                                {editingProposal === selectedThread ? (
+                                  <label className="cm-field">
+                                    Edit proposed reply
+                                    <textarea
+                                      aria-label="Proposed reply"
+                                      rows={5}
+                                      value={proposals[selectedThread]}
+                                      onChange={(event) =>
+                                        setProposals((current) => ({
+                                          ...current,
+                                          [selectedThread]: event.target.value,
+                                        }))
+                                      }
+                                    />
+                                  </label>
+                                ) : (
+                                  <p className="cm-agent-proposed-text">
+                                    {proposals[selectedThread]}
+                                  </p>
+                                )}
+                                <div className="cm-agent-review-note">
+                                  <ShieldAlert size={13} />
+                                  <span>
+                                    Not sent. Agent context received does not
+                                    mean a human approved.
+                                  </span>
+                                </div>
+                                {feedbackThread === selectedThread ? (
+                                  <div className="cm-agent-return">
+                                    <label className="cm-field">
+                                      What should the agent investigate or
+                                      change?
+                                      <textarea
+                                        aria-label="Feedback for agent"
+                                        rows={3}
+                                        value={
+                                          agentFeedback[selectedThread] ?? ""
+                                        }
+                                        onChange={(event) =>
+                                          setAgentFeedback((current) => ({
+                                            ...current,
+                                            [selectedThread]:
+                                              event.target.value,
+                                          }))
+                                        }
+                                      />
+                                    </label>
+                                    <div className="cm-agent-proposal-actions">
+                                      <Button
+                                        disabled={
+                                          isStale ||
+                                          !agentFeedback[selectedThread]?.trim()
+                                        }
+                                        onClick={returnToAgent}
+                                      >
+                                        <RotateCcw size={14} />
+                                        Return with feedback
+                                      </Button>
+                                      <Button
+                                        onClick={() => setFeedbackThread(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="cm-agent-proposal-actions">
+                                    <Button
+                                      tone="amber"
+                                      onClick={approveReply}
+                                      disabled={
+                                        isStale ||
+                                        !proposals[selectedThread]?.trim()
+                                      }
+                                    >
+                                      <Check size={15} />
+                                      Approve and send reply
+                                    </Button>
+                                    <Button
+                                      disabled={isStale}
+                                      onClick={() =>
+                                        setEditingProposal(
+                                          editingProposal === selectedThread
+                                            ? null
+                                            : selectedThread,
+                                        )
+                                      }
+                                    >
+                                      <Pencil size={14} />
+                                      {editingProposal === selectedThread
+                                        ? "Finish editing"
+                                        : "Edit reply"}
+                                    </Button>
+                                    <Button
+                                      disabled={isStale}
+                                      onClick={() =>
+                                        setFeedbackThread(selectedThread)
+                                      }
+                                    >
+                                      <RotateCcw size={14} />
+                                      Return to agent
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {threadStatus === "answered" && (
+                              <div className="cm-agent-answer">
+                                <div className="cm-agent-proposal-label">
+                                  <CheckCheck size={18} />
+                                  <ProgressStatus state="done">
+                                    Human-approved answer
+                                  </ProgressStatus>
+                                  <Badge tone="success">Answered</Badge>
+                                </div>
+                                <p>
+                                  {sent
+                                    .filter(
+                                      (message) =>
+                                        message.thread === selectedThread &&
+                                        message.kind === "reply",
+                                    )
+                                    .at(-1)?.text ?? currentThread.proposal}
+                                </p>
+                                <Receipt>
+                                  {sent.some(
+                                    (message) =>
+                                      message.thread === selectedThread &&
+                                      message.kind === "reply",
+                                  )
+                                    ? "Approved by Jubril / sample reply routed to " +
+                                      currentThread.sender
+                                    : "Approved by Emmanuel at 14:45 / sample reply routed to Sammy"}
+                                </Receipt>
+                              </div>
+                            )}
+                            <div className="cm-agent-ack-row">
+                              <span>
+                                <CheckCheck size={13} />
+                                {threadStatus === "escalated"
+                                  ? "Agent context not yet received"
+                                  : "Agent context received"}
+                              </span>
+                              <span>
+                                {ack ? (
+                                  <>
+                                    <Check size={13} />
+                                    Human acknowledged by Jubril
+                                  </>
+                                ) : (
+                                  <button
+                                    disabled={isStale}
+                                    onClick={acknowledgeThread}
+                                  >
+                                    Acknowledge ask
+                                  </button>
+                                )}
+                              </span>
+                              <small>
+                                Acknowledgement does not answer the ask.
+                              </small>
+                            </div>
                             {sent
                               .filter(
-                                (message) => message.thread === selectedThread,
+                                (message) =>
+                                  message.thread === selectedThread &&
+                                  message.kind !== "reply",
                               )
                               .map((message, index) => (
                                 <div
                                   key={index}
-                                  className="cm-message cm-message-own"
+                                  className="cm-agent-outgoing-ask"
                                 >
-                                  <Avatar name="Jubril Oyetunji" />
                                   <div>
-                                    <div className="cm-message-byline">
-                                      <strong>You</strong>
-                                      <span>To {message.scope}</span>
-                                      <time>Now</time>
-                                    </div>
-                                    <div className="cm-message-bubble">
-                                      {message.text}
-                                    </div>
-                                    <span className="cm-receipt">
-                                      Local preview message / not delivered
-                                    </span>
+                                    <Bot size={15} />
+                                    <strong>
+                                      Ask queued through Jubril's agent
+                                    </strong>
+                                    <Badge tone="info">Sample queue</Badge>
                                   </div>
+                                  <p>{message.text}</p>
+                                  <span>
+                                    To {message.scope} via CaptainMorgue / no
+                                    real delivery
+                                  </span>
                                 </div>
                               ))}
                           </div>
                           {!wall && (
-                            <div className="cm-composer">
-                              <label className="cm-compose-scope">
-                                Send to{" "}
-                                <select
-                                  aria-label="Message recipients"
-                                  value={scope}
-                                  onChange={(event) =>
-                                    setScope(event.target.value)
-                                  }
-                                >
-                                  <option>Platform team</option>
-                                  <option>Registration team</option>
-                                  <option>Emmanuel</option>
-                                  <option>Sammy</option>
-                                  <option>All responders</option>
-                                </select>
-                              </label>
-                              <textarea
-                                aria-label="Message"
-                                value={draft}
-                                onChange={(event) =>
-                                  setDraft(event.target.value)
-                                }
-                                placeholder="Share what you know. Ask for what you need."
-                                rows={3}
-                              />
-                              <div className="cm-composer-footer">
+                            <div className="cm-agent-secondary-compose">
+                              <button
+                                className="cm-agent-compose-toggle"
+                                aria-expanded={composerOpen}
+                                onClick={() => setComposerOpen(!composerOpen)}
+                              >
+                                <Bot size={17} />
                                 <span>
-                                  <Command size={13} />
-                                  Messages stay in the incident record
+                                  Ask through my agent
+                                  <small>
+                                    Start a follow-up with an explicit recipient
+                                  </small>
                                 </span>
-                                <Button
-                                  tone="amber"
-                                  onClick={send}
-                                  disabled={!draft.trim() || isStale}
-                                >
-                                  <Send size={14} />
-                                  Send message
-                                </Button>
-                              </div>
+                                <ChevronDown size={15} />
+                              </button>
+                              {composerOpen && (
+                                <div className="cm-composer">
+                                  <label className="cm-compose-scope">
+                                    Recipient
+                                    <select
+                                      aria-label="Message recipients"
+                                      value={scope}
+                                      onChange={(event) =>
+                                        setScope(event.target.value)
+                                      }
+                                    >
+                                      <option>Platform team</option>
+                                      <option>Registration team</option>
+                                      <option>Emmanuel</option>
+                                      <option>Sammy</option>
+                                      <option>All responders</option>
+                                    </select>
+                                  </label>
+                                  <textarea
+                                    aria-label="Message"
+                                    value={draft}
+                                    onChange={(event) =>
+                                      setDraft(event.target.value)
+                                    }
+                                    placeholder="Ask your agent to coordinate a specific next step..."
+                                    rows={3}
+                                  />
+                                  <div className="cm-composer-footer">
+                                    <span>
+                                      <GitBranch size={13} />
+                                      Jubril's agent / CaptainMorgue / {scope}
+                                    </span>
+                                    <Button
+                                      tone="amber"
+                                      onClick={send}
+                                      disabled={!draft.trim() || isStale}
+                                    >
+                                      <Send size={14} />
+                                      Send ask through agent
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </section>
@@ -1276,7 +1772,39 @@ export function CaptainWorkspace({
                                 </Badge>
                                 <span>{person.time}</span>
                               </div>
-                              <p className="cm-crew-job">{person.job}</p>
+                              <div className="cm-agent-crew-task">
+                                <div>
+                                  <Bot size={17} />
+                                  <strong>{person.name}'s agent</strong>
+                                </div>
+                                <p>
+                                  {person.name === "Jubril"
+                                    ? "Prepared a payment recovery answer for Emmanuel"
+                                    : person.name === "Sammy"
+                                      ? "Reading database connections through Radar"
+                                      : "Confirmed check-in rollout state and briefed the crew"}
+                                </p>
+                                <Badge
+                                  tone={
+                                    person.name === "Jubril"
+                                      ? coordinationTones[
+                                          threadStatuses["Payment verification"]
+                                        ]
+                                      : person.name === "Sammy"
+                                        ? "info"
+                                        : "success"
+                                  }
+                                  dot
+                                >
+                                  {person.name === "Jubril"
+                                    ? coordinationLabels[
+                                        threadStatuses["Payment verification"]
+                                      ]
+                                    : person.name === "Sammy"
+                                      ? "Agent working"
+                                      : "Reply approved"}
+                                </Badge>
+                              </div>
                               <div className="cm-person-connections">
                                 <div>
                                   <span>Browser</span>
@@ -1305,15 +1833,15 @@ export function CaptainWorkspace({
                                         ? "Payment verification"
                                         : person.name === "Sammy"
                                           ? "Database coordination"
-                                          : "Incident broadcast",
+                                          : "Platform handoff",
                                       person.name === "Jubril"
                                         ? "All responders"
                                         : person.name,
                                     );
                                   }}
                                 >
-                                  <MessageSquare size={14} />
-                                  Message
+                                  <Bot size={14} />
+                                  Ask agent
                                 </Button>
                               </div>
                             </article>
@@ -1569,7 +2097,7 @@ export function CaptainWorkspace({
               <Button
                 onClick={() => {
                   openComposer(
-                    "Incident broadcast",
+                    "Platform handoff",
                     "All responders",
                     `Regarding ${inspector.evidence || inspector.kind}: `,
                   );
