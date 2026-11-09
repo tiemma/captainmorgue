@@ -56,6 +56,7 @@ type State struct {
 	Signals   map[string]Signal `json:"signals"`
 	PastMatch *PastMatch        `json:"past_match"`
 	Claims    []Claim           `json:"claims"`
+	Commander string            `json:"commander"`
 
 	Deliveries map[int]map[string]string `json:"deliveries"`
 }
@@ -69,6 +70,7 @@ func (inc *Incident) state() State {
 		Signals:   map[string]Signal{},
 		PastMatch: inc.pastMatch,
 		Claims:    inc.activeClaims(now),
+		Commander: inc.coord.commander,
 
 		Deliveries: inc.coord.deliveries,
 	}
@@ -131,7 +133,7 @@ func (inc *Incident) record() Record {
 	}
 	people := map[string]bool{}
 	for _, ev := range inc.events {
-		if _, ok := inc.roster.teamOf(ev.Actor); ok {
+		if inc.teamOf(ev.Actor) != "" {
 			people[ev.Actor] = true
 		}
 		if ev.Type == "conflict" {

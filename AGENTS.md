@@ -34,8 +34,8 @@ Docs live in the repo. Anything written about the design (plans, specs, diagrams
 
 ## Testing as we go
 
-- `scripts/e2e.sh` builds the service, runs it with short timings, and drives the real plugin as four people: auth, join, ask reaches the recipient's session, broadcast to everyone, reply, a silent member going offline, an election, and an auto-reply. Run it before every merge to `main`; it must print `ALL PASSED`.
-- `CM_URL=https://captainmorgue.cnh.radarhq.io CM_TOKEN=<team token> scripts/e2e.sh` runs the same checks (minus the timed ones) against the deployed service. It posts as example people into the live incident, so run it before the rehearsal, not during it; a service restart clears it.
+- `scripts/e2e.sh` builds the service, runs it with short timings, and drives the real plugin as four people: auth, join, ask reaches the recipient's session, broadcast to everyone, reply, a silent member going offline, an election, and an auto-reply. Run it before every merge to `main`; it must print `ALL PASSED`. It ignores the `CM_*` settings of your own session, so it never posts into the live incident by accident, and its pollers never show desktop alerts (`CM_NOTIFY=off`).
+- `E2E_URL=https://captainmorgue.cnh.radarhq.io CM_TOKEN=<team token> scripts/e2e.sh` runs the same checks (minus the timed ones) against the deployed service. It posts as example people into the live incident, so run it before the rehearsal, not during it; a service restart clears it.
 
 ## Milestone: set it up on your own agent
 

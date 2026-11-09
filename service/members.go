@@ -266,6 +266,7 @@ func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Actor string `json:"actor"`
 		Team  string `json:"team"`
+		Quiet bool   `json:"quiet"`
 		Profile
 	}
 	if !decodeBody(w, r, &req) {
@@ -322,7 +323,10 @@ func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
 		Members   []MemberStatus `json:"members"`
 		Cursor    int            `json:"cursor"`
 	}{inc.id, req.Team, tc.manager, tc.term, req.Role, c.commander, inc.members(req.Team, now), a.cursor}
-	others := slices.DeleteFunc(c.joinedNames(), func(name string) bool { return name == req.Actor })
+	var others []string
+	if !req.Quiet {
+		others = slices.DeleteFunc(c.joinedNames(), func(name string) bool { return name == req.Actor })
+	}
 	inc.mu.Unlock()
 
 	inc.append(Event{Actor: req.Actor, Team: req.Team, Type: "join", Text: text, Term: resp.Term, To: others, Why: "everyone already in " + inc.id})

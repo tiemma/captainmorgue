@@ -138,16 +138,16 @@ button { font: inherit; color: inherit; }
 .ev .actor span { font-size: 11px; color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ev .body { display: grid; gap: 5px; min-width: 0; }
 .ev .kind { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
-.ev .text { overflow-wrap: anywhere; }
+.ev .text { overflow-wrap: anywhere; white-space: pre-line; }
 .arts { display: flex; flex-wrap: wrap; gap: 6px; }
 .art { font-family: var(--font-mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--surface-3); color: var(--fg-2); border: 1px solid var(--line); }
 .k-alert { border-left-color: var(--critical); } .k-alert .kind { color: var(--critical); }
-.k-investigation { border-left-color: var(--brass); } .k-investigation .kind { color: var(--brass); }
-.k-join, .k-relay, .k-ask, .k-broadcast, .k-decision { border-left-color: var(--info); } .k-join .kind, .k-relay .kind, .k-ask .kind, .k-broadcast .kind, .k-decision .kind { color: var(--info); }
+.k-investigation, .k-digest, .k-claim { border-left-color: var(--brass); } .k-investigation .kind, .k-digest .kind, .k-claim .kind { color: var(--brass); }
+.k-join, .k-relay, .k-ask, .k-reply, .k-broadcast, .k-decision { border-left-color: var(--info); } .k-join .kind, .k-relay .kind, .k-ask .kind, .k-reply .kind, .k-broadcast .kind, .k-decision .kind { color: var(--info); }
 .k-action .kind { color: var(--fg-2); }
 .k-conflict { border-left-color: var(--conflict); background: var(--conflict-bg); } .k-conflict .kind { color: var(--conflict); }
 .k-signal, .k-close, .k-ship { border-left-color: var(--resolved); } .k-signal .kind, .k-close .kind, .k-ship .kind { color: var(--resolved); }
-.k-election, .k-escalation, .k-autoreply { border-left-color: var(--investigating); } .k-election .kind, .k-escalation .kind, .k-autoreply .kind { color: var(--investigating); }
+.k-election, .k-vote_request, .k-escalation, .k-autoreply { border-left-color: var(--investigating); } .k-election .kind, .k-vote_request .kind, .k-escalation .kind, .k-autoreply .kind { color: var(--investigating); }
 .banner { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 10px 14px; border: 1px solid var(--investigating-line); border-left: 3px solid var(--investigating); border-radius: 10px; background: var(--investigating-bg); }
 .banner .label { color: var(--investigating); }
 .banner[hidden] { display: none; }
@@ -259,7 +259,7 @@ button { font: inherit; color: inherit; }
       </section>
       <section class="panel" aria-label="Claims">
         <h2>Claims <span class="label">Who holds what</span></h2>
-        <div id="claims"><p class="empty">Nothing claimed.</p></div>
+        <div class="parts" id="claims"><p class="empty">Nothing claimed.</p></div>
       </section>
       <section class="panel" aria-label="Investigation">
         <h2>Radar AI investigation</h2>
@@ -360,9 +360,9 @@ function renderHeader() {
   else { pill.textContent = inc.status || "waiting"; pill.className = "pill p-quiet"; }
   $("opened").textContent = timeOf(inc.opened) || "-";
   $("closed").textContent = timeOf(inc.closed) || "-";
-  const commander = Object.entries(state.people || {}).find(([, p]) => p && typeof p === "object" && p.role === "commander");
+  const commander = state.commander;
   $("commanderFact").hidden = !commander;
-  $("commander").textContent = commander ? nameOf(commander[0]) : "";
+  $("commander").textContent = commander ? nameOf(commander) : "";
 }
 
 function personRow(id, isMgr, teamOn) {

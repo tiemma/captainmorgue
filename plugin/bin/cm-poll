@@ -52,6 +52,10 @@ notify() {
 }
 
 alert() {
+  if [ "${CM_NOTIFY:-}" = off ]; then
+    log "alert $1 from $2 (seq $3) not shown, CM_NOTIFY=off"
+    return
+  fi
   if ! command -v osascript >/dev/null 2>&1; then
     notify "$1" "$2" "$4"
     return
@@ -77,7 +81,7 @@ while :; do
     rejoin=""
     team=$(jq -r '.team // empty' "$SESSION" 2>/dev/null)
     role=$(jq -r '.role // empty' "$SESSION" 2>/dev/null)
-    join_incident "${team:-${CM_TEAM:-}}" "${role:-${CM_ROLE:-}}" "${CM_TASK:-}" >/dev/null && log "rejoined $INCIDENT after the service forgot $ACTOR"
+    CM_QUIET_JOIN=1 join_incident "${team:-${CM_TEAM:-}}" "${role:-${CM_ROLE:-}}" "${CM_TASK:-}" >/dev/null && log "rejoined $INCIDENT after the service forgot $ACTOR"
   fi
   cursor=$(read_seq "$CURSOR")
   started=$SECONDS

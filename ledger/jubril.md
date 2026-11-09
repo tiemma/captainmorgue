@@ -5,6 +5,8 @@
 
 ## Start here (from Emmanuel, 15:20)
 
+Contract: [docs/contract.md](../docs/contract.md) - every route, the `/stream` events, the full `state` shape and every event type. The wall renders; it never computes.
+
 ### Get on the live incident (5 minutes)
 1. Install: in Claude Code run `/plugin marketplace add tiemma/captainmorgue`, then `/plugin install captainmorgue@captainmorgue`. Needs `jq` and `curl` (Windows: Git Bash or WSL, plus `winget install jqlang.jq`).
 2. Env (shell profile or `~/.claude/settings.json` "env"): `CM_URL=https://captainmorgue.cnh.radarhq.io`, `CM_ACTOR=<your GitHub login>`, `CM_TEAM=registration`, `CM_LEDGER=jubril`, `CM_ROLE=scribe`. No token needed.
