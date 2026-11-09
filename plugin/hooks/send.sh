@@ -8,6 +8,7 @@ command -v curl >/dev/null 2>&1 || exit 0
 
 event=$(jq -c --arg actor "$ACTOR" --arg team "${CM_TEAM:-}" --arg inc "$INCIDENT" "$JQ_TARGET"'
   def trunc($n): if length > $n then .[:$n] + "..." else . end;
+  def redact: if test("token|password|secret|authorization|api[_-]?key"; "i") then "[redacted: may contain a secret]" else . end;
   def bash_target:
     .tool_input.command // "" | cli_args("kubectl") | kubectl_target;
 
@@ -22,11 +23,13 @@ event=$(jq -c --arg actor "$ACTOR" --arg team "${CM_TEAM:-}" --arg inc "$INCIDEN
   def tool_event:
     (if .tool_name == "Bash" then (first(bash_target) // null) else (first(radar_target) // null) end) as $t
     | (.tool_input.command // .tool_input.file_path // .tool_input.notebook_path
-       // (if $t then "\($t.resource.kind)/\($t.resource.name)" else null end)) as $detail
+       // (if $t then "\($t.resource.kind)/\($t.resource.name)" else null end) | if . then redact else . end) as $detail
     | (if .hook_event_name == "PostToolUse" then "ok" elif .is_interrupt then "interrupted" else "failed" end) as $status
     | {text: ((if $t.read then "Checked: " else "" end)
               + .tool_name + (if $detail then ": " + ($detail | trunc(300)) else "" end)
-              + " (" + $status + ")")}
+              + " (" + $status + ")"),
+       tool: .tool_name, outcome: $status}
+      + (if $detail then {command: ($detail | trunc(2000))} else {} end)
       + (if $t then {resource: $t.resource} else {} end);
 
   (if .hook_event_name == "UserPromptSubmit" then

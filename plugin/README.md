@@ -43,7 +43,7 @@ The pane follows your inbox as it arrives, stamps each message with your local t
 | `?` or `help` | Help |
 | `q` | Quit |
 
-When the console starts your shell (zsh or bash), every command you type is posted to the incident timeline as an `action` event, `Shell: <command> (ok|failed)` with `exit_code`, `duration_ms` and `cwd`, in the background so the prompt never waits. Commands starting with a space, and commands mentioning a token, password, secret, authorization or API key, are not sent; long commands are cut at 300 characters. To record another terminal, run `eval "$(cm shell-hook zsh)"` (or `bash`) in it.
+When the console starts your shell (zsh or bash), every command you type is posted to the incident timeline as an `action` event, `Shell: <command> (ok|failed)` with `tool`, `command`, `outcome`, `exit_code`, `duration_ms` and `cwd`, in the background so the prompt never waits. Commands starting with a space, and commands mentioning a token, password, secret, authorization or API key, are not sent; long commands are cut at 300 characters. To record another terminal, run `eval "$(cm shell-hook zsh)"` (or `bash`) in it.
 
 The hooks never fail your turn: with `CM_URL` unset or the service down they do nothing. Failures are logged to `~/.captainmorgue/hook.log`, the poller's output to `~/.captainmorgue/poll.log`.
 
