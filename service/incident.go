@@ -39,6 +39,9 @@ type Event struct {
 	ReplyTo    int        `json:"reply_to,omitempty"`
 	Service    string     `json:"service,omitempty"`
 	Signal     *Signal    `json:"signal,omitempty"`
+	ExitCode   *int       `json:"exit_code,omitempty"`
+	DurationMS int64      `json:"duration_ms,omitempty"`
+	Cwd        string     `json:"cwd,omitempty"`
 }
 
 var eventTypes = map[string]bool{
