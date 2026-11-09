@@ -6,7 +6,7 @@ const meta = {
   component: CaptainWorkspace,
   parameters: { layout: 'fullscreen' },
   argTypes: {
-    initialView: { control: 'select', options: ['incident', 'messages', 'crew', 'record', 'join'] },
+    initialView: { control: 'select', options: ['incident', 'messages', 'crew', 'record', 'join', 'postmortems'] },
     scenario: { control: 'select', options: ['active', 'conflict', 'reconnecting', 'resolved', 'empty'] },
     wallMode: { control: 'boolean' },
     initialConversation: { control: 'select', options: ['Payment verification', 'Database coordination', 'Connection recovery', 'Canary rollback', 'Platform handoff'] },
@@ -25,3 +25,5 @@ export const ActiveRecord: Story = { name: 'Record / active', args: { initialVie
 export const Record: Story = { args: { initialView: 'record', scenario: 'resolved' } };
 export const Join: Story = { args: { initialView: 'join' } };
 export const WallScreen: Story = { args: { wallMode: true, scenario: 'conflict' } };
+
+export const PostmortemsLibrary: Story = { name: 'Postmortems', args: { initialView: 'postmortems' } };

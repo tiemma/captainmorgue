@@ -46,11 +46,13 @@ import {
 } from "./ui";
 import { SidePanel } from "./side-panel";
 import { ResponseTimeline } from "./response-timeline";
+import { Postmortems } from "./postmortems";
+import { SAMPLE_POSTMORTEMS } from "./postmortems-fixtures";
 import "./tokens.css";
 import "./styles.css";
 import "./agent-conversations.css";
 
-type View = "incident" | "messages" | "crew" | "record" | "join";
+type View = "incident" | "messages" | "crew" | "record" | "join" | "postmortems";
 type Scenario = "active" | "conflict" | "reconnecting" | "resolved" | "empty";
 type Part = {
   id: string;
@@ -286,6 +288,7 @@ const nav: {
   { id: "messages", label: "Requests", icon: Bot, count: "2" },
   { id: "crew", label: "Crew", icon: Users },
   { id: "record", label: "Record", icon: BookOpen },
+  { id: "postmortems", label: "Postmortems", icon: FileText },
 ];
 
 export function CaptainWorkspace({
@@ -725,7 +728,7 @@ export function CaptainWorkspace({
               </div>
             ) : (
               <>
-                <div className="cm-page-title">
+                {view !== "postmortems" && (<div className="cm-page-title">
                   <div>
                     <h1>
                       {view === "incident"
@@ -774,7 +777,8 @@ export function CaptainWorkspace({
                     </Button>
                   )}
                 </div>
-                {isEmpty ? (
+                )}
+                {isEmpty && view !== "postmortems" ? (
                   <div className="cm-quiet-state">
                     <EmptyState
                       title="A quiet desk."
@@ -1846,6 +1850,7 @@ export function CaptainWorkspace({
                         </div>
                       </>
                     )}
+                    {view === "postmortems" && <Postmortems documents={SAMPLE_POSTMORTEMS} />}
                     {view === "record" && (
                       <div className="cm-record-layout">
                         <article className="cm-record-paper">
