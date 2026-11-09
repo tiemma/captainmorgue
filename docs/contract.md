@@ -93,7 +93,7 @@ Every `event` is followed by a `state`, so the wall can redraw panels from `stat
 | `claims[]` | array, oldest first | Active claims only: `{"key": "ns/kind/name", "actor", "text", "since", "expires"}`, times RFC 3339. |
 | `deliveries` | object, seq (as a string key) to object of login to status | Per recipient delivery of every `ask`, `broadcast`, `relay` and `conflict`: `sent` (queued), `delivered` (their poller fetched it), `seen` (they acked it, or replied to the ask). |
 | `parts[]` | array | Reserved for incident parts `{"id", "name", "owner", "progress", "status", "resolved_at", "note"}`. Always `[]` today. |
-| `signals` | object | Reserved for live signals, key to `{"value", "status"}`. Always `{}` today. |
+| `signals` | object, `<service>_<metric>` to Signal | Live Dash0 signals, see [Signals](#signals). `{}` when Dash0 is not configured. |
 | `past_match` | object or null | Closest past incident from Elasticsearch: `{"id", "summary", "fixed_by"}`. Null when Elasticsearch is not configured or nothing matches. |
 
 Live `state` from production, 2026-11-09 (before `commander` shipped):
@@ -112,6 +112,34 @@ Busier fields from a local run:
 {"commander":"tiemma",
  "claims":[{"key":"registration/deployment/kiosk","actor":"kemi","text":"rollout restart","since":"2026-11-09T22:08:57.646465Z","expires":"2026-11-09T22:13:57.646465Z"}],
  "deliveries":{"13":{"jubril":"delivered","kemi":"delivered","sammy":"delivered"},"14":{"sammy":"seen"}}}
+```
+
+## Signals
+
+When the service runs with `DASH0_AUTH_TOKEN` set (and `DASH0_API_URL`, default `https://api.us-west-2.aws.dash0.com`), it runs three PromQL range queries against Dash0 every 30 s (`CM_SIGNAL_EVERY`) while the incident is open (at least one event, no `close`), over every service a roster team `owns`. `DASH0_DATASET` picks the dataset; unset uses the organization default. Unset or failing, `signals` stays as it was and the failure is logged once.
+
+| Metric key | Query (per `service_name`, server spans, 2 m rate) | `warn` at | `critical` at |
+|---|---|---|---|
+| `requests` | `dash0.spans` rate, requests per second | never | never |
+| `errors` | `dash0.spans` with `otel_span_status_code="ERROR"` over all, in percent | 1 % | 5 % |
+| `p95` | `histogram_quantile(0.95, dash0.spans.duration)`, in ms | 500 ms | 1000 ms |
+
+A service with no spans in Dash0 gets no entry. Each Signal:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `label` | string | Ready to show, `checkin p95 latency`. |
+| `service` | string | The owned service. |
+| `value` | string | Latest point, formatted: `4.5/s`, `0.4%`, `640 ms`. |
+| `status` | `"ok"` \| `"warn"` \| `"critical"` | Latest point against the thresholds above. |
+| `series` | number[] | Up to the last 15 points, 30 s apart, oldest first, in the metric's unit. |
+| `spark` | number[] | `series` scaled to 0..1 (min to max; flat series is all 0.5), ready to draw. |
+
+When a signal's `status` changes (a new signal counts as changing from `ok`), the service appends a `signal` event: `actor: dash0`, `team` the owning team, text `checkin p95 latency is critical at 1400 ms (was warn)`.
+
+```json
+"signals":{"checkin_p95":{"label":"checkin p95 latency","service":"checkin","value":"150 ms","status":"ok",
+  "series":[10,20,30,40,50,60,70,80,90,100,110,120,130,140,150],"spark":[0,0.071,0.143,0.214,0.286,0.357,0.429,0.5,0.571,0.643,0.714,0.786,0.857,0.929,1]}}
 ```
 
 ## Event
@@ -141,7 +169,7 @@ Busier fields from a local run:
 | `investigation` | `POST /events` (Radar) | `artifacts` | An investigation finding. The wall shows the latest in its Investigation panel. |
 | `action` | `POST /events`, or `POST /incidents/{id}/task` | `resource` | Someone did something. From `/task` the text is `Working on: <task>`. Two writes on one resource within 2 minutes raise a `conflict`. |
 | `decision` | `POST /events` | `resource` | A decision; counts as a write for conflict checks. |
-| `signal` | `POST /events` | | A telemetry signal. |
+| `signal` | `POST /events`, or the service when a Dash0 signal changes status | `team` | A telemetry signal. |
 | `ship` | `POST /events` (Gitar, Argo) | `artifacts` | A fix shipped. |
 | `close` | `POST /events` | | Incident resolved. The record is written right after. |
 | `join` | `POST /incidents/{id}/join` (or `/events`) | `team`, `term`, `to` (everyone already joined), `why` | Someone joined, with role; text adds `and manages <team>, term N` when they became manager. |

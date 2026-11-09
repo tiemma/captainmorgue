@@ -179,7 +179,9 @@ button { font: inherit; color: inherit; }
 .signals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .sig { border: 1px solid var(--line); border-radius: 6px; padding: 8px; display: grid; gap: 2px; background: var(--surface-2); }
 .sig b { font-family: var(--font-mono); font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.sig.bad b { color: var(--critical); } .sig.good b { color: var(--resolved); }
+.sig.critical b { color: var(--critical); } .sig.warn b { color: var(--investigating); } .sig.ok b { color: var(--resolved); }
+.sig svg { width: 100%; height: 22px; } .sig polyline { fill: none; stroke: currentColor; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.sig.critical svg { color: var(--critical); } .sig.warn svg { color: var(--investigating); } .sig.ok svg { color: var(--resolved); }
 .signals .empty { grid-column: 1 / -1; }
 .inv { display: grid; gap: 6px; font-size: 13px; }
 
@@ -443,8 +445,14 @@ function renderInvestigation() {
 function renderSignals() {
   const entries = Object.entries(state.signals || {});
   $("signals").innerHTML = entries.length ? entries.map(([key, s]) =>
-    '<div class="sig' + (s.status === "bad" || s.status === "good" ? " " + s.status : "") + '"><span class="label">' + esc(s.label || key.replace(/_/g, " ")) + '</span><b>' + esc(s.value) + '</b></div>'
+    '<div class="sig ' + esc(s.status) + '"><span class="label">' + esc(s.label || key) + ' &middot; ' + esc(s.status) + '</span><b>' + esc(s.value) + '</b>' + sparkline(s.spark) + '</div>'
   ).join("") : '<p class="empty">No signals yet.</p>';
+}
+
+function sparkline(points) {
+  if (!points || points.length < 2) return "";
+  const last = points.length - 1;
+  return '<svg viewBox="0 0 ' + last + ' 1" preserveAspectRatio="none" aria-hidden="true"><polyline points="' + points.map((p, i) => i + "," + (1 - p)).join(" ") + '"/></svg>';
 }
 
 async function loadRecord(id) {

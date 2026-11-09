@@ -69,6 +69,7 @@ type Incident struct {
 	matchReq  chan struct{}
 	coord     coord
 	claims    map[string]*Claim
+	signals   map[string]Signal
 }
 
 func newIncident(id, title string, roster Roster, st *store, br *brain) *Incident {
@@ -76,6 +77,7 @@ func newIncident(id, title string, roster Roster, st *store, br *brain) *Inciden
 		id: id, title: title, roster: roster, store: st, brain: br,
 		subs:     map[chan sseMessage]struct{}{},
 		matchReq: make(chan struct{}, 1),
+		signals:  map[string]Signal{},
 	}
 }
 

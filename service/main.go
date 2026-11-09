@@ -35,6 +35,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	if d := newDash0(); d != nil {
+		every, err := envDuration("CM_SIGNAL_EVERY", 30*time.Second)
+		if err != nil {
+			slog.Error("signal config", "err", err)
+			os.Exit(1)
+		}
+		go inc.pollSignals(d, every)
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /events", inc.handleEvent)
 	mux.HandleFunc("POST /broadcast", inc.handleBroadcast)
