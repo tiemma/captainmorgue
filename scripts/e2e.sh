@@ -5,7 +5,8 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 port=${PORT:-18190}
 token=e2e-$$
-export CM_ALERT_SECONDS=${CM_ALERT_SECONDS:-1}
+unset CM_ACTOR CM_TEAM CM_ROLE CM_TASK CM_REPO CM_TOOLS CM_LEDGER CM_INCIDENT
+export CM_URL=${E2E_URL:-} CM_NOTIFY=off
 fails=0
 
 cleanup() {
@@ -14,6 +15,7 @@ cleanup() {
   rm -rf "$work"
 }
 trap cleanup EXIT
+trap 'exit 1' INT TERM HUP
 
 check() {
   if eval "$2"; then echo "PASS $1"; else echo "FAIL $1"; fails=$((fails + 1)); fi

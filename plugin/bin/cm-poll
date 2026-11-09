@@ -52,6 +52,10 @@ notify() {
 }
 
 alert() {
+  if [ "${CM_NOTIFY:-}" = off ]; then
+    log "alert $1 from $2 (seq $3) not shown, CM_NOTIFY=off"
+    return
+  fi
   if ! command -v osascript >/dev/null 2>&1; then
     notify "$1" "$2" "$4"
     return
