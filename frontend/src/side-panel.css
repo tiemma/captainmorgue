@@ -22,17 +22,14 @@
 
 .cm-side-panel-header h2 {
   margin: 0;
-  font-family: var(--cm-font, sans-serif);
-  font-size: 14px;
-  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .cm-side-panel-header button {
   display: grid;
   place-items: center;
-  flex: 0 0 32px;
-  height: 32px;
+  flex: 0 0 36px;
+  height: 36px;
   border: 0;
   border-radius: 6px;
   background: transparent;

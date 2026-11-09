@@ -107,7 +107,7 @@ export function SidePanel({ title, onClose, children }: {
         onKeyDown={keyboard}
       />}
       <header className="cm-side-panel-header">
-        <h2 id={heading}>{title}</h2>
+        <h2 id={heading} className="text-label-sm">{title}</h2>
         <button ref={closeButton} type="button" aria-label={`Close ${title}`} onClick={onClose}>
           <X size={16} aria-hidden="true" />
         </button>

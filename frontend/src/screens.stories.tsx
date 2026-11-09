@@ -21,6 +21,7 @@ type Story = StoryObj<typeof meta>;
 export const Incident: Story = {};
 export const Messages: Story = { name: 'Requests', args: { initialView: 'messages' } };
 export const Crew: Story = { args: { initialView: 'crew' } };
+export const ActiveRecord: Story = { name: 'Record / active', args: { initialView: 'record', scenario: 'active' } };
 export const Record: Story = { args: { initialView: 'record', scenario: 'resolved' } };
 export const Join: Story = { args: { initialView: 'join' } };
 export const WallScreen: Story = { args: { wallMode: true, scenario: 'conflict' } };

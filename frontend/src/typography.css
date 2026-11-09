@@ -40,7 +40,7 @@
 .cm-signal-row strong,
 .cm-record-top h2,
 .cm-join-card h2,
-.cm-inspector h2,
+.cm-inspector-content h2,
 .cm-agent-detail-heading h2 {
   font: 500 1.5rem/2rem var(--cm-display);
   letter-spacing: -0.01em;

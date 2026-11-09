@@ -16,7 +16,7 @@ export function Button({
     <button
       type="button"
       {...props}
-      className={`cm-button cm-button-${tone} ${className}`}
+      className={`cm-button text-label-sm cm-button-${tone} ${className}`}
     >
       {children}
     </button>
@@ -32,7 +32,7 @@ export function Badge({
   dot?: boolean;
 }) {
   return (
-    <span className={`cm-badge cm-tone-${tone}`}>
+    <span className={`cm-badge text-label-xs cm-tone-${tone}`}>
       {dot && <span className="cm-status-dot" />}
       {children}
     </span>
@@ -72,7 +72,7 @@ export function Panel({
   return (
     <section className={`cm-panel ${className}`}>
       <div className="cm-panel-heading">
-        <h2>{title}</h2>
+        <h2 className="text-label-sm">{title}</h2>
         {action}
       </div>
       {children}
@@ -93,7 +93,7 @@ export function EmptyState({
       <span className="cm-empty-icon">
         <Circle size={26} />
       </span>
-      <h2>{title}</h2>
+      <h2 className="text-title-h5">{title}</h2>
       <p>{children}</p>
       {action}
     </div>
@@ -191,7 +191,7 @@ export function ProgressStatus({ state, children }: {
 }) {
   const StateIcon = state === "working" ? LoaderCircle : state === "waiting" ? Clock3 : Check;
   return (
-    <span className={`cm-progress-status cm-progress-${state}`} role="status">
+    <span className={`cm-progress-status text-paragraph-xs cm-progress-${state}`} role="status">
       <StateIcon size={14} aria-hidden="true" />
       <span>{children}</span>
     </span>

@@ -1486,7 +1486,7 @@ body {
   padding: 4px;
   background: transparent;
 }
-.cm-inspector h2 {
+.cm-inspector-content h2 {
   margin: 15px 0;
   overflow-wrap: anywhere;
 }

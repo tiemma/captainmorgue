@@ -44,6 +44,8 @@ import {
   Receipt,
   ProgressStatus,
 } from "./ui";
+import { SidePanel } from "./side-panel";
+import { ResponseTimeline } from "./response-timeline";
 import "./tokens.css";
 import "./styles.css";
 import "./agent-conversations.css";
@@ -1916,54 +1918,11 @@ export function CaptainWorkspace({
                               </button>
                             </div>
                           </section>
-                          <section className="cm-record-section">
-                            <span className="cm-section-number">02</span>
-                            <div>
-                              <h3>
-                                {resolved
-                                  ? "How the crew resolved it"
-                                  : "The response so far"}
-                              </h3>
-                              <div className="cm-record-step">
-                                <span>14:44</span>
-                                <p>
-                                  <b>Emmanuel aborted the check-in canary.</b>{" "}
-                                  Previous version v1.7 restored while the crew
-                                  investigated.
-                                </p>
-                              </div>
-                              <div className="cm-record-step">
-                                <span>14:45</span>
-                                <p>
-                                  <b>Sammy held the database restart.</b>{" "}
-                                  Coordination preserved the sessions draining
-                                  during rollback.
-                                </p>
-                              </div>
-                              <div className="cm-record-step">
-                                <span>14:46</span>
-                                <p>
-                                  <b>Database pressure eased.</b> Payment errors
-                                  returned to 0.3%. The crew requested a real
-                                  payment verification.
-                                </p>
-                              </div>
-                              {resolved && (
-                                <div className="cm-record-step">
-                                  <span>14:51</span>
-                                  <p>
-                                    <b>The sample incident was closed.</b> This
-                                    is a design example, not a production
-                                    incident record.
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </section>
+                          <ResponseTimeline resolved={resolved} />
                           <section className="cm-record-section">
                             <span className="cm-section-number">03</span>
                             <div>
-                              <h3>Keep it from coming back</h3>
+                              <h3>Prevention</h3>
                               <div className="cm-improvement">
                                 <span className="cm-checkbox" />
                                 <div>
@@ -2028,16 +1987,8 @@ export function CaptainWorkspace({
             )}
           </main>
           {inspector && (
-            <aside className="cm-inspector" aria-label="Evidence inspector">
-              <div className="cm-inspector-header">
-                <span className="cm-eyebrow">INCIDENT CONTEXT</span>
-                <Button
-                  aria-label="Close inspector"
-                  onClick={() => setInspector(null)}
-                >
-                  <X size={16} />
-                </Button>
-              </div>
+            <SidePanel title="Evidence inspector" onClose={() => setInspector(null)}>
+              <div className="cm-inspector-content">
               <Badge tone={inspector.tone}>{inspector.kind}</Badge>
               <h2>{inspector.evidence || inspector.kind}</h2>
               <div className="cm-inspector-byline">
@@ -2045,16 +1996,9 @@ export function CaptainWorkspace({
                 <span>{inspector.actor}</span>
                 <time>{inspector.time}</time>
               </div>
-              <p className="cm-inspector-summary">{inspector.text}</p>
-              <div className="cm-inspector-block">
-                <span className="cm-eyebrow">AFFECTED RESOURCE</span>
-                <code>
-                  {inspector.actor === "Radar"
-                    ? "deployment/checkin"
-                    : "cluster/confdb"}
-                </code>
-                <small>team-captainmorgue</small>
-              </div>
+              {!events.some((event) => event.id === inspector.id) && (
+                <p className="cm-inspector-summary">{inspector.text}</p>
+              )}
               {inspector.actor === "Radar" && (
                 <div className="cm-inspector-block">
                   <span className="cm-eyebrow">SAMPLE EVIDENCE</span>
@@ -2069,13 +2013,6 @@ export function CaptainWorkspace({
                   </p>
                 </div>
               )}
-              <div className="cm-inspector-block">
-                <span className="cm-eyebrow">WHAT THIS MEANS</span>
-                <p>
-                  Coordinate changes to check-in and confdb. Verify recovery
-                  before resolving the affected parts.
-                </p>
-              </div>
               <Button
                 onClick={() => {
                   openComposer(
@@ -2092,7 +2029,8 @@ export function CaptainWorkspace({
                 Sample evidence for design review. No external investigation is
                 opened.
               </p>
-            </aside>
+              </div>
+            </SidePanel>
           )}
         </div>
       </div>
