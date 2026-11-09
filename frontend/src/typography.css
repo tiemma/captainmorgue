@@ -1,25 +1,25 @@
 .text-title-h1 {
-  font: 500 4.5rem/5.375rem var(--cm-display);
-  letter-spacing: -0.01em;
+  font: 600 28px/36px var(--cm-display);
+  letter-spacing: -0.02em;
   text-transform: none;
 }
 
 .text-title-h2 {
-  font: 500 3.75rem/4.5rem var(--cm-display);
-  letter-spacing: -0.01em;
+  font: 600 28px/36px var(--cm-display);
+  letter-spacing: -0.02em;
   text-transform: none;
 }
 
 .text-title-h3 {
-  font: 500 3rem/3.625rem var(--cm-display);
-  letter-spacing: -0.01em;
+  font: 600 28px/36px var(--cm-display);
+  letter-spacing: -0.02em;
   text-transform: none;
 }
 
 .text-title-h4,
 .cm-foundations-brand {
-  font: 500 2.25rem/2.75rem var(--cm-display);
-  letter-spacing: -0.01em;
+  font: 600 28px/36px var(--cm-display);
+  letter-spacing: -0.02em;
   text-transform: none;
 }
 
@@ -29,8 +29,8 @@
 .cm-empty h2,
 .cm-wall .cm-page-title h1,
 .cm-type-specimen strong.cm-serif-sample {
-  font: 500 1.875rem/2.375rem var(--cm-display);
-  letter-spacing: -0.01em;
+  font: 600 28px/36px var(--cm-display);
+  letter-spacing: -0.02em;
   text-transform: none;
 }
 
@@ -42,15 +42,15 @@
 .cm-join-card h2,
 .cm-inspector-content h2,
 .cm-agent-detail-heading h2 {
-  font: 500 1.5rem/2rem var(--cm-display);
-  letter-spacing: -0.01em;
+  font: 600 20px/28px var(--cm-display);
+  letter-spacing: -0.02em;
   text-transform: none;
 }
 
 .text-label-xl,
 .cm-type-specimen strong {
-  font: 500 1.5rem/2rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 500 20px/28px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
@@ -59,8 +59,8 @@
 .cm-record-facts b,
 .cm-wall .cm-attention-content h2,
 .cm-foundation-heading h2 {
-  font: 500 1.125rem/1.625rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 500 16px/24px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
@@ -69,8 +69,8 @@
 .cm-resolved-banner h2,
 .cm-record-aside h3,
 .cm-modal > .cm-panel-heading h2 {
-  font: 500 1rem/1.5rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 500 16px/24px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
@@ -110,8 +110,8 @@
 .cm-agent-working h3,
 .cm-agent-escalation strong,
 .cm-disclosure > summary {
-  font: 500 0.875rem/1.25rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 500 14px/20px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
@@ -151,27 +151,27 @@
 .cm-agent-outgoing-ask strong,
 .cm-agent-compose-toggle > span,
 .cm-agent-crew-task strong {
-  font: 500 0.75rem/1rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 500 12px/16px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
 .text-label-xxs,
 .cm-count {
-  font: 500 0.625rem/0.75rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 500 12px/16px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
 .text-paragraph-xl {
-  font: 400 1.5rem/2rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 400 20px/28px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
 .text-paragraph-lg {
-  font: 400 1.125rem/1.625rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 400 16px/24px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
@@ -179,8 +179,8 @@
 .cm-join-quote,
 .cm-foundations > header p,
 .cm-type-specimen code {
-  font: 400 1rem/1.625rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 400 14px/20px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
@@ -226,8 +226,8 @@
 .cm-agent-human-input > p,
 .cm-agent-answer > p,
 .cm-agent-outgoing-ask p {
-  font: 400 0.875rem/1.25rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 400 14px/20px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
@@ -311,39 +311,39 @@
 .cm-agent-crew-task p,
 .cm-agent-quiet-traffic,
 .cm-disclosure > summary small {
-  font: 400 0.75rem/1rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 400 13px/20px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
 .text-paragraph-xxs {
-  font: 400 0.625rem/0.75rem var(--cm-font);
-  letter-spacing: 0.01em;
+  font: 400 12px/16px var(--cm-font);
+  letter-spacing: 0;
   text-transform: none;
 }
 
 .text-subheading-lg {
-  font: 500 1.25rem/2rem var(--cm-font);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
+  font: 500 12px/16px var(--cm-font);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .text-subheading-md {
-  font: 500 1rem/1.5rem var(--cm-font);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font: 500 12px/16px var(--cm-font);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .text-subheading-sm {
-  font: 500 0.875rem/1.25rem var(--cm-font);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font: 500 12px/16px var(--cm-font);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .text-subheading-xs {
-  font: 500 0.75rem/1rem var(--cm-font);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font: 500 12px/16px var(--cm-font);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .text-subheading-xxs,
@@ -358,9 +358,9 @@
 .cm-conflict-comparison span,
 .cm-type-specimen > div > span,
 .cm-agent-inbox-group {
-  font: 500 0.625rem/0.75rem var(--cm-font);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font: 500 12px/16px var(--cm-font);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .cm-mono,
@@ -370,4 +370,24 @@
 .cm-signal-row strong,
 .cm-nav-count {
   font-variant-numeric: tabular-nums;
+}
+
+.cm-mono,
+.cm-event-heading time,
+.cm-message-byline time,
+.cm-inspector-byline time,
+.cm-agent-tool-steps time,
+.cm-response-time,
+.cm-inspector-block > code,
+.cm-inspector-block pre,
+.cm-type-specimen code,
+.cm-swatches code {
+  font-family: var(--cm-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cm-record-facts b {
+  font: 600 20px/28px var(--cm-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }

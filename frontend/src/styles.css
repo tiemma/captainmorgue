@@ -150,7 +150,7 @@ body {
   background: #302820;
 }
 .cm-nav-item.is-active {
-  background: var(--cm-nav-surface);
+  background: var(--cm-accent-soft);
   box-shadow: none;
   color: #fffaf0;
 }
@@ -390,7 +390,7 @@ body {
 }
 .cm-tone-amber {
   color: #824716;
-  background: var(--cm-amber-soft);
+  background: var(--cm-warning-soft);
 }
 .cm-tone-danger {
   color: var(--cm-danger);
@@ -484,7 +484,7 @@ body {
   color: var(--cm-amber);
   width: 32px;
   height: 32px;
-  background: var(--cm-amber-soft);
+  background: var(--cm-warning-soft);
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -1009,7 +1009,7 @@ body {
   overflow-wrap: anywhere;
 }
 .cm-message-own .cm-message-bubble {
-  background: var(--cm-amber-soft);
+  background: var(--cm-bg-layer);
   border-color: #dac5a3;
 }
 .cm-route-receipt {
@@ -1406,7 +1406,7 @@ body {
 .cm-join-quote {
   gap: 14px;
   align-items: center;
-  color: var(--cm-brass);
+  color: var(--cm-text-sub);
   margin-top: 45px;
   display: none;
 }
@@ -1628,7 +1628,7 @@ body {
   margin: 18px 0;
 }
 .cm-close-check.has-open {
-  background: var(--cm-amber-soft);
+  background: var(--cm-warning-soft);
   color: #824716;
 }
 .cm-toast {
@@ -1676,7 +1676,7 @@ body {
   display: grid;
   place-items: center;
   background: var(--cm-layer);
-  color: var(--cm-brass);
+  color: var(--cm-text-sub);
   width: 66px;
   height: 66px;
   border: 1px solid #cdbc9b;
