@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "dash0": {
+      "type": "http",
+      "url": "https://api.us-west-2.aws.dash0.com/mcp",
+      "headers": { "Authorization": "Bearer ${DASH0_AUTH_TOKEN}" }
+    },
+    "radar": {
+      "type": "http",
+      "url": "https://api.radarhq.io/mcp"
+    }
+  }
+}

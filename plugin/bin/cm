@@ -2,6 +2,7 @@
 
 . "$(dirname "$0")/../lib.sh"
 BIN="$(cd "$(dirname "$0")" && pwd)"
+[ "$1" = doctor ] && exec "$BIN/cm-doctor"
 
 if [ -z "$CM_URL" ]; then
   echo "CM_URL is not set, so CaptainMorgue is off."
@@ -168,6 +169,6 @@ reply)
   esac
   ;;
 *)
-  echo "Usage: cm join|leave|task|status|inbox|broadcast|ask|reply"
+  echo "Usage: cm join|leave|task|status|inbox|broadcast|ask|reply|doctor"
   ;;
 esac
