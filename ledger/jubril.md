@@ -1,7 +1,7 @@
 # Jubril: wall screen
 
 ## Now
-15:04 - Building Postmortems library and document view in frontend/: parallel UI and Storybook/test worktrees. Main54c3380 still has no archive APIs; Emmanuel ask9 pending.
+15:13 - Postmortems frontend and Emmanuel live-wall polish implemented. Local service8080, preview5173 and Storybook6006 running; archive API still pending.
 
 ## Start here (from Emmanuel, 15:20)
 
@@ -40,6 +40,7 @@ env -u CM_URL scripts/e2e.sh                                       # must print 
 `CM_URL` pointing at the live service makes e2e hit production; always unset it for e2e.
 
 ## Done
+- 15:13 - Postmortems library/document/search/state stories integrated85ad7c0,4b596e7,5f7d1cd. Live wall8527101 implements Emmanuel role/task/team/claim display requests. Local service health/record and standalone preview navigation verified; frontend and Storybook builds pass; isolated service/plugin E2E ALL PASSED. Local setup documented in docs/local-development.md. All19 browser cases passed:18 in final suite plus1 rerun after concurrent trace-output collision; five Postmortems cases passed.
 - 15:02 - Sent Emmanuel (tiemma) a direct CaptainMorgue ask, seq 9, requesting ownership and API contract for the postmortem library. List plus complete historical document is the hackathon priority; frontend remains ours. Awaiting reply.
 - 15:00 - Reviewed postmortem support on main 7f93997: current-incident record exists; historical list/detail do not. Generated summary/fixed_by are stored but absent from GET record. No backend changes.
 - 14:54 - Typography (309cf23), inline panel (f61b6cb) and chronological timeline (e49a35e) integrated. Final app and static Storybook builds pass; all 14 browser tests pass, including inspector pointer/keyboard persistence, progressive disclosure, active/closed timeline and reduced motion. Desktop/mobile screenshots inspected; no overflow.
@@ -61,7 +62,7 @@ env -u CM_URL scripts/e2e.sh                                       # must print 
 - [ ] Teams view: the hard-coded team graph was removed with the demo data. If wanted, draw it from `state.teams` (teams, managers, members, `owns`).
 
 ## Blocked on
-- Full browser actions still need claim/resolve/close contracts; join, inbox, messaging and elections have now landed on main.
+- Browser resolve/close workflows and approval lifecycle still need agreed contracts. Resource claims, join, inbox, messaging, roles and elections are on main. Postmortems archive list/detail remains pending Emmanuel.
 
 ## Handing off
 - Emmanuel: taking web/index.html for your live-wall polish requests (join/digest/claim/task labels, profile details, Claims and service-driven teams) alongside the separate Postmortems frontend. Registration/Platform are the current roster; no backend changes.
