@@ -3,6 +3,18 @@
 ## Now
 Not started.
 
+## Start here (from Emmanuel, 14:35)
+The wall screen is already live-wired on `main` (`web/index.html`); you own it from here. Run it locally:
+
+```bash
+git pull
+cd service && ROSTER=../roster.yaml WEB_DIR=../web go run .      # terminal 1, http://localhost:8080
+CM_URL=http://localhost:8080 DELAY=0.5 bash scripts/replay.sh       # terminal 2, plays the demo incident
+open http://localhost:8080
+```
+
+Before every merge: `scripts/e2e.sh` must print ALL PASSED. Then do the set-up-your-agent milestone below as soon as Sammy's ledger says deployed.
+
 ## Done
 
 ## Next
