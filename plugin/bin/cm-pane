@@ -33,6 +33,8 @@ console() {
   if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
     tmux new-session -d -s "$SESSION_NAME" "$(with_env ${CM_CONSOLE_CMD:-${SHELL:-bash}})" \; \
       split-window -h -l 40% "$(with_env "$BIN/cm" pane)" \; select-pane -L || return
+  else
+    tmux respawn-pane -k -t "$SESSION_NAME:0.1" "$(with_env "$BIN/cm" pane)"
   fi
   [ -t 0 ] && [ -t 1 ] && exec tmux attach -t "$SESSION_NAME"
   echo "The console runs in tmux session $SESSION_NAME. Open it in a terminal with: tmux attach -t $SESSION_NAME"
