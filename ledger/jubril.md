@@ -1,12 +1,13 @@
 # Jubril: wall screen
 
 ## Now
-14:05 - Building local Storybook screen previews and adapting project hooks for Codex. Confirmed: full responder workspace, ivory/ink design, every responder can act in demo; Emmanuel/team owns action APIs.
+14:22 - Storybook running on :6006. Revising it to use CostGraph patterns more directly and center agent-driven conversations, with human approvals and exceptions. Emmanuel/team owns action APIs.
 
 ## Done
 - 14:00 - Drafted docs/frontend-design-plan.md on docs/frontend-design-plan after pulling main at 7ebf17f. Reviewed CostGraph live reference and local source with three research agents. No frontend implementation yet.
 
 ## Next
+- [ ] Milestone: set up on my agent once deployed, using the instructions in AGENTS.md; not completed by this frontend preview work.
 - Review Storybook against CostGraph patterns and integrate the approved design. Browser action ownership stays with Emmanuel/team; all responders may act in the demo.
 - Take over the live wall screen (merged to main from feat/web-live, renders from /stream). Check state.people objects, teams[].term and deliveries keyed by seq. Fix the truncated Ticketing and Payments label and sticky last-actor highlight.
 - Verify live record rendering and asynchronous record readiness against the latest service.

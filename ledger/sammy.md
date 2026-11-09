@@ -15,6 +15,7 @@
 - `## Before` in `STORY.md` (cluster repo).
 
 ## Next
+- [ ] **Milestone: set up on my agent** (AGENTS.md, "Milestone: set it up on your own agent") once the service is deployed: install the plugin, set the env, `/captainmorgue:join`, send and answer one ask. Tick and push when done.
 - Review and merge `feat/infra` (`26bfbe8`), after confirming the service image is published.
 - Create the hand-made `dash0` and `captainmorgue` Secrets through Radar using values supplied directly by Emmanuel; never put values in git or chat.
 - Push the cluster repo, then sync and confirm workloads healthy through Radar.
