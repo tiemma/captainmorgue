@@ -1,0 +1,102 @@
+.cm-response-content {
+  min-width: 0;
+  flex: 1;
+}
+.cm-response-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.cm-response-timeline .cm-response-heading h3 {
+  margin: 0;
+}
+.cm-response-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--cm-amber);
+  flex-shrink: 0;
+}
+.cm-response-state.is-closed {
+  color: var(--cm-success);
+}
+.cm-response-active-dot {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.cm-response-active-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0.15;
+  box-shadow: 0 0 7px currentColor;
+}
+.cm-response-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.cm-response-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 12px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 24px;
+}
+.cm-response-step:last-child {
+  padding-bottom: 0;
+}
+.cm-response-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 61px;
+  top: 12px;
+  bottom: -7px;
+  width: 1px;
+  background: var(--cm-line);
+}
+.cm-response-time {
+  color: var(--cm-muted);
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.cm-response-marker {
+  z-index: 1;
+  width: 8px;
+  height: 8px;
+  margin: 6px 2px 0;
+  border: 2px solid var(--cm-secondary);
+  border-radius: 50%;
+  background: var(--cm-paper);
+}
+.cm-response-description h4 {
+  margin: 0 0 5px;
+  color: var(--cm-ink);
+}
+.cm-response-description p {
+  margin: 0;
+  max-width: 65ch;
+  color: var(--cm-secondary);
+}
+.cm-response-step.is-pending .cm-response-marker {
+  border-color: var(--cm-amber);
+}
+.cm-response-step.is-pending h4 {
+  color: var(--cm-amber);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cm-response-active-dot::after {
+    animation: cm-response-glow 3s ease-in-out infinite;
+  }
+}
+@keyframes cm-response-glow {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.3; }
+}
