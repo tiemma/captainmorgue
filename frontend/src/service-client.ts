@@ -147,17 +147,6 @@ export interface ActionItem {
   due?: string;
 }
 
-export interface RecordSummary {
-  id: string;
-  title: string;
-  severity: string;
-  opened: string | null;
-  resolved: string | null;
-  duration: string;
-  summary: string;
-  fixed_by: string;
-}
-
 export interface IncidentRecord {
   id: string;
   title: string;
@@ -255,7 +244,7 @@ export function fetchRecord(id: string, signal?: AbortSignal) {
 }
 
 export function fetchRecords(signal?: AbortSignal) {
-  return request<RecordSummary[] | null>('/records', undefined, signal);
+  return request<IncidentRecord[] | null>('/records?full=1', undefined, signal);
 }
 
 export function setIncidentStatus(

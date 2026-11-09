@@ -375,14 +375,9 @@ export function LiveWorkspace() {
     const controller = new AbortController();
     setArchiveError("");
     fetchRecords(controller.signal)
-      .then((list) =>
-        Promise.all(
-          (list || []).map((item) => fetchRecord(item.id, controller.signal)),
-        ),
-      )
       .then((records) =>
         setArchive(
-          records.length ? records.map(recordToDocument) : SAMPLE_POSTMORTEMS,
+          records?.length ? records.map(recordToDocument) : SAMPLE_POSTMORTEMS,
         ),
       )
       .catch((reason: unknown) => {
@@ -394,7 +389,7 @@ export function LiveWorkspace() {
           );
       });
     return () => controller.abort();
-  }, [tab, state?.incident.closed, archiveAttempt]);
+  }, [tab, incidentId, state?.incident.status, state?.incident.closed, archiveAttempt]);
 
   async function moveIncident(status: "resolved" | "closed") {
     if (!incidentId || !identity || busy) return;

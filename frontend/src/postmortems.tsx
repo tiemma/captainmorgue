@@ -15,6 +15,7 @@ export type PostmortemDocument = {
   id: string;
   title: string;
   summary: string;
+  status?: string;
   resolved?: string;
   opened?: string;
   fixed_by?: string;
@@ -25,12 +26,14 @@ export type PostmortemDocument = {
 };
 
 export function recordToDocument(record: IncidentRecord): PostmortemDocument {
+  const closed = record.status === "closed";
   return {
     id: record.id,
     title: record.title,
     summary: record.summary || "",
+    status: record.status,
     opened: record.opened || undefined,
-    resolved: record.window?.closed || record.resolved || undefined,
+    resolved: closed ? record.window?.closed || record.resolved || undefined : undefined,
     fixed_by: record.fixed_by || undefined,
     parts: (record.parts || []).map((part) => ({
       name: part.name,
@@ -45,6 +48,10 @@ export function recordToDocument(record: IncidentRecord): PostmortemDocument {
     ),
     rfo: record,
   };
+}
+
+function inProgress(document: PostmortemDocument) {
+  return !!document.status && document.status !== "closed";
 }
 
 function utcTime(value?: string | null) {
@@ -311,10 +318,11 @@ export function Postmortems({
             <div className="cm-postmortem-meta text-paragraph-xs">
               <span className="cm-postmortem-id">{selected.id}</span>
               <span className={selected.resolved ? "cm-toe-tag" : undefined}>
-                <Badge tone={selected.resolved ? "success" : "neutral"}>
-                  {selected.resolved ? "Closed" : "Record"}
+                <Badge tone={selected.resolved ? "success" : inProgress(selected) ? "amber" : "neutral"}>
+                  {selected.resolved ? "Closed" : inProgress(selected) ? "In progress" : "Record"}
                 </Badge>
               </span>
+              {inProgress(selected) && <span>{selected.status}</span>}
             </div>
             <h1 ref={headingRef} tabIndex={-1} className="text-title-h5">
               {selected.title}
@@ -466,6 +474,9 @@ export function Postmortems({
                       </span>
                       <span className="cm-postmortem-meta text-paragraph-xs">
                         <span className="cm-postmortem-id">{document.id}</span>
+                        {inProgress(document) && (
+                          <Badge tone="amber">In progress</Badge>
+                        )}
                         {document.resolved && (
                           <span className="cm-postmortem-closed">
                             <span
