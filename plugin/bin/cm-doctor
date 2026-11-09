@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+. "$(dirname "$0")/../lib.sh"
+
+failed=0
+
+pass() {
+  echo "ok    $1"
+}
+
+fail() {
+  echo "FAIL  $1"
+  echo "      fix: $2"
+  failed=$((failed + 1))
+}
+
+mcp_servers() {
+  local line name rest status
+  claude mcp list 2>/dev/null | while IFS= read -r line; do
+    case $line in *": "*" - "*) ;; *) continue ;; esac
+    name=${line%%: *}
+    rest=${line#*: }
+    status=${rest##* - }
+    status=${status#* }
+    case $status in
+    Connected) ;;
+    "Needs authentication"*) status="needs authentication" ;;
+    *) status="not connected" ;;
+    esac
+    printf '%s\t%s\t%s\n' "$name" "${rest%% - *}" "$status"
+  done
+}
+
+for t in jq curl claude; do
+  if command -v "$t" >/dev/null 2>&1; then pass "$t installed"; else fail "$t missing" "install $t and put it on PATH"; fi
+done
+
+if [ -z "${CM_URL:-}" ]; then
+  fail "CM_URL is not set" "export CM_URL=https://captainmorgue.cnh.radarhq.io in your shell profile, then restart Claude Code"
+elif CM_MAX_TIME=5 api GET /healthz >/dev/null 2>&1; then
+  pass "CM_URL $CM_URL reachable"
+else
+  fail "CM_URL $CM_URL not reachable" "check the URL and your network"
+fi
+
+if poller_alive "$(cat "$CM_DIR/poll.pid" 2>/dev/null)"; then
+  pass "poller running"
+else
+  fail "poller not running" "run /captainmorgue:join"
+fi
+
+command -v claude >/dev/null 2>&1 || { echo "$failed checks failed."; exit 0; }
+
+if claude plugin list --json 2>/dev/null | jq -e 'any(.[]; (.id | startswith("captainmorgue@")) and .enabled)' >/dev/null 2>&1; then
+  pass "plugin hooks installed"
+else
+  fail "plugin hooks not installed" "/plugin install captainmorgue@captainmorgue, then restart Claude Code"
+fi
+
+connected= seen=
+while IFS=$'\t' read -r name target status; do
+  [ -n "$name" ] || continue
+  case $target in
+  *dash0.com/mcp*) fix="export DASH0_AUTH_TOKEN=<Dash0 auth token with read access> and restart Claude Code" seen="$seen dash0" ;;
+  *api.radarhq.io/mcp*) fix="run /mcp in Claude Code and sign in to $name" seen="$seen radar" ;;
+  *) fix="run /mcp in Claude Code and sign in to or reconnect $name, or claude mcp remove $name if you do not use it" ;;
+  esac
+  if [ "$status" = Connected ]; then
+    pass "MCP $name connected"
+    case $name in
+    *dash0* | *radar* | *github* | *grafana* | *signoz* | *datadog* | *pagerduty* | *incident* | *kube* | *argo*)
+      connected="$connected${connected:+, }${name##*:}"
+      ;;
+    esac
+  else
+    fail "MCP $name $status" "$fix"
+  fi
+done <<<"$(mcp_servers)"
+
+case $seen in *dash0*) ;; *) fail "Dash0 MCP not configured" "/plugin update captainmorgue@captainmorgue, then restart Claude Code" ;; esac
+case $seen in *radar*) ;; *) fail "Radar MCP not configured" "/plugin update captainmorgue@captainmorgue, then restart Claude Code" ;; esac
+
+write_file "$CM_DIR/tools" "$connected"
+echo "Connected MCP servers, incident tools sent on /captainmorgue:join: ${connected:-none}"
+if [ "$failed" = 0 ]; then echo "All checks passed."; else echo "$failed checks failed."; fi

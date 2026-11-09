@@ -43,10 +43,11 @@ When the service is deployed (Sammy's ledger says so), everyone does this once a
 
 1. In Claude Code: `/plugin marketplace add tiemma/captainmorgue`, then `/plugin install captainmorgue@captainmorgue`.
 2. In your shell profile: `export CM_URL=https://captainmorgue.cnh.radarhq.io CM_ACTOR=<your github login> CM_TEAM=<registration|platform> CM_TOKEN=<team token> CM_LEDGER=<your ledger name>`, plus optionally `CM_ROLE=<commander|responder|scribe> CM_TASK=<what you are on> CM_REPO=<repo> CM_TOOLS=<comma list>`. The team token comes from Emmanuel directly, never through git.
-3. Restart Claude Code, run `/captainmorgue:join`, then `/captainmorgue:status`.
-4. Ask someone else something with `/captainmorgue:ask @<login> ...` and answer the one you get with `/captainmorgue:reply`.
-5. Tick "Set up on my agent" in your ledger and push it. When all three are ticked, we start the rehearsal.
-6. Test messaging for real, all three together, with the runbooks in [docs/runbooks/](docs/runbooks/README.md): join and see each other, ask and reply, broadcast, busy auto-reply and escalation, silent laptop and election, conflict.
+3. Add `export DASH0_AUTH_TOKEN=<Dash0 auth token with read access>` to the same profile (see [plugin/README.md](plugin/README.md#mcp-servers)). Restart Claude Code and run `/mcp` to sign in to `radar` (skip if you already have Radar Cloud connected).
+4. Run `/captainmorgue:doctor` and fix every `FAIL` until the CaptainMorgue, hooks, `dash0` and `radar` lines are `ok` (a failing MCP server of your own is yours to fix or remove). Then `/captainmorgue:join`: it sends the MCP servers doctor found connected as your tools, unless `CM_TOOLS` is set. Then `/captainmorgue:status`.
+5. Ask someone else something with `/captainmorgue:ask @<login> ...` and answer the one you get with `/captainmorgue:reply`.
+6. Tick "Set up on my agent" in your ledger and push it. When all three are ticked, we start the rehearsal.
+7. Test messaging for real, all three together, with the runbooks in [docs/runbooks/](docs/runbooks/README.md): join and see each other, ask and reply, broadcast, busy auto-reply and escalation, silent laptop and election, conflict.
 
 ## Branches and merging
 
