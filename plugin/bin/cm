@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+
+. "$(dirname "$0")/../lib.sh"
+BIN="$(cd "$(dirname "$0")" && pwd)"
+
+if [ -z "$CM_URL" ]; then
+  echo "CM_URL is not set, so CaptainMorgue is off."
+  exit 0
+fi
+for t in jq curl; do
+  command -v "$t" >/dev/null 2>&1 || { echo "CaptainMorgue needs $t."; exit 0; }
+done
+
+fail() {
+  echo "$1 failed, see $LOG."
+  exit 0
+}
+
+read_args() {
+  args=$(cat)
+  args="${args#"${args%%[![:space:]]*}"}"
+  args="${args%"${args##*[![:space:]]}"}"
+  first="${args%%[[:space:]]*}"
+  rest="${args#"$first"}"
+  rest="${rest#"${rest%%[![:space:]]*}"}"
+}
+
+send() {
+  local to=$1 kind=$2 text=$3 reply_to=${4:-} body resp
+  if [ -z "${text//[[:space:]]/}" ]; then
+    echo "Nothing to send: add the message after the command."
+    exit 0
+  fi
+  body=$(jq -nc --arg from "$ACTOR" --arg to "$to" --arg kind "$kind" --arg text "$text" --arg r "$reply_to" '
+    {from: $from, kind: $kind, text: $text}
+    + (if $to != "" then {to: [$to]} else {} end)
+    + (if $r != "" then {reply_to: ($r | tonumber)} else {} end)')
+  resp=$(CM_MAX_TIME=5 api POST /messages "$body" 2>>"$LOG") || fail "Sending the $kind"
+  jq -r --arg kind "$kind" '"Sent \($kind) (seq \(.seq)) to \(.to // [] | join(", "))" + (if .why and .why != "" then ". Why: \(.why)" else "" end)' <<<"$resp"
+}
+
+unread_lines() {
+  [ -s "$INBOX" ] || return 0
+  jq -sr --argjson seen "$(read_seq "$SEEN")" "$JQ_DEFS"'
+    map(select(.seq > $seen and .kind != "vote_request")) | sort_by(.seq) | .[] | msgline' "$INBOX"
+}
+
+stop_poller() {
+  local pid
+  pid=$(cat "$CM_DIR/poll.pid" 2>/dev/null)
+  ps -p "${pid:-0}" -o command= 2>/dev/null | grep -q cm-poll || return 0
+  kill "$pid"
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    kill -0 "$pid" 2>/dev/null || return 0
+    sleep 0.2
+  done
+}
+
+case "$1" in
+join)
+  team=$(cat | tr -d '[:space:]')
+  stop_poller
+  resp=$(join_incident "${team:-${CM_TEAM:-}}") || fail "Joining $INCIDENT"
+  nohup "$BIN/cm-poll" </dev/null >>"$CM_DIR/poll.log" 2>&1 &
+  jq -r --arg a "$ACTOR" --arg inc "$INCIDENT" "$JQ_DEFS"'
+    "Joined \($inc) as \($a) on team \(.team), manager \(.manager | name_or_none), term \(.term // "?").",
+    "Online: " + ([.members[]? | "\(.actor) (\(.status))"] | join(", "))' <<<"$resp"
+  ;;
+leave)
+  stop_poller
+  CM_MAX_TIME=5 api POST "/incidents/$INCIDENT/leave" "$(jq -nc --arg a "$ACTOR" '{actor: $a}')" >/dev/null 2>>"$LOG" || echo "The service did not confirm the leave, see $LOG."
+  rm -f "$SESSION"
+  echo "Left $INCIDENT and stopped the poller."
+  ;;
+status)
+  read_args
+  if [ -n "$first" ]; then
+    snap=$(snapshot 3)
+    jq -r --arg w "${first#@}" "$JQ_DEFS"'
+      if (.state.teams // []) | any(.id == $w) then
+        "Team \($w), manager \([.state.teams[] | select(.id == $w) | .manager][0] | name_or_none):", (members_of($w)[] as $a | person($a; 3))
+      else person($w; 3) end' <<<"$snap"
+    exit 0
+  fi
+  if [ ! -s "$SESSION" ]; then
+    echo "Not joined. Run /captainmorgue:join."
+  else
+    snapshot 3 | jq -r --slurpfile s "$SESSION" --arg me "$ACTOR" --arg inc "$INCIDENT" "$JQ_DEFS"'
+      $s[0] as $s
+      | "\($inc): \($me) on team \($s.team), manager \($s.manager | name_or_none), term \($s.term // "?").",
+        "Team:", teammates($s; $me)'
+  fi
+  echo "Unread: $(unread_lines | wc -l | tr -d ' ')"
+  if ps -p "$(cat "$CM_DIR/poll.pid" 2>/dev/null || echo 0)" >/dev/null 2>&1; then
+    echo "Poller: running"
+  else
+    echo "Poller: stopped"
+  fi
+  ;;
+inbox)
+  lines=$(unread_lines)
+  if [ -z "$lines" ]; then
+    echo "No unread messages."
+    exit 0
+  fi
+  echo "$lines"
+  ack "$(jq -s 'map(.seq) | max' "$INBOX")"
+  ;;
+broadcast)
+  read_args
+  case "$first" in
+  @*) to=${first#@} text=$rest ;;
+  root) to=root text=$rest ;;
+  *)
+    to=$(jq -r '.team // empty' "$SESSION" 2>/dev/null)
+    to=${to:-${CM_TEAM:-root}}
+    text=$args
+    ;;
+  esac
+  send "$to" broadcast "$text"
+  ;;
+ask)
+  read_args
+  case "$first" in
+  @?*) send "${first#@}" ask "$rest" ;;
+  *) echo "Usage: /captainmorgue:ask @person-or-team <question>" ;;
+  esac
+  ;;
+reply)
+  read_args
+  case "$first" in
+  *[!0-9]* | "") echo "Usage: /captainmorgue:reply <seq> <text>" ;;
+  *) send "" reply "$rest" "$first" ;;
+  esac
+  ;;
+*)
+  echo "Usage: cm join|leave|status|inbox|broadcast|ask|reply"
+  ;;
+esac

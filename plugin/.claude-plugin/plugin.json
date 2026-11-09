@@ -1,5 +1,5 @@
 {
   "name": "captainmorgue",
   "version": "0.1.0",
-  "description": "Sends your prompts and tool calls to the CaptainMorgue incident timeline and adds /broadcast."
+  "description": "Sends your prompts and tool calls to the CaptainMorgue incident timeline and brings incident messages into your session."
 }
