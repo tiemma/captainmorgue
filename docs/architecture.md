@@ -179,13 +179,14 @@ Same shape as the CostGraph context graph: entities, aliases and typed edges, wi
 - CaptainMorgue holds the MCP connections to Dash0 and Radar. People use them through their own agent, and every read lands in the record.
 - MCP first. When MCP cannot answer, for example a bulk export or a join across sources, the model writes code against the service's API. The code runs in a sandbox, and the code itself goes into the record.
 - Deep telemetry questions go to Dash0 Agent0 through `runTask`.
+- Each incident starts one Radar AI investigation on the affected workload through the `radar-cloud` MCP server (`start_investigation` where offered, otherwise the Radar Cloud link). A short summary and the link go into the record. Judges look for this.
 - Everyone in the incident can see everything CaptainMorgue reads. Per-person limits come later.
 
 ## 11. The demo
 
 Setup: a small microservice app in `team-captainmorgue` (frontend, checkout, payments, a CloudNativePG database) with fault switches, instrumented to Dash0, team labels on every workload, the app repository with Gitar installed, and one seeded past record.
 
-1. CaptainMorgue flips a fault switch that crashes the checkout service. The restarts and retries take down the database, and payments fails next.
+1. A real issue on the conference app (one from the day, replayed from its record, or a real release that misbehaves under an Argo Rollouts canary). Fault switches are for rehearsal only; the judges ask teams not to break things on purpose. The restarts and retries take down the database, and payments fails next.
 2. Dash0 alerts. CaptainMorgue opens the incident, finds the owners and pulls in three teams. The seeded past incident shows as a match.
 3. Responders work it from Claude Code on their own laptops. The web app streams every event, the tree fills in, and relays show why each person was told.
 4. Two people act on the database at once. CaptainMorgue flags the conflict with the model's explanation.
