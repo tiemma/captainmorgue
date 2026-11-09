@@ -122,7 +122,7 @@ func (inc *Incident) conflictWith(ev Event) (Event, bool) {
 		if ev.TS.Sub(prev.TS) > conflictWindow {
 			break
 		}
-		if prev.Resource == nil || prev.Actor == ev.Actor || *prev.Resource != *ev.Resource {
+		if prev.Type == "conflict" || prev.Resource == nil || prev.Actor == ev.Actor || *prev.Resource != *ev.Resource {
 			continue
 		}
 		if !looksLikeWrite(prev) && !looksLikeWrite(ev) {
