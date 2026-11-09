@@ -5,9 +5,10 @@ Sends what you do in Claude Code to the CaptainMorgue incident timeline, and bri
 - Every prompt you submit becomes an `action` event (first 300 characters; slash commands are skipped).
 - Every Bash, Edit, Write and MCP tool call becomes an `action` event with the tool name, the command or file path, and whether it succeeded. Tool output is never sent.
 - When a command names a Kubernetes object (`kubectl rollout restart deploy/checkin -n team-captainmorgue`, `kubectl get cluster confdb`, `kubectl argo rollouts abort checkin`) or a Radar MCP call carries `kind` and `name`, the event carries a `resource`, which is what CaptainMorgue uses to spot two people acting on the same thing.
-- After `/captainmorgue:join`, a background poller (`bin/cm-poll`) sends a heartbeat every 5 s, holds `/inbox` open, keeps a local copy in `~/.captainmorgue/inbox.jsonl`, raises a desktop notification for asks, conflicts and escalations, and answers election votes on its own.
+- After `/captainmorgue:join`, a background poller (`bin/cm-poll`) sends a heartbeat every 5 s, holds `/inbox` open, keeps a local copy in `~/.captainmorgue/inbox.jsonl`, raises one kind of alert for asks, conflicts, escalations and joins, and answers election votes on its own. On macOS that alert is a dialog that stays until you press Open (brings your terminal forward) or Later, or for an hour (`CM_ALERT_SECONDS`); on Windows and Linux it is the system notification.
 - Unread messages reach Claude from that local copy on session start, on every prompt and after every tool call, and are then marked seen. Session start also briefs Claude on your team and what each teammate did last. Claude does not finish a turn while an ask, conflict or escalation is unread.
-- An ask is shown to you as it arrived; Claude asks how you want to answer, investigates in a subagent if needed, and sends the reply only after you approve it. If you do not answer within 60 s, CaptainMorgue replies with your current status.
+- New messages also appear in the chat as a CaptainMorgue line, so you see them, not only Claude.
+- An ask is shown to you verbatim and Claude asks how to answer: Reply, I am on it, Not me (route to someone), or Let my agent handle it (a subagent does the work and replies with the result). If Claude is about to stop with an ask still unanswered, it is held once to surface it, never more than once per ask. If you do not answer within 60 s, CaptainMorgue replies with your current status.
 
 | Command | What it does |
 |---|---|
@@ -19,7 +20,24 @@ Sends what you do in Claude Code to the CaptainMorgue incident timeline, and bri
 | `/captainmorgue:broadcast [@team or root] <message>` | Message your team (default), another team, or everyone |
 | `/captainmorgue:ask @person-or-team <question>` | Direct question |
 | `/captainmorgue:reply <seq> <text>` | Answer an ask |
+| `/captainmorgue:console` | Open the console: your shell beside a live CaptainMorgue pane |
 | `/captainmorgue:doctor` | Check the service, poller, hooks and every MCP server, with the fix for each failure |
+
+## Console
+
+`cm console` (or `/captainmorgue:console`) splits the terminal with tmux: your shell on the left, a live CaptainMorgue pane on the right. Inside tmux it splits the current window; otherwise it starts a tmux session `captainmorgue` running `$CM_CONSOLE_CMD` (default your shell; `CM_CONSOLE_CMD=claude` runs Claude Code there) and attaches, or tells you to `tmux attach -t captainmorgue` when started from Claude Code. Without tmux, run `plugin/bin/cm pane` in a second terminal.
+
+The pane follows your inbox as it arrives and highlights asks you have not answered. Type:
+
+| Input | What it does |
+|---|---|
+| `<seq> <text>` | Reply to that ask |
+| `<seq> on` | Reply "On it" |
+| `<seq> @who` | Route: ask @who the same question, then reply "Not me, asked @who" |
+| `b [@team or root] <text>` | Broadcast |
+| `a @who <text>` | Ask |
+| `l` | Redraw |
+| `q` | Quit |
 
 The hooks never fail your turn: with `CM_URL` unset or the service down they do nothing. Failures are logged to `~/.captainmorgue/hook.log`, the poller's output to `~/.captainmorgue/poll.log`.
 

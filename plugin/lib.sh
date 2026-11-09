@@ -5,6 +5,8 @@ INCIDENT="${CM_INCIDENT:-INC-1}"
 INBOX="$CM_DIR/inbox.jsonl"
 SEEN="$CM_DIR/seen"
 SESSION="$CM_DIR/session.json"
+ANSWERED="$CM_DIR/answered"
+HELD="$CM_DIR/held"
 
 mkdir -p "$CM_DIR"
 
@@ -58,6 +60,7 @@ join_incident() {
   write_file "$CM_DIR/cursor" "$cursor"
   write_file "$SEEN" "$cursor"
   : >"$INBOX"
+  rm -f "$ANSWERED" "$HELD"
   printf '%s\n' "$resp"
 }
 
@@ -165,7 +168,7 @@ def person($a; $n): (latest($a; $n) | map(evline) | if . == [] then ["no events 
 def teammates($s; $me): ((members_of($s.team) | if . == [] then [$s.members[]?.actor] else . end) - [$me])[] as $a | person($a; 1);
 def msgline: "- [\(.kind)] seq \(.seq) from \(.from)\(if .why and .why != "" then " (why: \(.why))" else "" end): \(.text)";
 def guidance: {
-  ask: "For each ask: show it to the person verbatim with the sender and why, and ask them how to answer. If answering needs investigation, do it in a subagent (Agent tool) so their own task is not derailed, then propose a reply. Send only after the person approves, with /captainmorgue:reply <seq> <text>. If they do not answer within 60 s, CaptainMorgue auto-replies with their current status.",
+  ask: "For each ask: stop what you are doing. Show the ask to the person verbatim (seq, sender, why, text), then ask them how to answer with the AskUserQuestion tool, one question per ask, with the options \"Reply\" (they type the answer), \"I am on it\", \"Not me, route to someone\" and \"Let my agent handle it\". Reply: send their text. I am on it: send \"On it\". Route: ask who, run /captainmorgue:ask @them with the question and who asked it, then reply \"Not me, asked @them\". Let my agent handle it: do the work in a subagent (Agent tool) so their own task is not derailed, then reply with the result. Send every answer with /captainmorgue:reply <seq> <text>, then resume what you were doing. If nobody answers within 60 s, CaptainMorgue auto-replies with their current status.",
   conflict: "For each conflict: show it to the person now and stop any risky work on that resource until they decide.",
   escalation: "For each escalation: show it to the person now.",
   digest: "For a digest: give the person this catch-up in a few lines before going on."
