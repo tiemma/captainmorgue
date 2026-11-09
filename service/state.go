@@ -133,7 +133,7 @@ func (inc *Incident) record() Record {
 	}
 	people := map[string]bool{}
 	for _, ev := range inc.events {
-		if _, ok := inc.roster.teamOf(ev.Actor); ok {
+		if inc.teamOf(ev.Actor) != "" {
 			people[ev.Actor] = true
 		}
 		if ev.Type == "conflict" {
