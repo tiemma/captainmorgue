@@ -6,6 +6,7 @@ Each responder gets an agent on their laptop, and CaptainMorgue coordinates all 
 
 ## Start here
 
+- [docs/hackathon-plan.md](docs/hackathon-plan.md): today's build. The contract, who does what, and the checkpoints. Read this first.
 - [docs/prd.md](docs/prd.md): what CaptainMorgue does, decisions so far, hackathon scope, and open questions (section 6).
 - [docs/architecture.md](docs/architecture.md): how it is built, covering components, messaging, the record and manager elections.
 - [docs/captainmorgue-map.html](docs/captainmorgue-map.html): topology diagram and UI patterns. Open it in a browser.
