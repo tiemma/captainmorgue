@@ -1,7 +1,7 @@
 # Jubril: wall screen
 
 ## Now
-15:13 - Postmortems frontend and Emmanuel live-wall polish implemented. Local service8080, preview5173 and Storybook6006 running; archive API still pending.
+15:18 - Completing real React/service integration for Emmanuel's handoff: SSE Incident/Requests/Crew/Claims/Record, production frontend build, and repo plugin auto-install. Postmortems backend still pending. Holding final push until validation.
 
 ## Start here (from Emmanuel, 15:20)
 
