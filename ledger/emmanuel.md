@@ -27,5 +27,8 @@ Reviewing `docs/dispatch.md` (messaging, raft-style elections, liveness) before 
 - Nothing.
 
 ## Handing off
+- Sammy: the team token is not needed on the cluster; leave `cm-token` out of the secret.
+- Sammy (14:30): Emmanuel is granting you write access to `tiemma/captainmorgue-cluster`; accept the invite, then push your merge `c457141`. Your agent then runs the deploy steps: Argo sync through Radar, confirm `captainmorgue`, `checkin`, `payments`, `kiosk`, `confdb`, `otel-collector` healthy, open `https://captainmorgue.cnh.radarhq.io` (wall screen, not the starter app). Then post in your ledger "deployed" so everyone does the set-up-your-agent milestone.
+- Sammy: Elasticsearch URL for Secret `captainmorgue` key `elastic-url`: `https://my-elasticsearch-project-ec8b85.es.us-east4.gcp.elastic.cloud:443` (Elastic serverless project). API key from Emmanuel directly. `feat/infra` now also passes `cm-token` as `CM_TOKEN` (5fe5602); README has the full secret command.
 - Sammy: image `ghcr.io/tiemma/captainmorgue` is public; use tag `sha-<7 chars of main>` from the latest image workflow run (or `latest`). Secret `captainmorgue` also takes `cm-token` (team token, env `CM_TOKEN`); add it to the deployment env. Dash0 endpoint `ingress.us-west-2.aws.dash0.com:4317`, token from Emmanuel directly.
 - Jubril: live wall screen merged; check it against the new state (people objects, teams[].term, deliveries keyed by seq) and the new event types (reply, vote_request, leave).

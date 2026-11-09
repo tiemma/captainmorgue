@@ -111,3 +111,45 @@ Key constraints that shape it ([dispatch.md](dispatch.md) section 2):
 - [hackathon-plan.md](hackathon-plan.md): contract, owners, checkpoints
 - [../AGENTS.md](../AGENTS.md): how we work together, hooks, ledgers
 - [demo.html](demo.html), [../design/index.html](../design/index.html): UI demo and design system
+
+## 8. Where we are at 14:45
+
+Live map: https://claude.ai/artifact/7PedKAvLJhsBNEgHT4fU64. Ranked ideas: [product-ideas.md](product-ideas.md).
+
+### Done
+
+- Service live at `https://captainmorgue.cnh.radarhq.io`: events, stream, record, conflict rule, join, inbox, heartbeat, elections, asks, broadcasts, 60 s auto-reply. Claude is connected.
+- Wall screen served from the same URL, fed by `/stream`.
+- Plugin on `main`: join, leave, status @person, inbox, broadcast, ask, reply, poller, inject hooks.
+- `scripts/e2e.sh` passes locally (8 checks) and against the live URL (4 checks; liveness, election and auto-reply need short timings, so they run locally only).
+- Cluster on `main` via Argo: checkin x2, kiosk, confdb, otel-collector, captainmorgue. Images build on every push.
+- Team token dropped for the hackathon.
+
+### Integrations, verified on the live cluster
+
+| Integration | State | Evidence | To get it running | Owner |
+|---|---|---|---|---|
+| Claude | Working | service log `claude=true` | nothing | |
+| Elasticsearch | **Not working** | service log: `check index cm-events: ... status code: 401`; the incident is kept in memory only | Create an API key in the serverless project `my-elasticsearch-project-ec8b85` with write on `cm-*`, put it in Secret `captainmorgue` key `elastic-api-key`, restart `captainmorgue`. Check: the log line should read `elasticsearch=true` | Sammy |
+| Dash0 | **Not working** | collector log: `Unauthenticated ... invalid authentication token` and `authentication token is blocked`; the token on the cluster is not the one Emmanuel verified | Recreate Secret `dash0` with Emmanuel's verified token and endpoint `ingress.us-west-2.aws.dash0.com:4317`, restart `otel-collector`. Check: no `Exporting failed` lines, and checkin traces visible in Dash0 | Emmanuel gives Sammy the token |
+| Dash0 alert opens the incident | Not built | | Dash0 check rule on checkin error rate, webhook to `POST /events` with a `kind: alert` event | Emmanuel |
+| Gitar | **Not exercised** | both repos have 0 pull requests; we push straight to `main` | Install Gitar on `tiemma/captainmorgue-cluster`, make the canary change to checkin as a PR, let Gitar review it, merge, Argo rolls it out | Sammy |
+| Radar | Working | cluster visible as `captainmorgue`; pods, logs and changes readable | Use Radar AI investigation on the canary in the demo | Sammy |
+| payments | Degraded | Running, not ready: Postgres refuses connections | Fix DB host or credentials | Sammy |
+
+### Left before 17:30
+
+1. Elasticsearch and Dash0 credentials fixed (above). Without them there is no recall, no stored record, and no telemetry story.
+2. All three on their own agents: the milestone in AGENTS.md. Rehearsal starts when all three tick.
+3. Canary release on checkin as a Gitar-reviewed PR; Dash0 sees the regression; Radar investigates.
+4. Dash0 alert opens the incident instead of opening it by hand.
+5. Plugin auto-install from repo settings (Jubril).
+6. Rehearsal with a screen recording, then the story.
+
+### Pieces we can add (from [product-ideas.md](product-ideas.md))
+
+1. Claim before any cluster write: a second agent's write is blocked with the holder's name. 1.5 h.
+2. Manager approval for destructive actions through the inbox. 1.5-2 h.
+3. Join catch-up digest from the record. 1 h.
+4. Recall on open from Elasticsearch, once storage works. 1 h.
+5. Agent card at join: role, repo, tools, resources touched, so the router picks the person whose agent can act. About 1 h for the slice.

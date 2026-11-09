@@ -3,6 +3,18 @@
 ## Now
 14:22 - Storybook running on :6006. Revising it to use CostGraph patterns more directly and center agent-driven conversations, with human approvals and exceptions. Emmanuel/team owns action APIs.
 
+## Start here (from Emmanuel, 14:35)
+The wall screen is already live-wired on `main` (`web/index.html`); you own it from here. Run it locally:
+
+```bash
+git pull
+cd service && ROSTER=../roster.yaml WEB_DIR=../web go run .      # terminal 1, http://localhost:8080
+CM_URL=http://localhost:8080 DELAY=0.5 bash scripts/replay.sh       # terminal 2, plays the demo incident
+open http://localhost:8080
+```
+
+Before every merge: `scripts/e2e.sh` must print ALL PASSED. Then do the set-up-your-agent milestone below as soon as Sammy's ledger says deployed.
+
 ## Done
 - 14:34 - Local Storybook runs at :6006; app and static Storybook builds pass. Screen/setup commits f4d43d7 and 7a189d2 on docs/frontend-design-plan. Browser checks initially 5/6; dialog focus fix and agent-first redesign in progress.
 - 14:34 - Pulled main through bfcb853; coordination, receive plugin and live-wall handoff reviewed.
@@ -10,6 +22,7 @@
 - 14:00 - Drafted docs/frontend-design-plan.md on docs/frontend-design-plan after pulling main at 7ebf17f. Reviewed CostGraph live reference and local source with three research agents. No frontend implementation yet.
 
 ## Next
+- [ ] **Install the plugin automatically** (from Emmanuel, 14:40). Today each person runs `/plugin marketplace add` and `/plugin install` by hand. Make it automatic: in `.claude/settings.json` of this repo and of `tiemma/captainmorgue-cluster`, add `extraKnownMarketplaces` (`captainmorgue` -> GitHub `tiemma/captainmorgue`) and `enabledPlugins` (`"captainmorgue@captainmorgue": true`), so anyone who opens either repo in Claude Code and trusts it is offered the plugin. Check the exact keys in the Claude Code settings docs, test it in a fresh clone, and update the milestone steps in AGENTS.md.
 - [ ] Milestone: set up on my agent once deployed, using the instructions in AGENTS.md; not completed by this frontend preview work.
 - Review Storybook against CostGraph patterns and integrate the approved design. Browser action ownership stays with Emmanuel/team; all responders may act in the demo.
 - Take over the live wall screen (merged to main from feat/web-live, renders from /stream). Check state.people objects, teams[].term and deliveries keyed by seq. Fix the truncated Ticketing and Payments label and sticky last-actor highlight.
