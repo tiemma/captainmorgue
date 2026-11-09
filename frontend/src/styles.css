@@ -1,3 +1,7 @@
+body {
+  margin: 0;
+}
+
 .cm-app,
 .cm-foundations {
   box-sizing: border-box;
@@ -48,6 +52,11 @@
 }
 .cm-app a {
   color: inherit;
+}
+.cm-event p,
+.cm-attention p,
+.cm-inspector-summary {
+  overflow-wrap: anywhere;
 }
 .cm-sidebar {
   width: 238px;

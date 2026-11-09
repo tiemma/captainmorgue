@@ -202,7 +202,11 @@ export function CaptainWorkspace({
   const [conflictDecision, setConflictDecision] = useState("");
   const [inspector, setInspector] = useState<PreviewEvent | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [scope, setScope] = useState("Platform team");
+  const [scopes, setScopes] = useState<Record<string, string>>({
+    "Database coordination": "Platform team",
+    "Payment verification": "Emmanuel",
+    "Incident broadcast": "All responders",
+  });
   const [sent, setSent] = useState<
     { text: string; scope: string; thread: string }[]
   >([]);
@@ -215,6 +219,10 @@ export function CaptainWorkspace({
   const [filter, setFilter] = useState("All activity");
   const [selectedThread, setSelectedThread] = useState("Database coordination");
   const draft = drafts[selectedThread] ?? "";
+  const scope = scopes[selectedThread];
+  function setScope(value: string) {
+    setScopes((current) => ({ ...current, [selectedThread]: value }));
+  }
   function setDraft(value: string) {
     setDrafts((current) => ({ ...current, [selectedThread]: value }));
   }
@@ -254,13 +262,16 @@ export function CaptainWorkspace({
   }
   function chooseThread(next: string) {
     setSelectedThread(next);
-    setScope(
-      next === "Payment verification"
-        ? "Emmanuel"
-        : next === "Incident broadcast"
-          ? "All responders"
-          : "Platform team",
-    );
+  }
+  function openComposer(thread: string, recipient: string, prefill = "") {
+    if (drafts[thread]?.trim()) {
+      notify("Your existing draft and its recipients have been kept.");
+    } else {
+      setScopes((current) => ({ ...current, [thread]: recipient }));
+      setDrafts((current) => ({ ...current, [thread]: prefill }));
+    }
+    chooseThread(thread);
+    navigate("messages");
   }
   function toggleWall() {
     if (wall) {
@@ -1289,12 +1300,16 @@ export function CaptainWorkspace({
                                 </span>
                                 <Button
                                   onClick={() => {
-                                    setScope(
+                                    openComposer(
+                                      person.name === "Emmanuel"
+                                        ? "Payment verification"
+                                        : person.name === "Sammy"
+                                          ? "Database coordination"
+                                          : "Incident broadcast",
                                       person.name === "Jubril"
                                         ? "All responders"
                                         : person.name,
                                     );
-                                    navigate("messages");
                                   }}
                                 >
                                   <MessageSquare size={14} />
@@ -1553,12 +1568,11 @@ export function CaptainWorkspace({
               </div>
               <Button
                 onClick={() => {
-                  setScope("All responders");
-                  if (!draft.trim())
-                    setDraft(
-                      `Regarding ${inspector.evidence || inspector.kind}: `,
-                    );
-                  navigate("messages");
+                  openComposer(
+                    "Incident broadcast",
+                    "All responders",
+                    `Regarding ${inspector.evidence || inspector.kind}: `,
+                  );
                 }}
               >
                 <MessageSquare size={15} />
