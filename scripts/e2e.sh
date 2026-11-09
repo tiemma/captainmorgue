@@ -23,7 +23,7 @@ check() {
 
 if [ -z "${CM_URL:-}" ]; then
   (cd "$root/service" && go build -o "$work/cm" .) || exit 1
-  CM_TOKEN=$token PORT=$port ROSTER="$root/roster.yaml" WEB_DIR="$root/web" \
+  CM_TOKEN=$token ANTHROPIC_API_KEY= ELASTIC_URL= PORT=$port ROSTER="$root/roster.yaml" WEB_DIR="$root/web" \
     CM_SUSPECT_AFTER=3s CM_OFFLINE_AFTER=6s CM_ASK_TIMEOUT=8s "$work/cm" >"$work/service.log" 2>&1 &
   svc=$!
   export CM_URL=http://localhost:$port CM_TOKEN=$token
@@ -127,6 +127,31 @@ if [ -n "${short:-}" ]; then
   check "returning member gets a digest naming the unanswered ask" 'as ben platform inbox | sed -n "/\[digest\]/,\$p" | grep -q "Are you there"'
 else
   echo "SKIP liveness, election and auto-reply (needs short timings; run without CM_URL)"
+fi
+
+if [ -n "${short:-}" ]; then
+  echo 'investigating checking checkin' | as gus registration status-set >/dev/null
+  echo 'sev2' | as gus registration status-set >/dev/null
+  echo 'mitigated rolled back checkin' | as ben platform status-set >/dev/null
+  refused=$(echo 'resolved' | as gus registration status-set)
+  s=$(state)
+  check "anyone moves the incident to investigating and mitigated, and sets severity" '[ "$(jq -r ".incident.status + \" \" + .incident.severity" <<<"$s")" = "mitigated sev2" ]'
+  check "only the commander may resolve" 'grep -q "only the commander" <<<"$refused"'
+  echo 'Radar investigation: checkin OOMKilled after the 2.3 release' | as dana registration note >/dev/null
+  echo '@ben Add a memory alert on checkin' | as dana registration action >/dev/null
+  pr=https://github.com/tiemma/captainmorgue-cluster/pull/99
+  echo "$pr checkin" | as dana registration pr >/dev/null
+  check "pull request shows in state" 'jq -e --arg u "$pr" ".prs[] | select(.service == \"checkin\" and .url == \$u and .author == \"dana\")" <<<"$(state)" >/dev/null'
+  check "fix points to the open pull request instead of opening another" 'echo "checkin raise the memory limit" | as dev platform fix | grep -q "already open in INC-1: $pr"'
+  echo 'resolved' | as dana registration status-set >/dev/null
+  echo 'Rolled back checkin and raised its memory limit' | as dana registration close >/dev/null
+  sleep 3
+  rec=$(curl -s "$CM_URL/record/INC-1")
+  check "close writes the RFO from events" 'jq -e ".status == \"closed\" and .written_by == \"captainmorgue\" and (.root_cause | test(\"OOMKilled\")) and .window.mitigated != null and .window.resolved != null and (.timeline | length) > 0 and (.went_well | length) > 0 and (.errors | length) > 0" <<<"$rec" >/dev/null'
+  check "RFO lists the pull request and the action item with an owner and due hint" 'jq -e --arg u "$pr" "(.remediation[0].url == \$u) and (.action_items[] | select(.owner == \"ben\" and .due == \"within 1 week\"))" <<<"$rec" >/dev/null'
+  check "action item owner gets it in their inbox" 'as ben platform inbox | grep -A3 "\[action\]" | grep -q "Add a memory alert on checkin"'
+  check "status lists action items after close" 'as ben platform status </dev/null | grep -q "@ben: Add a memory alert on checkin"'
+  check "RFO served as markdown" 'curl -s "$CM_URL/record/INC-1.md" | grep -q "^## Action items" && curl -s "$CM_URL/record/INC-1.md" | grep -q "checkin: $pr"'
 fi
 
 [ "$fails" -eq 0 ] && echo "ALL PASSED" || { echo "$fails FAILED"; [ -f "$work/service.log" ] && tail -20 "$work/service.log"; exit 1; }

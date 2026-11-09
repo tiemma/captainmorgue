@@ -30,7 +30,7 @@ type Envelope struct {
 var envelopePriority = map[string]string{
 	"ask": "interrupt", "page": "interrupt", "conflict": "interrupt", "vote_request": "interrupt", "escalation": "interrupt",
 	"broadcast": "inject", "relay": "inject", "election": "inject", "autoreply": "inject", "reply": "inject", "join": "inject", "digest": "inject",
-	"alert": "inject", "recovered": "inject",
+	"alert": "inject", "recovered": "inject", "action": "inject",
 }
 
 var trackedKinds = map[string]bool{"ask": true, "page": true, "broadcast": true, "relay": true, "conflict": true}
