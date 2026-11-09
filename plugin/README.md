@@ -11,9 +11,10 @@ Sends what you do in Claude Code to the CaptainMorgue incident timeline, and bri
 
 | Command | What it does |
 |---|---|
-| `/captainmorgue:join [team]` | Join the incident and start the poller |
+| `/captainmorgue:join [team] [role] [task]` | Join the incident and start the poller. Role is `commander`, `responder` (default) or `scribe`; one commander per incident, the first to claim it. Team managers are elected, not chosen |
+| `/captainmorgue:task <text>` | Tell the incident what you are working on now |
 | `/captainmorgue:leave` | Leave and stop the poller |
-| `/captainmorgue:status [@person or team]` | Your team, manager, term, teammates and unread count; or someone's status and latest events |
+| `/captainmorgue:status [@person or team]` | Your team, manager, term, commander, teammates and unread count; or someone's status, role, task, repo, tools and latest events |
 | `/captainmorgue:inbox` | Show unread messages and mark them seen |
 | `/captainmorgue:broadcast [@team or root] <message>` | Message your team (default), another team, or everyone |
 | `/captainmorgue:ask @person-or-team <question>` | Direct question |
@@ -49,9 +50,13 @@ export CM_URL=https://captainmorgue.cnh.radarhq.io
 export CM_ACTOR=<your GitHub login, as in roster.yaml>
 export CM_TEAM=<your team id from roster.yaml>
 export CM_TOKEN=<the team token>
+export CM_ROLE=<commander|responder|scribe>
+export CM_TASK=<what you are working on>
+export CM_REPO=<the repo you work in>
+export CM_TOOLS=<tools you have connected, comma separated>
 ```
 
-With `CM_URL` unset the plugin does nothing. `CM_TEAM` is optional; the service looks it up from the roster. `CM_TOKEN` is sent as `Authorization: Bearer` on every call. `CM_INCIDENT` defaults to `INC-1`.
+With `CM_URL` unset the plugin does nothing. `CM_TEAM` is optional; the service looks it up from the roster. `CM_TOKEN` is sent as `Authorization: Bearer` on every call. `CM_INCIDENT` defaults to `INC-1`. `CM_ROLE`, `CM_TASK`, `CM_REPO` and `CM_TOOLS` are sent at join and shown to everyone; arguments to `/captainmorgue:join` override role and task.
 
 Then run `/captainmorgue:join` once in Claude Code. Outside Claude Code the same commands are `plugin/bin/cm join`, `plugin/bin/cm status`, and so on, with arguments on stdin.
 

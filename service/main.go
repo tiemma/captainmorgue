@@ -43,6 +43,7 @@ func main() {
 	mux.HandleFunc("POST /incidents/{id}/join", inc.handleJoin)
 	mux.HandleFunc("POST /incidents/{id}/leave", inc.handleLeave)
 	mux.HandleFunc("POST /incidents/{id}/vote", inc.handleVote)
+	mux.HandleFunc("POST /incidents/{id}/task", inc.handleTask)
 	mux.HandleFunc("POST /heartbeat", inc.handleHeartbeat)
 	mux.HandleFunc("GET /inbox/{actor}", inc.handleInbox)
 	mux.HandleFunc("POST /inbox/{actor}/ack", inc.handleAck)

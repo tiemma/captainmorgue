@@ -44,11 +44,18 @@ state() { curl -s -N --max-time 2 "$CM_URL/stream" | grep '^data' | tail -1 | se
 
 [ -n "${short:-}" ] && check "unauthenticated write is rejected" '[ "$(curl -s -o /dev/null -w %{http_code} -X POST "$CM_URL/heartbeat" -d "{\"actor\":\"dana\"}")" = 401 ]'
 
-as dana registration join </dev/null >"$work/join-dana"
-as gus registration join </dev/null >/dev/null
+echo 'commander Restore check-in at Hall B' | CM_REPO=conference CM_TOOLS='kubectl, radar' as dana registration join >"$work/join-dana"
+echo 'commander' | as gus registration join >"$work/join-gus"
 as ben platform join </dev/null >/dev/null
 as dev platform join </dev/null >/dev/null
 check "first to join manages the team" 'grep -q "manager dana" "$work/join-dana"'
+check "only one commander per incident" 'grep -q "Commander is already dana; you joined as responder" "$work/join-gus"'
+
+echo '@dana' | as ben platform status >"$work/status-dana"
+check "role and profile visible to another member" 'grep -q "(online, team registration, commander, team manager)" "$work/status-dana" && grep -q "repo: conference; tools: kubectl, radar" "$work/status-dana" && grep -q "working on: Restore check-in at Hall B" "$work/status-dana"'
+
+echo 'Rolling back checkin' | as dana registration task >/dev/null
+check "task update visible to another member" 'echo registration | as dev platform status | grep -q "working on: Rolling back checkin"'
 
 echo '@dana Is confdb failing over?' | as gus registration ask >/dev/null
 sleep 3

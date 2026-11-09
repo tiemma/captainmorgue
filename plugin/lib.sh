@@ -50,7 +50,9 @@ ack() {
 join_incident() {
   local resp cursor
   resp=$(CM_MAX_TIME=5 api POST "/incidents/$INCIDENT/join" \
-    "$(jq -nc --arg a "$ACTOR" --arg t "$1" '{actor: $a} + (if $t != "" then {team: $t} else {} end)')" 2>>"$LOG") || return 1
+    "$(jq -nc --arg a "$ACTOR" --arg t "$1" --arg role "$2" --arg task "$3" --arg repo "${CM_REPO:-}" --arg tools "${CM_TOOLS:-}" '
+      {actor: $a, role: $role, task: $task, repo: $repo, tools: ($tools | [splits(",") | gsub("^\\s+|\\s+$"; "") | select(. != "")])}
+      + (if $t != "" then {team: $t} else {} end)')" 2>>"$LOG") || return 1
   cursor=$(jq -r '.cursor // 0' <<<"$resp")
   write_file "$SESSION" "$resp"
   write_file "$CM_DIR/cursor" "$cursor"
@@ -149,9 +151,17 @@ def team_of($a): (.state.people[$a] | objects | .team) // ([.state.teams[]? | se
 def members_of($t): [.state.teams[]? | select(.id == $t) | (.manager | strings | select(. != "")), .members[]?] | unique;
 def latest($a; $n): [.events[] | select(.actor == $a)] | .[-$n:];
 def evline: "\(.ts // "" | .[11:16]) \(.type): \(.text)";
+def manages($a): any(.state.teams[]?; .manager == $a);
+def prof($a): (.state.people[$a] | objects) // {};
+def roles($a): (prof($a).role // "responder") + (if manages($a) then ", team manager" else "" end);
+def task_of($a): prof($a).task // "" | if . == "" then "not set" else . end;
+def kit($a): prof($a) | [(.repo // "" | select(. != "") | "repo: \(.)"), (.tools // [] | select(. != []) | "tools: \(join(", "))")] | join("; ");
+def commander: [.state.people // {} | to_entries[] | select(.value | objects | .role == "commander") | .key][0] | name_or_none;
 def person($a; $n): (latest($a; $n) | map(evline) | if . == [] then ["no events yet"] else . end) as $lines
-  | "- \($a) (\(status_of($a)), team \(team_of($a)))"
-    + (if $n == 1 then ": " + $lines[0] else "\n" + ($lines | map("    " + .) | join("\n")) end);
+  | "- \($a) (\(status_of($a)), team \(team_of($a)), \(roles($a)))",
+    "    working on: \(task_of($a))",
+    (kit($a) | select(. != "") | "    " + .),
+    ($lines[] | "    " + .);
 def teammates($s; $me): ((members_of($s.team) | if . == [] then [$s.members[]?.actor] else . end) - [$me])[] as $a | person($a; 1);
 def msgline: "- [\(.kind)] seq \(.seq) from \(.from)\(if .why and .why != "" then " (why: \(.why))" else "" end): \(.text)";
 def guidance: {
