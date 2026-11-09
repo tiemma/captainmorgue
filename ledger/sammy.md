@@ -1,7 +1,7 @@
 # Sammy: cluster, Radar and the story
 
 ## Now
-Emmanuel's infra handoff is complete. Sammy is online in the fresh INC-1 incident with Jubril (`s1ntaxe770r`); the fault/telemetry rehearsal is in progress, while the fault PR and Dash0 rule application remain permission-gated.
+Emmanuel's infra handoff is complete. PR #1 is merged and public `main` deployed at `a7e8589`; Sammy is online again after the deployment reset, while the live fault/Dash0 verification is pending Radar access and the Dash0 rules token.
 
 ## Done
 - Pulled latest private repo (`1dfb941`) and cluster repo (`e3ea5b2`) on public `main`.
@@ -42,9 +42,11 @@ Emmanuel's infra handoff is complete. Sammy is online in the fresh INC-1 inciden
 - Completed the safe coordination portion of runbooks 01-06: Sammy joined, set the rehearsal task, broadcast to Platform, and recorded the non-destructive conflict action; asked Jubril to run the teammate-side steps.
 - Verified the current incident record persists the new rehearsal events; this confirms the live record path but does not prove Elasticsearch logs `elasticsearch=true`.
 - Public story update pushed in `captainmorgue-cluster` commit `8b85902`.
+- Emmanuel merged PR #1; pulled public `main` through `c3cb01a`, confirmed deploy commit `a7e8589`, rendered the manifests successfully, and verified the public `/healthz` endpoint returns 200.
+- Repaired the poller to reset its cursor and automatically rejoin after a service/deployment restart; verified Sammy online in the post-deploy INC-1.
 
 ## Next
-- [ ] Emmanuel: review/merge public cluster PR #1 (`feat/fault-injection`) and grant/trigger Gitar on `tiemma/captainmorgue-cluster`; Sammy does not have the required repository permissions.
+- [x] Emmanuel: review/merge public cluster PR #1 (`feat/fault-injection`) and trigger Gitar on `tiemma/captainmorgue-cluster`.
 - [ ] Apply the five Dash0 rules and webhook from public branch `feat/dash0-checks` after a Dash0 rules/channel API token is supplied; the existing Radar `dash0` Secret is only the collector credential.
 - [ ] Verify the deployed fault switch and Dash0 traces after PR #1 lands; current live check-in pods are still on the pre-fault-switch image.
 - [ ] Ask Emmanuel to verify CaptainMorgue logs for `elasticsearch=true`; the public health/record test passed but Sammy lacks Radar log permissions.

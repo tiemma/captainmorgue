@@ -1,5 +1,5 @@
 {
   "name": "captainmorgue",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Sends your prompts and tool calls to the CaptainMorgue incident timeline and brings incident messages into your session."
 }

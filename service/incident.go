@@ -42,11 +42,14 @@ type Event struct {
 	ExitCode   *int       `json:"exit_code,omitempty"`
 	DurationMS int64      `json:"duration_ms,omitempty"`
 	Cwd        string     `json:"cwd,omitempty"`
+	Status     string     `json:"status,omitempty"`
+	Severity   string     `json:"severity,omitempty"`
 }
 
 var eventTypes = map[string]bool{
 	"alert": true, "action": true, "decision": true, "relay": true, "conflict": true,
 	"investigation": true, "signal": true, "ship": true, "join": true, "close": true,
+	"note": true, "action_item": true, "pr": true,
 }
 
 var readVerbs = []string{"get ", "describe", "read", "checked", "logs", "list", "query"}
@@ -69,6 +72,7 @@ type Incident struct {
 	subs      map[chan sseMessage]struct{}
 	pastMatch *PastMatch
 	written   *writtenRecord
+	writtenBy string
 	matchReq  chan struct{}
 	coord     coord
 	claims    map[string]*Claim

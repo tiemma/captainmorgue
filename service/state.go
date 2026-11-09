@@ -4,19 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 )
 
 type IncidentSummary struct {
-	ID     string     `json:"id"`
-	Title  string     `json:"title"`
-	Status string     `json:"status"`
-	Opened *time.Time `json:"opened"`
-	Closed *time.Time `json:"closed"`
+	ID       string     `json:"id"`
+	Title    string     `json:"title"`
+	Status   string     `json:"status"`
+	Severity string     `json:"severity"`
+	Opened   *time.Time `json:"opened"`
+	Closed   *time.Time `json:"closed"`
 }
 
 type TeamState struct {
@@ -62,20 +65,25 @@ type State struct {
 	PastMatch *PastMatch        `json:"past_match"`
 	Claims    []Claim           `json:"claims"`
 	Commander string            `json:"commander"`
+	PRs       []PR              `json:"prs"`
+	Repos     map[string]Repo   `json:"repos"`
 
 	Deliveries map[int]map[string]string `json:"deliveries"`
 }
 
 func (inc *Incident) state() State {
 	now := time.Now().UTC()
+	status, severity := inc.lifecycleStatus()
 	s := State{
-		Incident:  IncidentSummary{ID: inc.id, Title: inc.title, Status: "open"},
+		Incident:  IncidentSummary{ID: inc.id, Title: inc.title, Status: status, Severity: severity},
 		People:    inc.people(now),
 		Parts:     []Part{},
 		Signals:   maps.Clone(inc.signals),
 		PastMatch: inc.pastMatch,
 		Claims:    inc.activeClaims(now),
 		Commander: inc.coord.commander,
+		PRs:       inc.prs(),
+		Repos:     inc.roster.Services,
 
 		Deliveries: inc.coord.deliveries,
 	}
@@ -93,13 +101,12 @@ func (inc *Incident) state() State {
 		}
 		switch ev.Type {
 		case "open":
-			s.Incident.Status, s.Incident.Opened, s.Incident.Closed = "open", &ev.TS, nil
+			s.Incident.Opened, s.Incident.Closed = &ev.TS, nil
 		case "relay", "broadcast":
 			s.Relay = &Relay{From: ev.Actor, To: ev.To, Text: ev.Text, Why: ev.Why}
 		case "conflict":
 			s.Conflict = ev
 		case "close":
-			s.Incident.Status = "resolved"
 			s.Incident.Closed = &ev.TS
 		}
 	}
@@ -115,31 +122,65 @@ type Improvement struct {
 	Text  string `json:"text"`
 	Owner string `json:"owner"`
 	Link  string `json:"link"`
+	Due   string `json:"due"`
 }
 
 type Record struct {
-	ID           string        `json:"id"`
-	Title        string        `json:"title"`
-	Opened       *time.Time    `json:"opened"`
-	Resolved     *time.Time    `json:"resolved"`
-	Duration     string        `json:"duration"`
-	People       int           `json:"people"`
-	Teams        int           `json:"teams"`
-	Conflicts    int           `json:"conflicts"`
-	Parts        []RecordPart  `json:"parts"`
-	Improvements []Improvement `json:"improvements"`
-	PastMatch    *PastMatch    `json:"past_match"`
-	Events       []Event       `json:"events"`
+	ID                  string        `json:"id"`
+	Title               string        `json:"title"`
+	Status              string        `json:"status"`
+	Severity            string        `json:"severity"`
+	WrittenBy           string        `json:"written_by"`
+	Opened              *time.Time    `json:"opened"`
+	Resolved            *time.Time    `json:"resolved"`
+	Duration            string        `json:"duration"`
+	Window              Window        `json:"window"`
+	People              int           `json:"people"`
+	Teams               int           `json:"teams"`
+	Conflicts           int           `json:"conflicts"`
+	Summary             string        `json:"summary"`
+	FixedBy             string        `json:"fixed_by"`
+	RootCause           string        `json:"root_cause"`
+	ContributingFactors []string      `json:"contributing_factors"`
+	Timeline            []Moment      `json:"timeline"`
+	WentWell            []string      `json:"went_well"`
+	WentBadly           []string      `json:"went_badly"`
+	Errors              []Moment      `json:"errors"`
+	Remediation         []PR          `json:"remediation"`
+	ActionItems         []Improvement `json:"action_items"`
+	Improvements        []Improvement `json:"improvements"`
+	Steps               []StepGroup   `json:"steps"`
+	Changes             []Step        `json:"changes"`
+	Parts               []RecordPart  `json:"parts"`
+	PastMatch           *PastMatch    `json:"past_match"`
+	Events              []Event       `json:"events"`
 }
 
 func (inc *Incident) record() Record {
-	s := inc.state()
-	rec := Record{
-		ID: inc.id, Title: inc.title, Opened: s.Incident.Opened, Resolved: s.Incident.Closed,
-		Parts: []RecordPart{}, Improvements: []Improvement{}, PastMatch: inc.pastMatch, Events: inc.events,
+	status, severity := inc.lifecycleStatus()
+	win := window(inc.events)
+	written, by := fallbackRecord(inc.title, inc.events), captainMorgue
+	if inc.written != nil && status == "closed" {
+		written, by = *inc.written, inc.writtenBy
 	}
-	if inc.written != nil {
-		rec.Parts, rec.Improvements = inc.written.Parts, inc.written.Improvements
+	rec := Record{
+		ID: inc.id, Title: inc.title, Status: status, Severity: severity, WrittenBy: by,
+		Opened: win.Opened, Resolved: win.Resolved, Duration: win.Duration, Window: win,
+		Summary: written.Summary, FixedBy: written.FixedBy, RootCause: written.RootCause, ContributingFactors: written.ContributingFactors,
+		Timeline:    moments(inc.events, func(ev Event) bool { return keyEvents[ev.Type] }),
+		WentWell:    written.WentWell,
+		WentBadly:   written.WentBadly,
+		Errors:      incidentErrors(inc.events),
+		Remediation: inc.prs(),
+		ActionItems: explicitActionItems(inc.events, severity),
+		Parts:       written.Parts, PastMatch: inc.pastMatch, Events: inc.events,
+	}
+	rec.Steps, rec.Changes = steps(inc.events)
+	for _, a := range written.Improvements {
+		if a.Due == "" {
+			a.Due = dueBySeverity[severity]
+		}
+		rec.ActionItems = append(rec.ActionItems, a)
 	}
 	people := map[string]bool{}
 	for _, ev := range inc.events {
@@ -152,60 +193,113 @@ func (inc *Incident) record() Record {
 	}
 	rec.People = len(people)
 	rec.Teams = len(inc.teamsInIncident())
-	if rec.Opened != nil && rec.Resolved != nil {
-		rec.Duration = fmt.Sprintf("%d min", int(rec.Resolved.Sub(*rec.Opened).Minutes()))
-	}
+	rec.Improvements = rec.ActionItems
 	return rec
 }
 
 func (inc *Incident) handleRecord(w http.ResponseWriter, r *http.Request) {
-	if r.PathValue("id") != inc.id {
-		http.Error(w, "no such incident", http.StatusNotFound)
+	id, asMarkdown := strings.CutSuffix(r.PathValue("id"), ".md")
+	var rec Record
+	if id == inc.id {
+		inc.mu.Lock()
+		rec = inc.record()
+		inc.mu.Unlock()
+	} else {
+		stored, err := inc.storedRecord(r.Context(), id)
+		if err != nil {
+			slog.Error("read stored record", "id", id, "err", err)
+			http.Error(w, "the record could not be read", http.StatusBadGateway)
+			return
+		}
+		if stored == nil {
+			http.Error(w, "no such incident", http.StatusNotFound)
+			return
+		}
+		rec = *stored
+	}
+	if asMarkdown {
+		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		if _, err := io.WriteString(w, rec.markdown()); err != nil {
+			slog.Debug("write record markdown", "err", err)
+		}
 		return
 	}
-	inc.mu.Lock()
-	rec := inc.record()
-	inc.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(rec); err != nil {
 		slog.Debug("write record", "err", err)
 	}
 }
 
+func (inc *Incident) storedRecord(ctx context.Context, id string) (*Record, error) {
+	if inc.store == nil {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, esTimeout)
+	defer cancel()
+	return inc.store.getRecord(ctx, id)
+}
+
+func (inc *Incident) handleRecords(w http.ResponseWriter, r *http.Request) {
+	inc.mu.Lock()
+	rec := inc.record()
+	inc.mu.Unlock()
+	out := []RecordSummary{}
+	if inc.store != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), esTimeout)
+		stored, err := inc.store.listRecords(ctx)
+		cancel()
+		if err != nil {
+			slog.Error("list stored records", "err", err)
+		}
+		out = append(out, stored...)
+	}
+	if rec.Status == "closed" && !slices.ContainsFunc(out, func(s RecordSummary) bool { return s.ID == rec.ID }) {
+		out = append([]RecordSummary{{ID: rec.ID, Title: rec.Title, Severity: rec.Severity, Opened: rec.Opened, Resolved: rec.Resolved, Duration: rec.Duration, Summary: rec.Summary, FixedBy: rec.FixedBy}}, out...)
+	}
+	writeJSON(w, out)
+}
+
 func (inc *Incident) writeRecord() {
 	inc.mu.Lock()
 	events := append([]Event(nil), inc.events...)
-	rec := inc.record()
 	roster := inc.liveRoster()
+	title := inc.title
 	inc.mu.Unlock()
 
-	written := writtenRecord{Summary: incidentText(rec.Title, events), Parts: []RecordPart{}, Improvements: []Improvement{}}
+	written, by := fallbackRecord(title, events), captainMorgue
 	if inc.brain != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), recordTimeout)
-		w, err := inc.brain.writeRecord(ctx, rec.Title, roster, events)
+		w, err := inc.brain.writeRecord(ctx, title, roster, events)
 		cancel()
 		if err != nil {
 			slog.Error("write record with model", "err", err)
 		} else {
-			written = w
+			written, by = w, "claude"
 		}
 	}
 	inc.mu.Lock()
-	inc.written = &written
+	inc.written, inc.writtenBy = &written, by
+	rec := inc.record()
 	inc.mu.Unlock()
+	inc.deliverActionItems(rec)
 
 	if inc.store == nil {
 		return
 	}
+	stored := rec
+	stored.Events = nil
 	ctx, cancel := context.WithTimeout(context.Background(), esTimeout)
 	defer cancel()
 	err := inc.store.saveRecord(ctx, storedRecord{
 		PastMatch:    PastMatch{ID: inc.id, Summary: written.Summary, FixedBy: written.FixedBy},
 		Title:        rec.Title,
+		Severity:     rec.Severity,
+		Duration:     rec.Duration,
+		RFO:          &stored,
 		Opened:       rec.Opened,
 		Resolved:     rec.Resolved,
 		Parts:        written.Parts,
-		Improvements: written.Improvements,
+		Improvements: rec.ActionItems,
 	})
 	if err != nil {
 		slog.Error("store record", "err", err)

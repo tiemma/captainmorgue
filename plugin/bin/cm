@@ -112,6 +112,19 @@ stop_poller() {
   done
 }
 
+post_event() {
+  CM_MAX_TIME=5 api POST /events "$1" >/dev/null 2>>"$LOG" || fail "$2"
+}
+
+set_status() {
+  local resp
+  if ! resp=$(CM_MAX_TIME=5 api POST "/incidents/$INCIDENT/status" "$1" 2>>"$LOG"); then
+    echo "Not changed: ${resp:-the service did not answer, see $LOG}"
+    exit 0
+  fi
+  jq -r --arg inc "$INCIDENT" '"\($inc) is \(.status)" + (if .severity != "" then ", \(.severity)" else "" end) + "."' <<<"$resp"
+}
+
 case "$1" in
 join)
   read_args
@@ -166,10 +179,14 @@ status)
   else
     snapshot 3 | jq -r --slurpfile s "$SESSION" --arg me "$ACTOR" --arg inc "$INCIDENT" "$JQ_DEFS"'
       $s[0] as $s
-      | "\($inc): \($me) on team \($s.team), manager \($s.manager | name_or_none), term \($s.term // "?"), commander \(commander).",
+      | "\($inc) (\(.state.incident.status // "open")\(.state.incident.severity // "" | if . == "" then "" else ", " + . end)): \($me) on team \($s.team), manager \($s.manager | name_or_none), term \($s.term // "?"), commander \(commander).",
         "You: \(roles($me)), working on \(task_of($me))" + (kit($me) | if . == "" then "" else "; " + . end),
         "Team:", teammates($s; $me),
         "Claims:", ((.state.claims // []) | if . == [] then "- none" else .[] | "- \(.key) held by \(.actor) (\(.text)) until \(.expires[11:19])" end)'
+  fi
+  if [ "$(snapshot 3 | jq -r '.state.incident.status // ""')" = closed ]; then
+    echo "Action items:"
+    CM_MAX_TIME=5 api GET "/record/$INCIDENT" 2>>"$LOG" | jq -r '(.action_items // []) | if . == [] then "- none" else .[] | "- @\(.owner): \(.text) (due \(.due))" end'
   fi
   echo "Unread: $(unread_lines | wc -l | tr -d ' ')"
   if poller_alive "$(cat "$CM_DIR/poll.pid" 2>/dev/null)"; then
@@ -214,6 +231,86 @@ reply)
   *) send "" reply "$rest" "$first" && printf '%s\n' "$first" >>"$ANSWERED" ;;
   esac
   ;;
+status-set | state)
+  read_args
+  case "$first" in
+  sev[123]) body=$(jq -nc --arg a "$ACTOR" --arg s "$first" --arg w "$rest" '{actor: $a, severity: $s, why: $w}') ;;
+  open | investigating | mitigated | resolved | closed) body=$(jq -nc --arg a "$ACTOR" --arg s "$first" --arg w "$rest" '{actor: $a, status: $s, why: $w}') ;;
+  *)
+    echo "Usage: /captainmorgue:status-set <investigating|mitigated|resolved|closed|sev1|sev2|sev3> [why]"
+    exit 0
+    ;;
+  esac
+  set_status "$body"
+  ;;
+close)
+  read_args
+  set_status "$(jq -nc --arg a "$ACTOR" --arg w "$args" '{actor: $a, status: "closed", why: $w}')"
+  echo "CaptainMorgue is writing the RFO: ${CM_URL%/}/record/$INCIDENT.md"
+  ;;
+note)
+  read_args
+  [ -n "$args" ] || { echo "Usage: /captainmorgue:note <finding, decision or evidence>"; exit 0; }
+  post_event "$(jq -nc --arg a "$ACTOR" --arg t "$args" '{actor: $a, type: "note", text: $t}')" "Recording the note"
+  echo "Noted: $args"
+  ;;
+action)
+  read_args
+  case "$first" in
+  @?*) ;;
+  *)
+    echo "Usage: /captainmorgue:action @owner <follow-up>"
+    exit 0
+    ;;
+  esac
+  [ -n "$rest" ] || { echo "Usage: /captainmorgue:action @owner <follow-up>"; exit 0; }
+  post_event "$(jq -nc --arg a "$ACTOR" --arg o "${first#@}" --arg t "$rest" '{actor: $a, type: "action_item", to: [$o], text: $t}')" "Recording the action item"
+  echo "Action item for ${first#@}: $rest"
+  ;;
+fix)
+  read_args
+  [ -n "$first" ] && [ -n "$rest" ] || { echo "Usage: /captainmorgue:fix <service> <what to change>"; exit 0; }
+  snap=$(snapshot 3)
+  open_pr=$(jq -r --arg s "$first" '[.state.prs[]? | select(.service == $s) | .url][0] // empty' <<<"$snap")
+  if [ -n "$open_pr" ]; then
+    echo "A pull request for $first is already open in $INCIDENT: $open_pr"
+    echo "Do not open another. Update that branch or review it instead."
+    exit 0
+  fi
+  repo=$(jq -r --arg s "$first" '.state.repos[$s].repo // empty' <<<"$snap")
+  if [ -z "$repo" ]; then
+    echo "No repository is mapped to $first in roster.yaml. Known services: $(jq -r '.state.repos // {} | keys | join(", ")' <<<"$snap")."
+    exit 0
+  fi
+  paths=$(jq -r --arg s "$first" '.state.repos[$s].paths // [] | join(", ")' <<<"$snap")
+  branch="fix/$(tr '[:upper:]' '[:lower:]' <<<"$INCIDENT")-$first"
+  printf '%s\n' "$first" >"$CM_DIR/fixing"
+  echo "Open a pull request that fixes $first for $INCIDENT: $rest"
+  echo "Repository: $repo. Change only under: $paths. Branch: $branch."
+  echo "1. In a checkout of $repo, fetch and create $branch from the default branch."
+  echo "2. Make the smallest change that fixes it, commit as fix($first): <short summary>."
+  echo "3. Push the branch and run gh pr create --repo $repo --head $branch --title 'fix($first): <short summary>' with a body that has:"
+  echo "   Incident: $INCIDENT, ${CM_URL%/}/record/$INCIDENT.md"
+  echo "   What: $rest"
+  echo "   Evidence:"
+  jq -r '[.events[] | select(.type == "note" or .type == "investigation") | "   - \(.actor): \(.text)"] | if . == [] then "   - none recorded" else .[] end' <<<"$snap"
+  echo "4. Never merge it; Gitar reviews it."
+  echo "5. Record it: $BIN/cm pr <pull request url> $first"
+  ;;
+pr)
+  read_args
+  svc=${rest:-$(cat "$CM_DIR/fixing" 2>/dev/null)}
+  case "$first" in
+  http://* | https://*) ;;
+  *)
+    echo "Usage: cm pr <pull request url> [service]"
+    exit 0
+    ;;
+  esac
+  [ -n "$svc" ] || { echo "Name the service: cm pr <pull request url> <service>"; exit 0; }
+  post_event "$(jq -nc --arg a "$ACTOR" --arg s "$svc" --arg u "$first" '{actor: $a, type: "pr", text: "opened a pull request for \($s): \($u)", resource: {kind: "Service", name: $s}, artifacts: [{label: "pull request", url: $u}]}')" "Recording the pull request"
+  echo "Recorded the pull request for $svc: $first"
+  ;;
 shell-event)
   cmd=$5
   case "$cmd" in "" | " "*) exit 0 ;; esac
@@ -229,6 +326,6 @@ console | pane)
   exec "$BIN/cm-pane" "$1"
   ;;
 *)
-  echo "Usage: cm join|leave|task|status|inbox|broadcast|ask|reply|console|pane|shell-hook|doctor"
+  echo "Usage: cm join|leave|task|status|status-set|note|action|close|fix|pr|inbox|broadcast|ask|reply|console|pane|shell-hook|doctor"
   ;;
 esac

@@ -33,10 +33,24 @@ type PastMatch struct {
 type storedRecord struct {
 	PastMatch
 	Title        string        `json:"title"`
+	Severity     string        `json:"severity,omitempty"`
+	Duration     string        `json:"duration,omitempty"`
 	Opened       *time.Time    `json:"opened,omitempty"`
 	Resolved     *time.Time    `json:"resolved,omitempty"`
 	Parts        []RecordPart  `json:"parts"`
 	Improvements []Improvement `json:"improvements"`
+	RFO          *Record       `json:"rfo,omitempty"`
+}
+
+type RecordSummary struct {
+	ID       string     `json:"id"`
+	Title    string     `json:"title"`
+	Severity string     `json:"severity"`
+	Opened   *time.Time `json:"opened"`
+	Resolved *time.Time `json:"resolved"`
+	Duration string     `json:"duration"`
+	Summary  string     `json:"summary"`
+	FixedBy  string     `json:"fixed_by"`
 }
 
 func newStore(ctx context.Context) (*store, error) {
@@ -54,6 +68,9 @@ func newStore(ctx context.Context) (*store, error) {
 	}
 	if err := s.ensureIndex(ctx, recordsIndex, recordsMapping()); err != nil {
 		return nil, err
+	}
+	if _, err := s.es.Indices.PutMapping(recordsIndex).Properties(rfoMapping()).Do(ctx); err != nil {
+		return nil, fmt.Errorf("update %s mapping: %w", recordsIndex, err)
 	}
 	return s, nil
 }
@@ -115,6 +132,49 @@ func recordsMapping() *types.TypeMapping {
 			"text": types.NewTextProperty(), "owner": keyword(), "link": keyword(),
 		}},
 	}}
+}
+
+func rfoMapping() map[string]types.Property {
+	return map[string]types.Property{
+		"severity": keyword(),
+		"duration": keyword(),
+		"rfo":      &types.ObjectProperty{Enabled: new(false)},
+	}
+}
+
+func (s *store) listRecords(ctx context.Context) ([]RecordSummary, error) {
+	res, err := s.es.Search().Index(recordsIndex).
+		Sort(&types.SortOptions{SortOptions: map[string]types.FieldSort{"resolved": {Order: &sortorder.Desc}}}).
+		SourceExcludes_("rfo").
+		Size(100).
+		Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list records: %w", err)
+	}
+	out := make([]RecordSummary, 0, len(res.Hits.Hits))
+	for _, hit := range res.Hits.Hits {
+		var rec storedRecord
+		if err := json.Unmarshal(hit.Source_, &rec); err != nil {
+			return nil, fmt.Errorf("decode record: %w", err)
+		}
+		out = append(out, RecordSummary{ID: rec.ID, Title: rec.Title, Severity: rec.Severity, Opened: rec.Opened, Resolved: rec.Resolved, Duration: rec.Duration, Summary: rec.Summary, FixedBy: rec.FixedBy})
+	}
+	return out, nil
+}
+
+func (s *store) getRecord(ctx context.Context, id string) (*Record, error) {
+	res, err := s.es.Get(recordsIndex, id).Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get record %s: %w", id, err)
+	}
+	if !res.Found {
+		return nil, nil
+	}
+	var rec storedRecord
+	if err := json.Unmarshal(res.Source_, &rec); err != nil {
+		return nil, fmt.Errorf("decode record %s: %w", id, err)
+	}
+	return rec.RFO, nil
 }
 
 func (s *store) ensureIndex(ctx context.Context, name string, mapping *types.TypeMapping) error {
