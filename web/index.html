@@ -100,11 +100,11 @@ button { font: inherit; color: inherit; }
 .tree li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 6px; transition: background var(--dur-base) ease, opacity var(--dur-base) ease; }
 .tree li.off { opacity: 0.42; }
 .tree li.flash { background: var(--brass-soft); }
-.tree .who { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tree .who { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .tree .team-row .who { font-family: var(--font-display); font-weight: 600; }
 .tree .d1 { padding-left: 20px; } .tree .d2 { padding-left: 38px; }
-.tree .task { color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; }
-.mgr { font-family: var(--font-mono); font-size: 9.5px; color: var(--tag-ink); background: var(--tag-paper); padding: 0 5px; border-radius: 3px; }
+.tree .task { color: var(--fg-3); flex-basis: 100%; padding-left: 15px; white-space: normal; overflow-wrap: anywhere; }
+.mgr { flex: none; font-family: var(--font-mono); font-size: 9.5px; color: var(--tag-ink); background: var(--tag-paper); padding: 0 5px; border-radius: 3px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--quiet); }
 .dot.on { background: var(--resolved); box-shadow: 0 0 0 3px var(--resolved-bg); }
 .dot.busy { background: var(--investigating); box-shadow: 0 0 0 3px var(--investigating-bg); }
@@ -121,16 +121,16 @@ button { font: inherit; color: inherit; }
 .ev .actor span { font-size: 11px; color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ev .body { display: grid; gap: 5px; min-width: 0; }
 .ev .kind { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
-.ev .text { overflow-wrap: anywhere; }
+.ev .text { overflow-wrap: anywhere; white-space: pre-line; }
 .arts { display: flex; flex-wrap: wrap; gap: 6px; }
 .art { font-family: var(--font-mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--surface-3); color: var(--fg-2); border: 1px solid var(--line); }
 .k-alert { border-left-color: var(--critical); } .k-alert .kind { color: var(--critical); }
-.k-investigation { border-left-color: var(--brass); } .k-investigation .kind { color: var(--brass); }
-.k-join, .k-relay, .k-ask, .k-broadcast, .k-decision { border-left-color: var(--info); } .k-join .kind, .k-relay .kind, .k-ask .kind, .k-broadcast .kind, .k-decision .kind { color: var(--info); }
+.k-investigation, .k-digest, .k-claim { border-left-color: var(--brass); } .k-investigation .kind, .k-digest .kind, .k-claim .kind { color: var(--brass); }
+.k-join, .k-relay, .k-ask, .k-reply, .k-broadcast, .k-decision { border-left-color: var(--info); } .k-join .kind, .k-relay .kind, .k-ask .kind, .k-reply .kind, .k-broadcast .kind, .k-decision .kind { color: var(--info); }
 .k-action .kind { color: var(--fg-2); }
 .k-conflict { border-left-color: var(--conflict); background: var(--conflict-bg); } .k-conflict .kind { color: var(--conflict); }
 .k-signal, .k-close, .k-ship { border-left-color: var(--resolved); } .k-signal .kind, .k-close .kind, .k-ship .kind { color: var(--resolved); }
-.k-election, .k-escalation, .k-autoreply { border-left-color: var(--investigating); } .k-election .kind, .k-escalation .kind, .k-autoreply .kind { color: var(--investigating); }
+.k-election, .k-vote_request, .k-escalation, .k-autoreply { border-left-color: var(--investigating); } .k-election .kind, .k-vote_request .kind, .k-escalation .kind, .k-autoreply .kind { color: var(--investigating); }
 .banner { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 10px 14px; border: 1px solid var(--investigating-line); border-left: 3px solid var(--investigating); border-radius: 10px; background: var(--investigating-bg); }
 .banner .label { color: var(--investigating); }
 .banner[hidden] { display: none; }
@@ -193,6 +193,7 @@ button { font: inherit; color: inherit; }
         <div class="fact"><span class="label">Clock</span><b id="clock" class="clock">--:--:--</b></div>
         <div class="fact"><span class="label">Opened</span><b id="opened">-</b></div>
         <div class="fact"><span class="label">Closed</span><b id="closed">-</b></div>
+        <div class="fact"><span class="label">Commander</span><b id="commander">-</b></div>
       </div>
     </div>
     <div class="controls">
@@ -241,7 +242,7 @@ button { font: inherit; color: inherit; }
       </section>
       <section class="panel" aria-label="Claims">
         <h2>Claims <span class="label">Who holds what</span></h2>
-        <div id="claims"><p class="empty">Nothing claimed.</p></div>
+        <div class="parts" id="claims"><p class="empty">Nothing claimed.</p></div>
       </section>
       <section class="panel" aria-label="Investigation">
         <h2>Radar AI investigation</h2>
@@ -254,7 +255,7 @@ button { font: inherit; color: inherit; }
 <script>
 const NAMES = { captainmorgue: "CaptainMorgue", dash0: "Dash0", radar: "Radar", gitar: "Gitar", argo: "Argo CD" };
 const ROLES = { captainmorgue: "root", dash0: "alert", radar: "cluster", gitar: "pull request", argo: "via Radar" };
-const KIND = { alert: "Alert", join: "Joined", leave: "Left", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", claim: "Claimed", ship: "Shipped", election: "Election", investigation: "Investigation", signal: "Signal", close: "Closed" };
+const KIND = { alert: "Alert", join: "Joined", leave: "Left", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", reply: "Reply", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", claim: "Claimed", ship: "Shipped", election: "Election", vote_request: "Vote request", digest: "Catch-up", investigation: "Investigation", signal: "Signal", close: "Closed" };
 const STATUS = {
   online: ["on", "online", "p-resolved"],
   in_incident: ["on", "in incident", "p-resolved"],
@@ -341,6 +342,7 @@ function renderHeader() {
   else { pill.textContent = inc.status || "waiting"; pill.className = "pill p-quiet"; }
   $("opened").textContent = timeOf(inc.opened) || "-";
   $("closed").textContent = timeOf(inc.closed) || "-";
+  $("commander").textContent = state.commander ? nameOf(state.commander) : "-";
 }
 
 function personRow(id, isMgr, teamOn) {
