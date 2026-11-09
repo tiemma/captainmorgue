@@ -6,6 +6,7 @@ test('arcs stay hidden at rest and appear for the hovered or selected team', asy
   await page.goto(story);
   const registration = page.getByRole('button', { name: /^Registration/ });
   await expect(registration).toBeVisible();
+  await expect(page.getByRole('button', { name: /zoom in/i })).toBeVisible();
   await expect(page.locator('.cm-graph-tree')).toHaveCount(3);
   await expect(page.locator('.cm-graph-arc')).toHaveCount(0);
 
