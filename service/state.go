@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -44,21 +46,23 @@ type Signal struct {
 }
 
 type State struct {
-	Incident IncidentSummary   `json:"incident"`
-	Teams    []TeamState       `json:"teams"`
-	People   map[string]string `json:"people"`
-	Parts    []Part            `json:"parts"`
-	Relay    *Relay            `json:"relay"`
-	Conflict *Event            `json:"conflict"`
-	Signals  map[string]Signal `json:"signals"`
+	Incident  IncidentSummary   `json:"incident"`
+	Teams     []TeamState       `json:"teams"`
+	People    map[string]string `json:"people"`
+	Parts     []Part            `json:"parts"`
+	Relay     *Relay            `json:"relay"`
+	Conflict  *Event            `json:"conflict"`
+	Signals   map[string]Signal `json:"signals"`
+	PastMatch *PastMatch        `json:"past_match"`
 }
 
 func (inc *Incident) state() State {
 	s := State{
-		Incident: IncidentSummary{ID: inc.id, Title: inc.title, Status: "open"},
-		People:   map[string]string{},
-		Parts:    []Part{},
-		Signals:  map[string]Signal{},
+		Incident:  IncidentSummary{ID: inc.id, Title: inc.title, Status: "open"},
+		People:    map[string]string{},
+		Parts:     []Part{},
+		Signals:   map[string]Signal{},
+		PastMatch: inc.pastMatch,
 	}
 	if len(inc.events) > 0 {
 		s.Incident.Opened = &inc.events[0].TS
@@ -86,21 +90,41 @@ func (inc *Incident) state() State {
 	return s
 }
 
+type RecordPart struct {
+	Name string `json:"name"`
+	How  string `json:"how"`
+}
+
+type Improvement struct {
+	Text  string `json:"text"`
+	Owner string `json:"owner"`
+	Link  string `json:"link"`
+}
+
 type Record struct {
-	ID        string     `json:"id"`
-	Title     string     `json:"title"`
-	Opened    *time.Time `json:"opened"`
-	Resolved  *time.Time `json:"resolved"`
-	Duration  string     `json:"duration"`
-	People    int        `json:"people"`
-	Teams     int        `json:"teams"`
-	Conflicts int        `json:"conflicts"`
-	Events    []Event    `json:"events"`
+	ID           string        `json:"id"`
+	Title        string        `json:"title"`
+	Opened       *time.Time    `json:"opened"`
+	Resolved     *time.Time    `json:"resolved"`
+	Duration     string        `json:"duration"`
+	People       int           `json:"people"`
+	Teams        int           `json:"teams"`
+	Conflicts    int           `json:"conflicts"`
+	Parts        []RecordPart  `json:"parts"`
+	Improvements []Improvement `json:"improvements"`
+	PastMatch    *PastMatch    `json:"past_match"`
+	Events       []Event       `json:"events"`
 }
 
 func (inc *Incident) record() Record {
 	s := inc.state()
-	rec := Record{ID: inc.id, Title: inc.title, Opened: s.Incident.Opened, Resolved: s.Incident.Closed, Events: inc.events}
+	rec := Record{
+		ID: inc.id, Title: inc.title, Opened: s.Incident.Opened, Resolved: s.Incident.Closed,
+		Parts: []RecordPart{}, Improvements: []Improvement{}, PastMatch: inc.pastMatch, Events: inc.events,
+	}
+	if inc.written != nil {
+		rec.Parts, rec.Improvements = inc.written.Parts, inc.written.Improvements
+	}
 	people := map[string]bool{}
 	for _, ev := range inc.events {
 		if _, ok := inc.roster.teamOf(ev.Actor); ok {
@@ -130,4 +154,88 @@ func (inc *Incident) handleRecord(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(rec); err != nil {
 		slog.Debug("write record", "err", err)
 	}
+}
+
+func (inc *Incident) writeRecord() {
+	inc.mu.Lock()
+	events := append([]Event(nil), inc.events...)
+	rec := inc.record()
+	inc.mu.Unlock()
+
+	written := writtenRecord{Summary: incidentText(inc.title, events), Parts: []RecordPart{}, Improvements: []Improvement{}}
+	if inc.brain != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), recordTimeout)
+		w, err := inc.brain.writeRecord(ctx, inc.title, inc.roster, events)
+		cancel()
+		if err != nil {
+			slog.Error("write record with model", "err", err)
+		} else {
+			written = w
+		}
+	}
+	inc.mu.Lock()
+	inc.written = &written
+	inc.mu.Unlock()
+
+	if inc.store == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), esTimeout)
+	defer cancel()
+	err := inc.store.saveRecord(ctx, storedRecord{
+		PastMatch:    PastMatch{ID: inc.id, Summary: written.Summary, FixedBy: written.FixedBy},
+		Title:        inc.title,
+		Opened:       rec.Opened,
+		Resolved:     rec.Resolved,
+		Parts:        written.Parts,
+		Improvements: written.Improvements,
+	})
+	if err != nil {
+		slog.Error("store record", "err", err)
+	}
+}
+
+const matchEvents = 10
+
+func (inc *Incident) refreshPastMatch() {
+	if inc.store == nil {
+		return
+	}
+	select {
+	case inc.matchReq <- struct{}{}:
+	default:
+	}
+}
+
+func (inc *Incident) matchLoop() {
+	var lastQuery string
+	for range inc.matchReq {
+		inc.mu.Lock()
+		query := incidentText(inc.title, inc.events[:min(len(inc.events), matchEvents)])
+		inc.mu.Unlock()
+		if query == lastQuery {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), esTimeout)
+		match, err := inc.store.closestRecord(ctx, inc.id, query)
+		cancel()
+		if err != nil {
+			slog.Error("find past match", "err", err)
+			continue
+		}
+		lastQuery = query
+		inc.mu.Lock()
+		inc.pastMatch = match
+		inc.mu.Unlock()
+		inc.broadcast()
+	}
+}
+
+func incidentText(title string, events []Event) string {
+	var b strings.Builder
+	b.WriteString(title)
+	for _, ev := range events {
+		fmt.Fprintf(&b, ". %s", ev.Text)
+	}
+	return b.String()
 }

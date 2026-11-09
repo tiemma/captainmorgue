@@ -53,22 +53,23 @@ Key constraints that shape it ([dispatch.md](dispatch.md) section 2):
 | Broadcasts | Scoped by the team tree: every connected member downstream of the team, queued for offline ones; no model call | dispatch 3d |
 | Unscoped asks | Router picks recipients (rule, then Claude) and says why | dispatch 3, 3d |
 | Joining | `/captainmorgue:join`; told on next prompt or by notification; auto-join off; first in becomes manager | dispatch 3d-1 |
-| Into the session | SessionStart briefing; inject on prompt and after tool calls; Stop blocks while a conflict is unread; poller notifies idle sessions; channels push as stretch | dispatch 5 |
+| Into the session | SessionStart briefing; inject on prompt and after tool calls; Stop blocks while a conflict is unread; poller notifies idle sessions; auto mode pushes through a channel | dispatch 5, 9 |
 | Teams | Raft-style groups: voters = members + CaptainMorgue; manager holds a lease; heartbeat 5 s, suspect 15 s, election 30 s; vote for the highest cursor; terms on every decision | dispatch 3b |
 | Not responding | Suspect, offline, escalate unanswered asks member -> manager -> parent -> CaptainMorgue; digest on return; fold team into parent without quorum | dispatch 3c |
 | Communication | Upward by default, sideways only through CaptainMorgue, downward from managers and CaptainMorgue; every message has a why and a term | dispatch 3d |
+| Connections | Agents hold MCP connections to act with the person's identity; CaptainMorgue holds its own read-only connections (Dash0, Radar, GitHub) to open incidents, find owners, verify recovery and investigate. Not built yet. | dispatch 5a |
 | Failure modes | 20 listed with detection and mitigation; biggest: single point of failure, split brain on restart, false suspicion, spoofed actors, secrets in prompts | dispatch 7a |
 | Demo | A real canary release on the conference app, not an injected fault; a real laptop closed for the election | plan 0, dispatch 3e |
 
-## 4. Open questions (dispatch section 9)
+## 4. Decisions taken (dispatch section 9)
 
-1. Channels push (research preview flags) for the demo, or monitor notifications only?
-2. Broker today: Elasticsearch or the cluster's Postgres?
-3. Do conflicts interrupt with a desktop notification, or only inject on the next prompt?
-4. Should a busy person's agent auto-reply?
-5. Root broadcast (everyone): managers only?
-6. One team token for the hackathon, or one per incident?
-7. Does the wall screen show sent / seen per recipient?
+1. Idle sessions: desktop notification always, plus **auto mode** that pushes messages into the session through a channel so the agent acts on its own.
+2. Broker: **Elasticsearch**, inbox served from the in-memory tail.
+3. Conflicts **interrupt** (notification, mid-task inject, Stop blocks).
+4. Busy people **auto-reply** with their current status after 60 s, then escalate.
+5. **Anyone** can broadcast to everyone.
+6. **One team token** for the hackathon.
+7. Wall screen shows **sent / delivered / seen** per recipient.
 
 ## 5. What exists
 

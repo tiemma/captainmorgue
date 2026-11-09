@@ -206,7 +206,8 @@ sequenceDiagram
 | `/captainmorgue:leave` | Hand over parts, stop poller, election if you manage. |
 | `/captainmorgue:status` | Incident, your team, manager and term, who is online, your unread count, your open parts. |
 | `/captainmorgue:inbox` | Show and ack unread messages. |
-| `/captainmorgue:broadcast [team] <text>` | Broadcast to a team subtree; no team = your own team; `root` = everyone (managers only). |
+| `/captainmorgue:broadcast [team] <text>` | Broadcast to a team subtree; no team = your own team; `root` = everyone. Anyone can broadcast to everyone: that is how the room talks. |
+| `/captainmorgue:auto on|off` | Auto mode: messages are pushed straight into the session and the agent acts on them without waiting for the person. Off: notify and wait. |
 | `/captainmorgue:ask @who <text>` | Direct ask; `@who` can be a person, a team, or omitted to let CaptainMorgue pick. |
 | `/captainmorgue:take <part>` | Claim a part of the incident. |
 | `/captainmorgue:resolve <part> <how>` | Mark a part resolved; CaptainMorgue checks signals before tagging it. |
@@ -253,6 +254,58 @@ Checked against the Claude Code docs (hooks, channels, plugins reference), 2026-
 Not available: a plugin cannot ship the main status line, so no unread count there. Async hooks deliver their context on the *next* turn only.
 
 Priority and noise **(proposed)**: conflicts and direct asks interrupt (notification + inject); relays and FYIs inject only; the raw activity of other people is never injected, only shown on the wall screen. Otherwise every agent's context fills with everyone else's tool calls.
+
+## 5b. What an ask looks like in a session (human in the loop)
+
+1. Gus runs `/captainmorgue:ask @dana Is confdb failing over?`. CaptainMorgue delivers it to Dana as `interrupt`; her laptop pops a notification.
+2. On Dana's next prompt or tool call, the hook injects the ask with an instruction: show it to Dana verbatim (sender, text, why) and ask her how to answer.
+3. If answering needs digging (check confdb, read a rollout), Claude does it **in a subagent**, so Dana's own task is not derailed, and proposes a reply.
+4. Dana approves or edits; Claude sends `/captainmorgue:reply <seq> <text>`. The reply goes back to Gus, marks the ask answered, and the wall screen shows the ask as seen and answered.
+5. **Fallback is the timeout:** no reply in 60 s -> CaptainMorgue auto-replies to Gus with what Dana is doing right now and escalates to her manager. The wall screen shows the ask amber, then escalated, so it is always clear where an ask stands.
+6. If Claude is about to finish its turn with the ask unanswered, the Stop hook holds it once and repeats the instruction.
+
+Auto mode (P1) skips step 4's approval: the agent answers on its own.
+
+## 5a. Connections: agents and CaptainMorgue both reach the outside systems
+
+Two sides hold connections, for different jobs.
+
+| Side | Connections | Used for |
+|---|---|---|
+| **Each person's agent** (laptop) | Radar Cloud MCP, Dash0 MCP, GitHub, whatever else that person has | Doing the work: reading the cluster, rollouts, logs, opening PRs. The person's own identity and permissions. |
+| **CaptainMorgue** (cluster) | Dash0 (MCP or API, service token), Radar (MCP, service identity), GitHub (Gitar check results, CODEOWNERS), Elasticsearch, Claude | Coordinating: opening incidents from alerts, finding owners, checking that a part really recovered, starting the Radar AI investigation, enriching relays and the record. Read-only on the cluster. |
+
+```mermaid
+flowchart LR
+  subgraph Laptop
+    A["Agent (Claude Code)"]
+  end
+  subgraph Cluster
+    CM["CaptainMorgue"]
+  end
+  RADAR["Radar Cloud MCP"]
+  DASH0["Dash0 MCP / API"]
+  GH["GitHub + Gitar"]
+  A -->|"person's identity: act"| RADAR
+  A -->|"act"| DASH0
+  A -->|"act"| GH
+  CM -->|"service identity: read, verify, investigate"| RADAR
+  CM -->|"alerts in, signals read"| DASH0
+  CM -->|"owners, check results"| GH
+  A <-->|"events, messages"| CM
+```
+
+What CaptainMorgue does with its own connections (none of this is built yet):
+
+1. **Open incidents.** A Dash0 alert (webhook or poll) opens the incident and names the affected service.
+2. **Find owners.** Team labels from Radar resources and CODEOWNERS decide which teams are pulled in.
+3. **Verify progress.** A part is tagged resolved only when CaptainMorgue reads the recovered signal from Dash0 itself, not when someone says so (PRD: progress = signal recovery).
+4. **Investigate.** CaptainMorgue starts the Radar AI investigation on the affected workload and posts the finding.
+5. **Ground the router.** "Dev is reading confdb right now" comes from Dev's events; "checkin holds most connections" comes from CaptainMorgue's own Dash0 read.
+
+Rule: **agents act, CaptainMorgue reads and verifies.** CaptainMorgue never changes the cluster; it asks a person (or an agent in auto mode) to.
+
+Open: Radar Cloud MCP signs in interactively (OAuth). Whether a service in the cluster can hold its own Radar credential has to be checked with Radar; fallback is the in-cluster Radar API or the Kubernetes API with a read-only ServiceAccount. Dash0 accepts a bearer token, verified for OTLP ingest (region us-west-2).
 
 ## 6. Message model
 
@@ -308,7 +361,9 @@ Where this design itself can go wrong, how we notice, and what we do about it. S
 | 13 | **Context flooding**: injecting every message into every session | Claude loses track of its own task; token cost | Long hook outputs | Inject only `interrupt` and `inject` kinds for that person; cap per turn, link the rest to `/captainmorgue:inbox` |
 | 14 | **Hook latency** on every prompt | Typing feels slow | Prompt delay | Inbox read is a local cache filled by the poller; the hook reads the file, not the network |
 | 15 | **Idle sessions never see messages** (hooks cannot start a turn) | Ask goes unanswered while the person is in another window | `delivered` but not `seen` | Desktop notification from the monitor; escalation after 60 s / channels push |
-| 16 | **Monitors and channels are experimental / research preview** | Feature missing on a teammate's Claude Code version | Join reports no poller | Fallback: a plain background `cm poll &` started by the join command |
+| 16 | **Monitors and channels are experimental / research preview** | Feature missing on a teammate's Claude Code version; auto mode unavailable | Join reports no poller / no channel | Fallback: a plain background `cm poll &` started by the join command; auto mode degrades to notify-and-inject |
+| 21 | **Auto mode acts on a bad message** (wrong recipient, stale term, spoofed sender) | An agent changes the cluster on someone else's word | Record shows an action triggered by a message | Auto mode never acts on `stale_term` or unknown senders; destructive actions still go through Claude Code's own permission prompts |
+| 22 | **Everyone broadcasts to everyone** | Noise; real asks lost | Broadcast rate per person | Root broadcasts are `inject`, not `interrupt`; wall screen groups them |
 | 17 | **Model-picked recipients are wrong** for an unscoped ask | Wrong people interrupted | Recipients reply "not me" | Scoped broadcasts need no model; model pick shows `why`, falls back to managers on error |
 | 18 | **Conflict rule false positives** (read + write on the same object) | Warnings people learn to ignore | Many conflicts per incident | Read verbs marked by the plugin (`Checked:`); model confirms before sending |
 | 19 | **Stale manager acts after losing its lease** (laptop was asleep) | Orders from an old term | Term on every decision | Decisions with an old term are recorded as `stale_term` and not routed |
@@ -325,15 +380,17 @@ Where this design itself can go wrong, how we notice, and what we do about it. S
 | One sequencer, one replica | Lease-based failover; per-team logs if ever needed |
 | `ask` / `relay` / `conflict` delivered; everything else record-only | Full priority model, digests for returning people |
 
-## 9. Open questions for review
+## 9. Decisions (2026-11-09)
 
-1. **Channels as the push path:** worth the research-preview flags for the demo, or ship with monitor notifications only?
-2. Broker today: **A (Elasticsearch)** or **B (Postgres, already in the cluster)**? A keeps one store; B gives exact cursors and instant wake-up.
-3. Do conflicts **interrupt** (desktop notification) or only inject on the next prompt?
-4. Should a person's own agent auto-reply ("Dana is mid-rollback, will answer in 5 min") or always wait for the human?
-5. Root broadcast (everyone): managers only, as proposed in 3d-1?
-6. Team token per incident, or one shared token for the hackathon?
-7. Does the wall screen show delivery state (sent / seen) per recipient?
+| # | Question | Decision |
+|---|---|---|
+| 1 | Push into idle sessions | **Both.** The poller always raises a desktop notification. **Auto mode** (`/captainmorgue:auto on`) also pushes messages into the session through a Claude Code channel, so the agent acts without waiting for the person; the notification is then informational. Auto mode off, or channels unavailable on that laptop: notify and inject on the next prompt or tool call. |
+| 2 | Broker today | **Elasticsearch.** Inbox reads come from the service's in-memory tail; Elasticsearch holds history and cursors, so refresh lag does not matter. |
+| 3 | Conflicts | **Interrupt:** desktop notification, injected after the next tool call, and `Stop` blocks until Claude has handled it. |
+| 4 | Busy person | **Auto-reply.** An ask not seen within 60 s gets an automatic reply from CaptainMorgue built from that person's latest events ("Dana is mid-rollback on checkin, started 09:44"), then escalates to their manager. In auto mode the person's own agent may answer instead. |
+| 5 | Root broadcast | **Anyone** can broadcast to everyone. That is how the room communicates. |
+| 6 | Auth | **One team token** for the hackathon, in each laptop's keychain and the cluster Secret, sent as a header; the actor must be in the roster. |
+| 7 | Wall screen delivery state | **Yes:** relay and ask cards show each recipient as sent, delivered or seen; unseen asks turn amber before escalating. |
 
 ## 10. Impact on what is already in flight
 
