@@ -47,12 +47,13 @@ Emmanuel's infra handoff is complete. PR #1 is merged and public `main` deployed
 - Radar application sync completed successfully to `c3cb01a`; the application reached `Synced` and rollout health was progressing after the sync.
 - Activated the documented five-minute `slow-checkin` fault through a Radar Job; Job logs returned HTTP 200 and showed the automatic expiry timestamp.
 - Applied and verified the Dash0 notification channel plus all five check rules using the rules API credential; the existing Radar `dash0` Secret remains the collector credential.
+- Radar-side Elasticsearch check completed: CaptainMorgue logs show `created index index=cm-events`, `created index index=cm-records`, and `intelligence elasticsearch=true claude=true loaded_events=0`. Elasticsearch UI search/index confirmation is handed to Emmanuel.
 
 ## Next
 - [x] Emmanuel: review/merge public cluster PR #1 (`feat/fault-injection`) and trigger Gitar on `tiemma/captainmorgue-cluster`.
 - [x] Apply the five Dash0 rules and webhook from public branch `feat/dash0-checks`; the existing Radar `dash0` Secret remains the collector credential, while the rules API credential was used separately.
 - [x] Verify and activate the deployed fault switch through Radar; `fault-switch` completed successfully and returned HTTP 200 with `slow-checkin` TTL evidence.
-- [ ] Ask Emmanuel to verify CaptainMorgue logs for `elasticsearch=true`; the public health/record test passed but Sammy lacks Radar log permissions.
+- [ ] Emmanuel: use the Elasticsearch UI to confirm the `cm-events` and `cm-records` indices contain the recent incident records; Radar already confirms Elasticsearch is enabled and both indices were created.
 - [ ] Finish the remaining multi-person runbook steps with Jubril and Emmanuel.
 - [ ] Grant the public cluster repository's GitHub Actions identity package-write access, rerun the failed `fefc494` image build, then verify the attendee-lookup image and promote the check-in canary.
 - [ ] Capture the final rehearsal screen recording.
@@ -64,4 +65,4 @@ Emmanuel's infra handoff is complete. PR #1 is merged and public `main` deployed
 - Screen recording remains pending after the computer-control session stopped while switching to the public wall; the live rehearsal verification itself passed and the agent is online.
 
 ## Handing off
-- Emmanuel: item 1 is handed back because Sammy lacks permission to add/trigger Gitar or merge public cluster PR #1. Please merge/enable it, then notify Sammy so the fault rehearsal can be verified.
+- Emmanuel: use the Elasticsearch UI to confirm recent incident records in `cm-events` and `cm-records`. Radar confirms `elasticsearch=true` and index creation, but Sammy cannot complete the Elasticsearch UI search. GHCR permission repair is intentionally out of scope.
