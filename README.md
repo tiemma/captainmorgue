@@ -9,5 +9,7 @@ Each responder gets an agent on their laptop, and CaptainMorgue coordinates all 
 - [docs/prd.md](docs/prd.md): what CaptainMorgue does, decisions so far, hackathon scope, and open questions (section 6).
 - [docs/architecture.md](docs/architecture.md): how it is built, covering components, messaging, the record and manager elections.
 - [docs/captainmorgue-map.html](docs/captainmorgue-map.html): topology diagram and UI patterns. Open it in a browser.
+- [docs/demo.html](docs/demo.html): playable wall-screen demo of the web app on the example conference incident.
+- [design/](design/): design system. `tokens.css` for the web app, `index.html` as the live component reference.
 
 Pick an open question from PRD section 6, or a piece from the hackathon scope in PRD section 4.

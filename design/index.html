@@ -1,0 +1,1522 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CaptainMorgue Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Dark is primary: the wall screen sits in a dim room, and status color carries further against near-black steel than against white. */
+:root {
+  color-scheme: light;
+
+  --font-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+  --bg: #e9edeb;
+  --surface: #ffffff;
+  --surface-2: #f3f5f4;
+  --surface-3: #e3e8e5;
+  --line: #d3dad6;
+  --line-strong: #aeb9b4;
+  --fg: #121816;
+  --fg-2: #46524d;
+  --fg-3: #5f6b66;
+  --fg-inverse: #f2f5f3;
+  --scrim: rgba(18, 24, 22, 0.32);
+  --material: rgba(233, 237, 235, 0.78);
+
+  --brass: #7a530f;
+  --brass-soft: #f1e3c2;
+  --tag-paper: #ecd6a4;
+  --tag-paper-2: #e2c88c;
+  --tag-ink: #3a2a0b;
+  --tag-string: #8c7a57;
+
+  --critical: #c22f17;
+  --critical-bg: #fbe7e2;
+  --critical-line: #eeb3a6;
+  --investigating: #8f5d00;
+  --investigating-bg: #fbf0d8;
+  --investigating-line: #e6c784;
+  --resolved: #1b744b;
+  --resolved-bg: #e0f2e8;
+  --resolved-line: #9fd2b6;
+  --info: #1c5f9c;
+  --info-bg: #e2edf8;
+  --info-line: #a7c6e6;
+  --quiet: #5f6b66;
+  --quiet-bg: #eceeed;
+  --quiet-line: #aeb9b4;
+  --conflict: #b51d64;
+  --conflict-bg: #fae4ee;
+  --conflict-line: #eba9c8;
+
+  --focus: #1c5f9c;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus);
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.375rem;
+  --text-4xl: 3.25rem;
+  --text-clock: 4rem;
+  --leading-tight: 1.05;
+  --leading-snug: 1.25;
+  --leading-body: 1.5;
+  --tracking-display: -0.022em;
+  --tracking-body: 0;
+  --tracking-label: 0.08em;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 80px;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  --elev-1: 0 1px 0 rgba(18, 24, 22, 0.04), 0 1px 2px rgba(18, 24, 22, 0.06);
+  --elev-2: 0 1px 0 rgba(18, 24, 22, 0.04), 0 6px 16px -6px rgba(18, 24, 22, 0.16);
+  --elev-3: 0 2px 4px rgba(18, 24, 22, 0.06), 0 18px 40px -12px rgba(18, 24, 22, 0.28);
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  --dur-instant: 80ms;
+  --dur-press: 120ms;
+  --dur-fast: 160ms;
+  --dur-base: 220ms;
+  --dur-enter: 280ms;
+  --dur-exit: 180ms;
+  --dur-tag: 800ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-hover: ease;
+  /* damping 0.55, response 0.45s spring sampled for CSS; used only for the toe tag landing */
+  --ease-spring: linear(0, 0.09, 0.296, 0.536, 0.758, 0.931, 1.046, 1.107, 1.126, 1.117, 1.091, 1.061, 1.033, 1.01, 0.995, 0.987, 0.984, 0.985, 0.988, 0.992, 0.996, 0.999, 1, 1.002, 1);
+  --press-scale: 0.97;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b0f0e;
+    --surface: #121816;
+    --surface-2: #182020;
+    --surface-3: #202a28;
+    --line: #26302e;
+    --line-strong: #394643;
+    --fg: #e3e9e6;
+    --fg-2: #a3b0ab;
+    --fg-3: #84918c;
+    --fg-inverse: #0b0f0e;
+    --scrim: rgba(0, 0, 0, 0.5);
+    --material: rgba(11, 15, 14, 0.72);
+
+    --brass: #d9ac52;
+    --brass-soft: #2e2615;
+    --tag-paper: #dcc28a;
+    --tag-paper-2: #cdb177;
+    --tag-ink: #2d200a;
+    --tag-string: #7d6d50;
+
+    --critical: #ff6a4d;
+    --critical-bg: #2c1611;
+    --critical-line: #6b2b1f;
+    --investigating: #f0b444;
+    --investigating-bg: #2a2111;
+    --investigating-line: #5f4a1d;
+    --resolved: #4cc48a;
+    --resolved-bg: #11251c;
+    --resolved-line: #215640;
+    --info: #6eb3ee;
+    --info-bg: #10202e;
+    --info-line: #24486a;
+    --quiet: #8d9a95;
+    --quiet-bg: #182020;
+    --quiet-line: #43504c;
+    --conflict: #ff5d9e;
+    --conflict-bg: #2c1220;
+    --conflict-line: #6e2349;
+
+    --focus: #dcc28a;
+
+    --elev-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --elev-2: 0 8px 20px -8px rgba(0, 0, 0, 0.7);
+    --elev-3: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
+    --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0f0e;
+  --surface: #121816;
+  --surface-2: #182020;
+  --surface-3: #202a28;
+  --line: #26302e;
+  --line-strong: #394643;
+  --fg: #e3e9e6;
+  --fg-2: #a3b0ab;
+  --fg-3: #84918c;
+  --fg-inverse: #0b0f0e;
+  --scrim: rgba(0, 0, 0, 0.5);
+  --material: rgba(11, 15, 14, 0.72);
+
+  --brass: #d9ac52;
+  --brass-soft: #2e2615;
+  --tag-paper: #dcc28a;
+  --tag-paper-2: #cdb177;
+  --tag-ink: #2d200a;
+  --tag-string: #7d6d50;
+
+  --critical: #ff6a4d;
+  --critical-bg: #2c1611;
+  --critical-line: #6b2b1f;
+  --investigating: #f0b444;
+  --investigating-bg: #2a2111;
+  --investigating-line: #5f4a1d;
+  --resolved: #4cc48a;
+  --resolved-bg: #11251c;
+  --resolved-line: #215640;
+  --info: #6eb3ee;
+  --info-bg: #10202e;
+  --info-line: #24486a;
+  --quiet: #8d9a95;
+  --quiet-bg: #182020;
+  --quiet-line: #43504c;
+  --conflict: #ff5d9e;
+  --conflict-bg: #2c1220;
+  --conflict-line: #6e2349;
+
+  --focus: #dcc28a;
+
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --elev-2: 0 8px 20px -8px rgba(0, 0, 0, 0.7);
+  --elev-3: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
+  --edge-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --press-scale: 1;
+    --ease-spring: ease-out;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 72px; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 var(--text-md)/var(--leading-body) var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-display); line-height: var(--leading-snug); text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+a { color: inherit; }
+code, pre, kbd, time, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--fg-2); }
+.faint { color: var(--fg-3); }
+.icon { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.eyebrow { font: 500 var(--text-2xs)/1.2 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-3); }
+
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--material);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-in { max-width: 1240px; margin: 0 auto; height: 56px; display: flex; align-items: center; gap: var(--space-5); padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); }
+.brand { display: flex; align-items: center; gap: 10px; font: 700 var(--text-md)/1 var(--font-display); letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; }
+.brand-mark { width: 22px; height: 14px; }
+.topnav { display: none; gap: 2px; margin-left: auto; }
+.topnav a { font-size: var(--text-sm); color: var(--fg-2); text-decoration: none; padding: 6px 10px; border-radius: var(--radius-md); transition: color var(--dur-fast) var(--ease-hover), background-color var(--dur-fast) var(--ease-hover); }
+.seg { display: inline-flex; margin-left: auto; padding: 2px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--fg-2); font: 500 var(--text-xs)/1 var(--font-body); padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; transition: color var(--dur-fast) var(--ease-hover), background-color var(--dur-fast) var(--ease-hover), transform var(--dur-press) var(--ease-out); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--elev-1); }
+.seg button:active { transform: scale(var(--press-scale)); }
+@media (min-width: 900px) { .topnav { display: flex; } .topnav + .seg { margin-left: var(--space-3); } }
+
+.page { max-width: 1240px; margin: 0 auto; padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); padding-bottom: var(--space-10); }
+@media (min-width: 768px) { .page, .topbar-in { padding-inline: 32px; } }
+
+.hero { display: grid; gap: var(--space-8); padding-block: var(--space-9) var(--space-9); align-items: center; }
+.hero h1 { font-size: clamp(2.75rem, 7vw, 5rem); line-height: 0.95; letter-spacing: -0.035em; }
+.hero .lede { font-size: var(--text-lg); color: var(--fg-2); max-width: 46ch; margin-top: var(--space-4); }
+.hero .direction { margin-top: var(--space-6); display: grid; gap: var(--space-2); font-size: var(--text-sm); color: var(--fg-2); max-width: 60ch; }
+.hero .direction b { color: var(--fg); font-weight: 600; }
+.hero-tag { justify-self: center; padding: var(--space-6) 0; }
+@media (min-width: 960px) { .hero { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } .hero-tag { justify-self: end; } }
+
+.sec { display: grid; gap: var(--space-6); padding-block: var(--space-9); border-top: 1px solid var(--line); }
+.sec-head { display: grid; gap: var(--space-2); align-content: start; }
+.sec-head h2 { font-size: var(--text-2xl); }
+.sec-head p { color: var(--fg-2); font-size: var(--text-sm); max-width: 52ch; }
+@media (min-width: 1080px) {
+  .sec { grid-template-columns: 240px minmax(0, 1fr); gap: var(--space-8); }
+  .sec-head { position: sticky; top: 88px; }
+}
+.stack { display: grid; gap: var(--space-8); min-width: 0; }
+.demo { display: grid; gap: var(--space-3); min-width: 0; }
+.demo-label { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.demo-label h3 { font-size: var(--text-lg); }
+.demo-label p { font-size: var(--text-xs); color: var(--fg-3); }
+
+.principles { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+.principles li { background: var(--surface); padding: var(--space-4) var(--space-5); display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--space-3); }
+.principles .n { font: 500 var(--text-xs)/1.6 var(--font-mono); color: var(--brass); }
+.principles b { font-family: var(--font-display); font-size: var(--text-md); display: block; letter-spacing: -0.01em; }
+.principles span { color: var(--fg-2); font-size: var(--text-sm); }
+@media (min-width: 720px) { .principles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .principles li:last-child { grid-column: 1 / -1; } }
+
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+.sw { border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }
+.sw i { display: block; height: 56px; border-bottom: 1px solid var(--line); }
+.sw div { padding: var(--space-2) var(--space-3); display: grid; gap: 2px; }
+.sw b { font-size: var(--text-sm); font-weight: 600; }
+.sw code { font-size: var(--text-2xs); color: var(--fg-3); }
+.status-sw { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-3); }
+.ssw { border-radius: var(--radius-md); padding: var(--space-3); display: grid; gap: var(--space-2); border: 1px solid; }
+.ssw p { font-size: var(--text-xs); }
+.ssw .pill { justify-self: start; }
+.ssw code { font-size: var(--text-2xs); opacity: 0.85; }
+
+.type-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: var(--space-4); align-items: baseline; padding-block: var(--space-3); border-bottom: 1px solid var(--line); }
+.type-row:last-child { border-bottom: 0; }
+.type-row .spec { font: 400 var(--text-2xs)/1.4 var(--font-mono); color: var(--fg-3); }
+.type-row .sample { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .type-row { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); } }
+
+.scale-grid { display: grid; gap: var(--space-6); }
+@media (min-width: 900px) { .scale-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-5); display: grid; gap: var(--space-3); align-content: start; box-shadow: var(--edge-highlight); min-width: 0; }
+.panel h4 { font: 500 var(--text-2xs)/1.2 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-3); }
+.space-row { display: grid; grid-template-columns: 76px 40px minmax(0, 1fr); gap: var(--space-3); align-items: center; font: 400 var(--text-xs)/1 var(--font-mono); color: var(--fg-2); }
+.space-row i { display: block; height: 10px; background: var(--brass); border-radius: 1px; opacity: 0.8; }
+.radii { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.radii div { width: 72px; height: 56px; border: 1px solid var(--line-strong); background: var(--surface-2); display: grid; place-items: end start; padding: 6px; font: 400 var(--text-2xs)/1 var(--font-mono); color: var(--fg-3); }
+.elevs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.elevs div { height: 64px; border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; font: 400 var(--text-2xs)/1 var(--font-mono); color: var(--fg-3); }
+.motion-list { display: grid; gap: var(--space-3); }
+.motion-row { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr); gap: var(--space-3); align-items: center; }
+.motion-row code { font-size: var(--text-2xs); color: var(--fg-2); }
+.track { position: relative; height: 22px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--line); }
+.track i { position: absolute; top: 4px; left: 4px; width: 12px; height: 12px; border-radius: 2px; background: var(--fg); transform: translateX(0); }
+.motion-demo.is-playing .track i { transform: translateX(calc(var(--w, 200px) - 22px)); }
+.motion-note { font-size: var(--text-xs); color: var(--fg-3); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--edge-highlight), var(--elev-1); min-width: 0; }
+
+.btn {
+  --btn-bg: var(--surface); --btn-fg: var(--fg); --btn-line: var(--line-strong); --btn-hover: var(--surface-2);
+  appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 36px; padding: 0 14px; border: 1px solid var(--btn-line); border-radius: var(--radius-md);
+  background: var(--btn-bg); color: var(--btn-fg); font: 600 var(--text-sm)/1 var(--font-body); white-space: nowrap;
+  cursor: pointer; text-decoration: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-fast) var(--ease-hover), border-color var(--dur-fast) var(--ease-hover), color var(--dur-fast) var(--ease-hover);
+}
+.btn:active:not(:disabled) { transform: scale(var(--press-scale)); }
+.btn:focus-visible { border-radius: var(--radius-md); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { --btn-bg: var(--fg); --btn-fg: var(--fg-inverse); --btn-line: var(--fg); --btn-hover: color-mix(in oklab, var(--fg) 86%, var(--bg)); }
+.btn-ghost { --btn-bg: transparent; --btn-fg: var(--fg-2); --btn-line: transparent; --btn-hover: var(--surface-3); }
+.btn-danger { --btn-bg: transparent; --btn-fg: var(--critical); --btn-line: var(--critical-line); --btn-hover: var(--critical-bg); }
+.btn-tag { --btn-bg: var(--tag-paper); --btn-fg: var(--tag-ink); --btn-line: var(--tag-paper-2); --btn-hover: var(--tag-paper-2); }
+.btn-sm { height: 28px; padding: 0 10px; font-size: var(--text-xs); gap: 6px; }
+.btn .kbd { margin-right: -4px; }
+.kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: var(--radius-sm); font: 500 var(--text-2xs)/1 var(--font-mono); color: var(--fg-3); background: var(--surface); }
+.btn-primary .kbd { background: transparent; color: inherit; border-color: color-mix(in oklab, var(--fg-inverse) 40%, transparent); }
+.btn-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled) { background: var(--btn-hover); }
+  .btn-ghost:hover:not(:disabled) { color: var(--fg); }
+  .topnav a:hover { color: var(--fg); background: var(--surface-3); }
+  .seg button:hover { color: var(--fg); }
+}
+
+.pill {
+  --c: var(--fg-2); --cb: var(--surface-3); --cl: var(--line-strong);
+  display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px 0 7px;
+  border: 1px solid var(--cl); border-radius: var(--radius-xs); background: var(--cb); color: var(--c);
+  font: 500 var(--text-2xs)/1 var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+}
+.pill::before { content: ""; width: 7px; height: 7px; flex: none; background: currentColor; border-radius: 1px; }
+.pill.critical { --c: var(--critical); --cb: var(--critical-bg); --cl: var(--critical-line); }
+.pill.investigating { --c: var(--investigating); --cb: var(--investigating-bg); --cl: var(--investigating-line); }
+.pill.investigating::before { background: linear-gradient(90deg, currentColor 50%, transparent 50%); box-shadow: inset 0 0 0 1.5px currentColor; border-radius: 50%; }
+.pill.resolved { --c: var(--resolved); --cb: var(--resolved-bg); --cl: var(--resolved-line); }
+.pill.resolved::before { width: 8px; height: 5px; background: none; border: solid currentColor; border-width: 0 0 1.75px 1.75px; transform: translateY(-1.5px) rotate(-45deg); border-radius: 0; }
+.pill.info { --c: var(--info); --cb: var(--info-bg); --cl: var(--info-line); }
+.pill.info::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; border-radius: 50%; }
+.pill.quiet { --c: var(--quiet); --cb: transparent; --cl: var(--quiet-line); border-style: dashed; }
+.pill.quiet::before { background: none; border: 1.5px dashed currentColor; border-radius: 50%; }
+.pill.conflict { --c: var(--conflict); --cb: var(--conflict-bg); --cl: var(--conflict-line); }
+.pill.conflict::before { transform: rotate(45deg) scale(0.9); }
+.pill.plain::before { display: none; }
+.pill.plain { padding-left: 8px; }
+
+.sev { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--radius-xs); background: var(--critical); color: var(--fg-inverse); font: 600 var(--text-xs)/1 var(--font-mono); letter-spacing: 0.06em; white-space: nowrap; }
+
+.live { display: inline-flex; align-items: center; gap: 7px; font: 500 var(--text-2xs)/1 var(--font-mono); letter-spacing: var(--tracking-label); color: var(--critical); text-transform: uppercase; }
+.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; }
+@media (prefers-reduced-motion: no-preference) {
+  .live::before { animation: live-pulse 1.6s var(--ease-out) infinite; }
+}
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--critical) 60%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+
+.mgr { display: inline-flex; align-items: center; height: 16px; padding: 0 5px; border-radius: var(--radius-xs); background: var(--brass-soft); color: var(--brass); font: 600 9.5px/1 var(--font-mono); letter-spacing: 0.08em; vertical-align: 2px; white-space: nowrap; }
+.mgr.gone { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--fg-3); text-decoration: line-through; }
+
+.toe {
+  --hole: 2.6px;
+  position: relative; display: inline-flex; align-items: center; gap: 6px;
+  height: 22px; padding: 0 9px 0 19px;
+  background: linear-gradient(180deg, var(--tag-paper), var(--tag-paper-2));
+  color: var(--tag-ink); font: 600 var(--text-2xs)/1 var(--font-mono); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
+  clip-path: polygon(7px 0, 100% 0, 100% 100%, 7px 100%, 0 50%);
+  -webkit-mask: radial-gradient(circle at 10px 50%, transparent var(--hole), #000 calc(var(--hole) + 0.5px));
+  mask: radial-gradient(circle at 10px 50%, transparent var(--hole), #000 calc(var(--hole) + 0.5px));
+  transform: rotate(-2deg); transform-origin: 10px 50%;
+}
+.toe::before { content: ""; position: absolute; left: 5.5px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; border: 1.5px solid var(--tag-string); }
+.toe.is-new { animation: toe-land var(--dur-tag) var(--ease-spring) both; }
+@keyframes toe-land { from { opacity: 0; transform: rotate(-16deg) translateY(-3px); } 30% { opacity: 1; } to { opacity: 1; transform: rotate(-2deg); } }
+
+.tag-card {
+  --hole: 6px;
+  position: relative; width: 300px; max-width: 100%; padding: 20px 22px 20px 48px; color: var(--tag-ink);
+  background: linear-gradient(170deg, var(--tag-paper) 0%, var(--tag-paper-2) 100%);
+  clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
+  -webkit-mask: radial-gradient(circle at 24px 50%, transparent var(--hole), #000 calc(var(--hole) + 0.5px));
+  mask: radial-gradient(circle at 24px 50%, transparent var(--hole), #000 calc(var(--hole) + 0.5px));
+  transform: rotate(-4deg); transform-origin: 24px 50%;
+  transition: transform 600ms var(--ease-spring);
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,0.18));
+}
+.tag-card::before { content: ""; position: absolute; left: 13px; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%; border: 3px solid var(--tag-string); }
+.tag-card .t-id { font: 600 var(--text-xs)/1 var(--font-mono); letter-spacing: 0.1em; }
+.tag-card .t-title { font: 700 var(--text-xl)/1.1 var(--font-display); letter-spacing: -0.02em; margin-top: 10px; }
+.tag-card dl { margin: 14px 0 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; font: 400 var(--text-xs)/1.35 var(--font-mono); }
+.tag-card dt { opacity: 0.7; }
+.tag-card dd { margin: 0; }
+.tag-card .stamp { position: absolute; right: 16px; top: 16px; font: 700 var(--text-2xs)/1 var(--font-mono); letter-spacing: 0.14em; padding: 4px 6px; border: 1.5px solid currentColor; border-radius: 2px; transform: rotate(6deg); opacity: 0.8; }
+.tag-wrap { position: relative; display: inline-block; }
+.tag-wrap svg.string { position: absolute; z-index: 1; left: -64px; top: calc(50% - 40px); width: 96px; height: 80px; overflow: visible; }
+.tag-wrap svg.string path { fill: none; stroke: var(--tag-string); stroke-width: 1.5; stroke-linecap: round; }
+@media (max-width: 600px) { .tag-wrap svg.string { display: none; } }
+@media (hover: hover) and (pointer: fine) { .tag-wrap:hover .tag-card { transform: rotate(-1.5deg); } }
+
+.av { position: relative; flex: none; width: 26px; height: 26px; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--surface-3); color: var(--fg); font: 600 var(--text-2xs)/1 var(--font-mono); letter-spacing: 0.02em; }
+.av::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--surface); background: var(--resolved); }
+.av.quiet::after { background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--investigating); }
+.av.offline { color: var(--fg-3); background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.av.offline::after { background: var(--line-strong); }
+.av.root { background: var(--brass-soft); color: var(--brass); }
+.av.root::after { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip {
+  display: inline-flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%;
+  padding: 5px 12px 5px 5px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface);
+  transition: background-color var(--dur-fast) var(--ease-hover), border-color var(--dur-fast) var(--ease-hover), transform var(--dur-press) var(--ease-out);
+  cursor: pointer; text-align: left; color: inherit; font: inherit;
+}
+.chip:active { transform: scale(var(--press-scale)); }
+.chip .who { display: grid; min-width: 0; line-height: 1.2; }
+.chip b { font-size: var(--text-sm); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.chip small { font-size: var(--text-xs); color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip small.warn { color: var(--investigating); }
+.chip.offline b { color: var(--fg-2); }
+@media (hover: hover) and (pointer: fine) { .chip:hover { background: var(--surface-2); border-color: var(--line-strong); } }
+
+.inc { padding: var(--space-5); display: grid; gap: var(--space-5); }
+.inc-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.inc-id { font: 500 var(--text-sm)/1 var(--font-mono); color: var(--fg-2); }
+.inc-top .live { margin-left: auto; }
+.inc h3 { font-size: clamp(1.625rem, 3.2vw, 2.375rem); line-height: 1.05; }
+.inc .src { font-size: var(--text-sm); color: var(--fg-2); margin-top: 6px; }
+.inc .src code { font-size: var(--text-xs); color: var(--fg); background: var(--surface-3); padding: 1px 5px; border-radius: var(--radius-xs); }
+.inc-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.inc-stats > div { padding: var(--space-4) var(--space-4) 0 0; display: grid; gap: 4px; align-content: start; }
+.inc-stats dt { font: 500 var(--text-2xs)/1 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-3); }
+.inc-stats dd { margin: 0; font: 600 var(--text-2xl)/1.1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.inc-stats dd small { font: 400 var(--text-sm)/1 var(--font-body); color: var(--fg-3); }
+.inc-stats .clock dd { font: 500 var(--text-3xl)/1 var(--font-mono); letter-spacing: -0.04em; }
+.inc-stats .clock dd span { color: var(--fg-3); margin-inline: -0.12em; }
+@media (min-width: 860px) {
+  .inc { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: var(--space-6); }
+  .inc-head { grid-column: 1 / -1; }
+  .inc-stats { grid-column: 1 / -1; grid-template-columns: 1.5fr 1fr 1fr 1fr; }
+  .inc-stats > div + div { padding-left: var(--space-5); border-left: 1px solid var(--line); }
+  .inc-stats .clock dd { font-size: var(--text-clock); }
+}
+
+.tree { padding: var(--space-2); }
+.tree ul ul { margin-left: 13px; padding-left: 12px; border-left: 1px solid var(--line); }
+.trow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px var(--space-3); align-items: center; padding: 7px 8px; border-radius: var(--radius-md); transition: background-color var(--dur-fast) var(--ease-hover); }
+.trow .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.trow .nm { min-width: 0; display: grid; line-height: 1.25; }
+.trow .nm b { font-size: var(--text-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trow .nm span { font-size: var(--text-xs); color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trow .meta { display: flex; align-items: center; gap: var(--space-3); justify-content: flex-end; }
+.trow time { font-size: var(--text-xs); color: var(--fg-3); min-width: 30px; text-align: right; }
+.trow time.stale { color: var(--investigating); font-weight: 500; }
+.trow.team .nm b { font: 700 var(--text-md)/1.2 var(--font-display); letter-spacing: -0.01em; }
+.trow.team .tglyph { width: 26px; height: 26px; flex: none; display: grid; place-items: center; color: var(--fg-3); }
+.trow.is-quiet { background: linear-gradient(90deg, var(--investigating-bg), transparent 70%); }
+.trow.electing { background: repeating-linear-gradient(-45deg, var(--info-bg) 0 8px, transparent 8px 16px); }
+.votes { display: inline-flex; gap: 3px; }
+.votes i { width: 8px; height: 8px; border-radius: 1px; box-shadow: inset 0 0 0 1.5px var(--info); }
+.votes i.on { background: var(--info); }
+@media (hover: hover) and (pointer: fine) { .trow:hover { background-color: var(--surface-2); } }
+@media (max-width: 520px) { .trow { grid-template-columns: minmax(0, 1fr); } .trow .meta { justify-content: flex-start; padding-left: 36px; } }
+
+.log-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
+.log-head h4 { font: 700 var(--text-md)/1 var(--font-display); }
+.log-head .btn { margin-left: auto; }
+.filters { display: flex; gap: 2px; flex-wrap: wrap; padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); }
+.filters button { appearance: none; border: 0; background: transparent; color: var(--fg-2); font: 500 var(--text-xs)/1 var(--font-body); padding: 6px 9px; border-radius: var(--radius-sm); cursor: pointer; transition: background-color var(--dur-fast) var(--ease-hover), color var(--dur-fast) var(--ease-hover); }
+.filters button[aria-pressed="true"] { background: var(--surface-3); color: var(--fg); }
+.filters button span { color: var(--fg-3); margin-left: 4px; font-family: var(--font-mono); }
+.log { max-height: 560px; overflow-y: auto; overscroll-behavior: contain; }
+.ev { position: relative; display: grid; grid-template-columns: 72px 18px minmax(0, 1fr); gap: 0 var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
+.ev:last-child { border-bottom: 0; }
+.ev > time { font-size: var(--text-xs); color: var(--fg-3); padding-top: 2px; }
+.ev .mk { position: relative; display: grid; justify-items: center; padding-top: 5px; }
+.ev .mk i { width: 9px; height: 9px; background: var(--fg-2); border-radius: 50%; }
+.ev[data-type="decision"] .mk i { background: var(--info); border-radius: 1px; transform: rotate(45deg); }
+.ev[data-type="finding"] .mk i { background: none; box-shadow: inset 0 0 0 2px var(--info); }
+.ev[data-type="relay"] .mk i { background: var(--brass); border-radius: 1px; }
+.ev[data-type="conflict"] .mk i { background: var(--conflict); border-radius: 1px; transform: rotate(45deg); box-shadow: 0 0 0 3px var(--conflict-bg); }
+.ev[data-type="resolved"] .mk i { width: 12px; height: 8px; border-radius: 0; background: var(--tag-paper); clip-path: polygon(3px 0, 100% 0, 100% 100%, 3px 100%, 0 50%); }
+.ev[data-type="alert"] .mk i { background: var(--critical); border-radius: 1px; }
+.ev-body { display: grid; gap: 6px; min-width: 0; }
+.ev-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: var(--text-sm); }
+.ev-who b { font-weight: 600; }
+.ev-who .team { color: var(--fg-3); font-size: var(--text-xs); }
+.ev-who .type { font: 500 var(--text-2xs)/1 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-3); }
+.ev-body p { font-size: var(--text-md); }
+.cmd { display: block; font-size: var(--text-xs); color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 6px 10px; overflow-x: auto; white-space: pre; }
+.cmd::before { content: "$ "; color: var(--fg-3); }
+.excerpt { margin: 0; font-size: var(--text-xs); line-height: 1.6; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 0; overflow-x: auto; }
+.excerpt span { display: block; padding: 0 10px; white-space: pre; }
+.excerpt .err { background: var(--critical-bg); color: var(--critical); box-shadow: inset 2px 0 0 var(--critical); }
+.excerpt .ln { color: var(--fg-3); }
+.artifact {
+  display: inline-grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; max-width: 100%; justify-self: start;
+  padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface);
+  text-decoration: none; font-size: var(--text-sm);
+  transition: border-color var(--dur-fast) var(--ease-hover), background-color var(--dur-fast) var(--ease-hover), transform var(--dur-press) var(--ease-out);
+}
+.artifact:active { transform: scale(0.985); }
+.artifact .src { font: 600 9.5px/1 var(--font-mono); letter-spacing: 0.08em; padding: 5px 6px; border-radius: var(--radius-xs); background: var(--surface-3); color: var(--fg-2); }
+.artifact .src.dash0 { background: var(--info-bg); color: var(--info); }
+.artifact .src.radar { background: var(--resolved-bg); color: var(--resolved); }
+.artifact .src.gitar { background: var(--brass-soft); color: var(--brass); }
+.artifact .ttl { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.artifact .icon { color: var(--fg-3); transition: transform var(--dur-fast) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .artifact:hover { border-color: var(--line-strong); background: var(--surface-2); }
+  .artifact:hover .icon { transform: translate(1px, -1px); color: var(--fg); }
+  .filters button:hover { color: var(--fg); }
+}
+.ev.is-new { animation: ev-in var(--dur-enter) var(--ease-out) both; }
+.ev.is-new::after { content: ""; position: absolute; inset: 0; background: var(--brass); opacity: 0; pointer-events: none; animation: ev-glow 1600ms var(--ease-out) both; }
+@keyframes ev-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes ev-glow { 0% { opacity: 0.1; } 100% { opacity: 0; } }
+@media (max-width: 600px) {
+  .ev { grid-template-columns: 18px minmax(0, 1fr); padding-inline: var(--space-3); }
+  .ev > time { grid-column: 2; grid-row: 1; padding: 0; }
+  .ev .mk { grid-row: 1 / span 2; grid-column: 1; }
+  .ev .ev-body { grid-column: 2; }
+}
+
+.lanes { overflow-x: auto; padding: var(--space-3) var(--space-2) var(--space-2); }
+.lanes svg { display: block; min-width: 820px; width: 100%; height: auto; }
+.lanes text { font-family: var(--font-body); fill: var(--fg); font-size: 11px; }
+.lanes .lane-nm { font-family: var(--font-display); font-weight: 700; font-size: 13px; }
+.lanes .tick { font-family: var(--font-mono); font-size: 10.5px; fill: var(--fg-3); }
+.lanes .grid { stroke: var(--line); }
+.lanes .lane-bg { fill: var(--surface-2); }
+.lanes .span { stroke: var(--line-strong); stroke-width: 4; stroke-linecap: round; }
+.lanes .act { fill: var(--fg); }
+.lanes .dec { fill: var(--info); }
+.lanes .rel { fill: var(--brass); }
+.lanes .conf { fill: var(--conflict-bg); stroke: var(--conflict); stroke-width: 2; }
+.lanes .conf-link { stroke: var(--conflict); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.lanes .conf-t { fill: var(--conflict); font-family: var(--font-mono); font-size: 10.5px; }
+.lanes .res-tag { fill: var(--tag-paper); stroke: var(--tag-string); stroke-width: 1; }
+.lanes .res-line { stroke: var(--resolved); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.lanes .res-t { fill: var(--resolved); font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; }
+.lanes .now { stroke: var(--critical); stroke-width: 1.5; }
+.lanes .mark { transition: transform var(--dur-fast) var(--ease-out); transform-box: fill-box; transform-origin: center; cursor: default; }
+@media (hover: hover) and (pointer: fine) { .lanes .mark:hover { transform: scale(1.5); } }
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); font-size: var(--text-xs); color: var(--fg-2); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend svg { width: 14px; height: 14px; }
+
+.relay { padding: var(--space-4); display: grid; gap: var(--space-3); }
+.route { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.hop { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px 0 4px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--line); font-size: var(--text-sm); font-weight: 600; }
+.hop .av { width: 18px; height: 18px; font-size: 9px; }
+.hop .av::after { display: none; }
+.hop.root { background: var(--brass-soft); border-color: transparent; color: var(--brass); }
+.route .icon { color: var(--fg-3); width: 12px; height: 12px; }
+.route time { margin-left: auto; font-size: var(--text-xs); color: var(--fg-3); }
+.relay blockquote { margin: 0; font-size: var(--text-lg); line-height: 1.4; padding-left: var(--space-3); border-left: 2px solid var(--brass); }
+.why { display: grid; gap: 2px; border-top: 1px dashed var(--line-strong); padding-top: var(--space-3); }
+.why-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: var(--space-3); font-size: var(--text-sm); padding-block: 4px; }
+.why-row b { font-weight: 600; }
+.why-row.skip { color: var(--fg-3); }
+.why-row.skip b { font-weight: 500; text-decoration: line-through; text-decoration-color: var(--line-strong); }
+.relay-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+@media (max-width: 480px) { .why-row { grid-template-columns: minmax(0, 1fr); gap: 0; } .route time { margin-left: 0; width: 100%; } }
+
+.conflict-card { position: relative; padding: var(--space-5) var(--space-5) var(--space-5) calc(var(--space-5) + 6px); display: grid; gap: var(--space-4); border-color: var(--conflict-line); overflow: hidden; }
+.conflict-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: repeating-linear-gradient(-45deg, var(--conflict) 0 6px, transparent 6px 12px); }
+.conflict-top { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; }
+.conflict-top code { font-size: var(--text-xs); background: var(--surface-3); padding: 3px 6px; border-radius: var(--radius-xs); }
+.conflict-top time { margin-left: auto; font-size: var(--text-xs); color: var(--fg-3); }
+.conflict-card h4 { font-size: var(--text-xl); }
+.vs { display: grid; gap: var(--space-2); align-items: stretch; }
+.side { border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-3); display: grid; gap: 6px; background: var(--surface-2); min-width: 0; }
+.side-who { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); }
+.side-who b { font-weight: 600; }
+.side-who time { margin-left: auto; font-size: var(--text-xs); color: var(--fg-3); }
+.side p { font-size: var(--text-sm); }
+.side .cmd { white-space: pre-wrap; overflow-wrap: anywhere; }
+.gap-note { display: grid; place-items: center; font: 500 var(--text-2xs)/1.3 var(--font-mono); color: var(--conflict); text-transform: uppercase; letter-spacing: 0.06em; text-align: center; padding: 4px; }
+@media (min-width: 720px) { .vs { grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr); } }
+.model { display: grid; gap: 6px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--conflict-bg); }
+.model .eyebrow { color: var(--conflict); }
+.model p { font-size: var(--text-md); }
+.notified { font-size: var(--text-sm); color: var(--fg-2); }
+.notified b { color: var(--fg); font-weight: 600; }
+
+.ws { list-style: none; }
+.ws-row { display: grid; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--line); transition: background-color var(--dur-fast) var(--ease-hover); }
+.ws-row:last-child { border-bottom: 0; }
+.ws-main { display: grid; gap: 3px; min-width: 0; }
+.ws-main b { font: 700 var(--text-md)/1.25 var(--font-display); letter-spacing: -0.01em; }
+.ws-main span { font-size: var(--text-sm); color: var(--fg-2); }
+.ws-main span em { font-style: normal; color: var(--fg); font-weight: 500; }
+.meter { display: grid; gap: 6px; min-width: 0; }
+.bar { position: relative; height: 8px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.bar i { position: absolute; inset: 0 auto 0 0; width: var(--p); background: var(--investigating); border-radius: 2px; transition: width var(--dur-enter) var(--ease-out), background-color var(--dur-base) var(--ease-hover); }
+.bar.done i { background: var(--resolved); }
+.bar.cold i { background: var(--critical); }
+.meter small { font: 400 var(--text-xs)/1.35 var(--font-mono); color: var(--fg-3); }
+.meter small b { color: var(--fg); font-weight: 500; }
+.ws-state { display: flex; align-items: center; gap: var(--space-2); min-height: 22px; }
+@media (min-width: 860px) { .ws-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 230px; align-items: center; gap: var(--space-6); } .ws-state { justify-content: flex-end; } }
+@media (hover: hover) and (pointer: fine) { .ws-row:hover { background: var(--surface-2); } }
+
+.elect { padding: var(--space-4) var(--space-5); display: grid; gap: var(--space-4); border-color: var(--info-line); background: linear-gradient(180deg, var(--info-bg), var(--surface) 80%); }
+.elect-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.elect-top h4 { font-size: var(--text-lg); }
+.elect-top time { margin-left: auto; font-size: var(--text-xs); color: var(--fg-3); }
+.ballots { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-2); }
+.ballot { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); font-size: var(--text-sm); min-width: 0; }
+.ballot .v { margin-left: auto; font: 500 var(--text-xs)/1 var(--font-mono); color: var(--info); white-space: nowrap; }
+.ballot.none { border-style: dashed; color: var(--fg-3); background: transparent; }
+.ballot.none .v { color: var(--fg-3); }
+.elect-result { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; font-size: var(--text-sm); }
+.elect-result b { font-weight: 600; }
+.tally { display: inline-flex; align-items: center; gap: 8px; font: 500 var(--text-xs)/1 var(--font-mono); color: var(--info); }
+
+.record { display: grid; overflow: hidden; }
+.rec-head { display: grid; gap: var(--space-5); padding: var(--space-6); border-bottom: 1px dashed var(--line-strong); background: linear-gradient(180deg, var(--surface-2), var(--surface)); }
+.rec-head h4 { font-size: var(--text-3xl); line-height: 1; letter-spacing: -0.03em; }
+.rec-head .sub { font-size: var(--text-sm); color: var(--fg-2); margin-top: 8px; max-width: 56ch; }
+.rec-head .tag-card { justify-self: start; width: 260px; }
+@media (min-width: 900px) { .rec-head { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); margin: var(--space-5) 0 0; }
+.facts div { display: grid; gap: 4px; }
+.facts dt { font: 500 var(--text-2xs)/1 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-3); }
+.facts dd { margin: 0; font: 600 var(--text-xl)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+@media (min-width: 700px) { .facts { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rec-body { display: grid; }
+.rec-sec { padding: var(--space-5) var(--space-6); display: grid; gap: var(--space-3); border-bottom: 1px solid var(--line); }
+.rec-sec:last-child { border-bottom: 0; }
+.rec-sec h5 { margin: 0; font: 500 var(--text-2xs)/1 var(--font-mono); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-3); }
+.parts li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--space-3); padding-block: 6px; font-size: var(--text-md); }
+.parts a.ts { font: 500 var(--text-xs)/1.9 var(--font-mono); color: var(--info); text-decoration: none; border-radius: var(--radius-xs); }
+.parts a.ts:hover { text-decoration: underline; text-underline-offset: 3px; }
+.imp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--line); align-items: center; }
+.imp:first-of-type { border-top: 0; padding-top: 0; }
+.imp .what { display: grid; gap: 2px; min-width: 0; }
+.imp .what b { font-weight: 600; font-size: var(--text-md); }
+.imp .what span { font-size: var(--text-xs); color: var(--fg-3); }
+.imp .what a { color: var(--info); text-decoration: none; font-family: var(--font-mono); }
+.imp .what a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.imp .gitar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--text-xs); color: var(--fg-2); }
+@media (min-width: 760px) { .imp { grid-template-columns: minmax(0, 1fr) auto; } .imp .gitar { justify-content: flex-end; } }
+.before { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); }
+.before-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); }
+.before-top b { font: 700 var(--text-md)/1.2 var(--font-display); }
+.before-top .score { margin-left: auto; font: 500 var(--text-xs)/1 var(--font-mono); color: var(--brass); }
+.diff { display: grid; gap: var(--space-2); font-size: var(--text-sm); }
+.diff div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-3); }
+.diff dt { font: 500 var(--text-2xs)/1.9 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-3); }
+.diff dd { margin: 0; }
+
+.forms { display: grid; gap: var(--space-5); }
+@media (min-width: 860px) { .forms { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.field { display: grid; gap: 6px; align-content: start; }
+.field label { font-size: var(--text-sm); font-weight: 600; }
+.field .hint { font-size: var(--text-xs); color: var(--fg-3); }
+.field .err { font-size: var(--text-xs); color: var(--critical); }
+.input {
+  width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-md);
+  background: var(--surface); color: var(--fg); font: 400 var(--text-md)/1 var(--font-body);
+  transition: border-color var(--dur-fast) var(--ease-hover), box-shadow var(--dur-fast) var(--ease-hover);
+}
+.input::placeholder { color: var(--fg-3); }
+.input:focus-visible { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus) 28%, transparent); border-radius: var(--radius-md); }
+.input[aria-invalid="true"] { border-color: var(--critical); }
+.input.mono { font-family: var(--font-mono); font-size: var(--text-sm); }
+@media (hover: hover) and (pointer: fine) { .input:hover:not(:focus-visible) { border-color: var(--fg-3); } }
+.composer { display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface); transition: border-color var(--dur-fast) var(--ease-hover), box-shadow var(--dur-fast) var(--ease-hover); }
+.composer:focus-within { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus) 28%, transparent); }
+.composer .at { font: 600 var(--text-md)/1 var(--font-mono); color: var(--brass); }
+.composer input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--fg); font: 400 var(--text-md)/1.4 var(--font-body); padding: 6px 0; }
+.composer input:focus-visible { box-shadow: none; }
+.composer input::placeholder { color: var(--fg-3); }
+
+.empty { padding: var(--space-8) var(--space-5); display: grid; justify-items: center; text-align: center; gap: var(--space-3); border-style: dashed; box-shadow: none; background: transparent; }
+.empty .tags { display: flex; gap: 6px; margin-bottom: var(--space-2); }
+.empty .tags .toe:nth-child(2) { transform: rotate(3deg); }
+.empty .tags .toe:nth-child(3) { transform: rotate(-6deg); }
+.empty h4 { font-size: var(--text-xl); }
+.empty p { color: var(--fg-2); font-size: var(--text-sm); max-width: 40ch; }
+
+.toaster { position: fixed; z-index: 40; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); left: max(16px, env(safe-area-inset-left)); display: grid; justify-items: end; gap: var(--space-2); pointer-events: none; }
+.toast {
+  pointer-events: auto; width: min(380px, 100%); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: start;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); border-radius: var(--radius-lg);
+  background: var(--surface); border: 1px solid var(--line-strong); box-shadow: var(--edge-highlight), var(--elev-3);
+  opacity: 0; transform: translateY(16px) scale(0.98);
+  transition: opacity var(--dur-enter) var(--ease-out), transform var(--dur-enter) var(--ease-out);
+}
+.toast[data-state="open"] { opacity: 1; transform: none; }
+.toast[data-state="closing"] { opacity: 0; transform: translateY(16px) scale(0.98); transition-duration: var(--dur-exit); }
+.toast .toe { margin-top: 2px; }
+.toast b { display: block; font-size: var(--text-sm); font-weight: 600; }
+.toast p { font-size: var(--text-xs); color: var(--fg-2); margin-top: 2px; }
+.toast-static { position: relative; opacity: 1; transform: none; width: min(380px, 100%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ev.is-new { animation: ev-fade var(--dur-base) ease both; }
+  .toe.is-new { animation: ev-fade var(--dur-base) ease both; }
+  .toast, .toast[data-state="closing"] { transform: none; }
+  .tag-card { transition: none; }
+  .motion-demo .track i { transition: none !important; }
+  .lanes .mark { transition: none; }
+}
+@keyframes ev-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-transparency: reduce) {
+  .topbar { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+.foot { padding-top: var(--space-7); border-top: 1px solid var(--line); color: var(--fg-3); font-size: var(--text-xs); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 16 16"><path d="M6 3.5h6.5V10M12.5 3.5 4 12"/></symbol>
+  <symbol id="i-team" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M2.5 6.5h11"/></symbol>
+  <symbol id="i-send" viewBox="0 0 16 16"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M5 3.5v9l7-4.5z"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#top">
+      <svg class="brand-mark" viewBox="0 0 22 14" aria-hidden="true"><path d="M5 0h17v14H5L0 7z" fill="var(--tag-paper)"/><circle cx="6.5" cy="7" r="2" fill="var(--bg)"/></svg>
+      CaptainMorgue
+    </a>
+    <nav class="topnav" aria-label="Sections">
+      <a href="#principles">Principles</a>
+      <a href="#color">Color</a>
+      <a href="#type">Type</a>
+      <a href="#foundations">Space and motion</a>
+      <a href="#components">Components</a>
+    </nav>
+    <div class="seg" role="group" aria-label="Theme">
+      <button type="button" data-theme-set="auto" aria-pressed="true">Auto</button>
+      <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<main class="page" id="top">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Design system, v0.1, hackathon build</div>
+      <h1>CaptainMorgue</h1>
+      <p class="lede">Where incidents go to die. A wall-screen interface for many responders, many agents and one shared record.</p>
+      <div class="direction">
+        <p><b>Mortuary steel.</b> Cold green-grey neutrals, hairline rules and squared corners, built dark-first for a big screen in a dim room.</p>
+        <p><b>Status by shape and hue.</b> Six states, each with its own glyph, so a red-green split or a washed-out projector still reads.</p>
+        <p><b>One warm object.</b> Manila is reserved for the toe tag: a part, or the whole incident, gets one only when it is dead.</p>
+      </div>
+    </div>
+    <div class="hero-tag">
+      <div class="tag-wrap">
+        <svg class="string" viewBox="0 0 96 80" aria-hidden="true"><path d="M2 6 C 30 0, 50 40, 88 40"/></svg>
+        <div class="tag-card" role="img" aria-label="Toe tag for INC-2041, closed at 15:05">
+          <span class="stamp">Closed</span>
+          <div class="t-id">INC-2041</div>
+          <div class="t-title">Checkout 502s, eu-west</div>
+          <dl>
+            <dt>Opened</dt><dd>14:02, Dash0 alert</dd>
+            <dt>Closed</dt><dd>15:05, Dana</dd>
+            <dt>Cause</dt><dd>payments-db pool exhausted after v412</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="principles">
+    <div class="sec-head">
+      <div class="eyebrow">01</div>
+      <h2>Principles</h2>
+      <p>Five rules every screen is checked against.</p>
+    </div>
+    <ol class="principles">
+      <li><span class="n">1</span><div><b>Readable from the back of the room.</b><span>Hierarchy by size and weight first. The clock, the severity and what is still open win every screen.</span></div></li>
+      <li><span class="n">2</span><div><b>Every line has a person and a time.</b><span>Actor first, mono timestamp always. Nothing appears in the log without someone behind it.</span></div></li>
+      <li><span class="n">3</span><div><b>Motion only says something changed.</b><span>New rows arrive once and settle. The live dot is the only thing that loops.</span></div></li>
+      <li><span class="n">4</span><div><b>Always show the why.</b><span>Routing, conflicts and votes carry their reason inline, so people can trust them and correct them.</span></div></li>
+      <li><span class="n">5</span><div><b>The toe tag is earned.</b><span>Manila is the only decorative color. It appears when a part is resolved and nowhere else.</span></div></li>
+    </ol>
+  </section>
+
+  <section class="sec" id="color">
+    <div class="sec-head">
+      <div class="eyebrow">02</div>
+      <h2>Color</h2>
+      <p>Neutrals lean slightly green, like brushed steel under fluorescent light. Status colors are tuned per theme to hold at least 4.5 to 1 on their own tint.</p>
+    </div>
+    <div class="stack">
+      <div class="demo">
+        <div class="demo-label"><h3>Neutrals</h3><p>Switch the theme above to compare</p></div>
+        <div class="swatches">
+          <div class="sw"><i style="background:var(--bg)"></i><div><b>Background</b><code>--bg</code></div></div>
+          <div class="sw"><i style="background:var(--surface)"></i><div><b>Surface</b><code>--surface</code></div></div>
+          <div class="sw"><i style="background:var(--surface-2)"></i><div><b>Surface 2</b><code>--surface-2</code></div></div>
+          <div class="sw"><i style="background:var(--surface-3)"></i><div><b>Surface 3</b><code>--surface-3</code></div></div>
+          <div class="sw"><i style="background:var(--line-strong)"></i><div><b>Line strong</b><code>--line-strong</code></div></div>
+          <div class="sw"><i style="background:var(--fg-3)"></i><div><b>Text 3</b><code>--fg-3</code></div></div>
+          <div class="sw"><i style="background:var(--fg-2)"></i><div><b>Text 2</b><code>--fg-2</code></div></div>
+          <div class="sw"><i style="background:var(--fg)"></i><div><b>Text</b><code>--fg</code></div></div>
+        </div>
+      </div>
+      <div class="demo">
+        <div class="demo-label"><h3>Brand</h3><p>Brass marks CaptainMorgue itself. Manila is the toe tag.</p></div>
+        <div class="swatches">
+          <div class="sw"><i style="background:var(--brass)"></i><div><b>Brass</b><code>--brass</code></div></div>
+          <div class="sw"><i style="background:var(--brass-soft)"></i><div><b>Brass soft</b><code>--brass-soft</code></div></div>
+          <div class="sw"><i style="background:var(--tag-paper)"></i><div><b>Tag paper</b><code>--tag-paper</code></div></div>
+          <div class="sw"><i style="background:var(--tag-ink)"></i><div><b>Tag ink</b><code>--tag-ink</code></div></div>
+        </div>
+      </div>
+      <div class="demo">
+        <div class="demo-label"><h3>Status</h3><p>Each state has text, tint and line tokens</p></div>
+        <div class="status-sw">
+          <div class="ssw" style="background:var(--critical-bg);border-color:var(--critical-line);color:var(--critical)"><span class="pill critical">Critical</span><p>SEV, failing signal, crashlooping workload.</p><code>--critical</code></div>
+          <div class="ssw" style="background:var(--investigating-bg);border-color:var(--investigating-line);color:var(--investigating)"><span class="pill investigating">Investigating</span><p>Someone is on it. Also the warning tone for stale times.</p><code>--investigating</code></div>
+          <div class="ssw" style="background:var(--resolved-bg);border-color:var(--resolved-line);color:var(--resolved)"><span class="pill resolved">Resolved</span><p>Signal back to normal. Pairs with the toe tag.</p><code>--resolved</code></div>
+          <div class="ssw" style="background:var(--info-bg);border-color:var(--info-line);color:var(--info)"><span class="pill info">Info</span><p>Decisions, findings, elections, links.</p><code>--info</code></div>
+          <div class="ssw" style="background:var(--quiet-bg);border-color:var(--quiet-line);color:var(--quiet);border-style:dashed"><span class="pill quiet">Quiet</span><p>No progress for a while, or offline. Dashed, never filled.</p><code>--quiet</code></div>
+          <div class="ssw" style="background:var(--conflict-bg);border-color:var(--conflict-line);color:var(--conflict)"><span class="pill conflict">Conflict</span><p>Two actions working against each other. Diamond glyph, hazard stripe.</p><code>--conflict</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="type">
+    <div class="sec-head">
+      <div class="eyebrow">03</div>
+      <h2>Type</h2>
+      <p>Familjen Grotesk for names and numbers people read from a distance, Public Sans for prose, IBM Plex Mono for anything a machine wrote: time, ids, commands, logs. Tracking tightens as size grows.</p>
+    </div>
+    <div class="card" style="padding: 8px 20px">
+      <div class="type-row"><div class="spec">clock 64 / mono 500</div><div class="sample mono" style="font-size:var(--text-clock);line-height:1;letter-spacing:-0.04em;font-weight:500">00:47:12</div></div>
+      <div class="type-row"><div class="spec">4xl 52 / display 700</div><div class="sample" style="font:700 var(--text-4xl)/1 var(--font-display);letter-spacing:-0.03em">Checkout 502s</div></div>
+      <div class="type-row"><div class="spec">3xl 38 / display 700</div><div class="sample" style="font:700 var(--text-3xl)/1.05 var(--font-display);letter-spacing:-0.025em">Payments DB connections</div></div>
+      <div class="type-row"><div class="spec">2xl 28 / display 700</div><div class="sample" style="font:700 var(--text-2xl)/1.1 var(--font-display);letter-spacing:-0.02em">Team C / Payments</div></div>
+      <div class="type-row"><div class="spec">xl 22 / display 700</div><div class="sample" style="font:700 var(--text-xl)/1.2 var(--font-display);letter-spacing:-0.015em">Retry storm from edge</div></div>
+      <div class="type-row"><div class="spec">lg 18 / body 400</div><div class="sample" style="font-size:var(--text-lg)">Is the payments DB failing over? Seeing connection resets from checkout.</div></div>
+      <div class="type-row"><div class="spec">md 15 / body 400</div><div class="sample">Rolled back checkout to v411. Error rate is moving back toward normal.</div></div>
+      <div class="type-row"><div class="spec">sm 13 / body 400</div><div class="sample" style="font-size:var(--text-sm);color:var(--fg-2)">Picked Dev: rolled back deploy/checkout 10 minutes ago.</div></div>
+      <div class="type-row"><div class="spec">xs 12 / mono 400</div><div class="sample mono" style="font-size:var(--text-xs)">14:31:07  kubectl rollout undo deploy/checkout -n shop</div></div>
+      <div class="type-row"><div class="spec">2xs 11 / mono label</div><div class="sample eyebrow">Open parts</div></div>
+    </div>
+  </section>
+
+  <section class="sec" id="foundations">
+    <div class="sec-head">
+      <div class="eyebrow">04</div>
+      <h2>Space, shape and motion</h2>
+      <p>A 4px grid. Corners stay small: 2px for labels, 6px for controls, 10px for cards. Motion is fast, ease-out, and only on transform and opacity.</p>
+    </div>
+    <div class="scale-grid">
+      <div class="panel">
+        <h4>Spacing</h4>
+        <div class="space-row"><span>--space-1</span><span>4</span><i style="width:4px"></i></div>
+        <div class="space-row"><span>--space-2</span><span>8</span><i style="width:8px"></i></div>
+        <div class="space-row"><span>--space-3</span><span>12</span><i style="width:12px"></i></div>
+        <div class="space-row"><span>--space-4</span><span>16</span><i style="width:16px"></i></div>
+        <div class="space-row"><span>--space-5</span><span>20</span><i style="width:20px"></i></div>
+        <div class="space-row"><span>--space-6</span><span>24</span><i style="width:24px"></i></div>
+        <div class="space-row"><span>--space-7</span><span>32</span><i style="width:32px"></i></div>
+        <div class="space-row"><span>--space-8</span><span>40</span><i style="width:40px"></i></div>
+        <div class="space-row"><span>--space-9</span><span>56</span><i style="width:56px"></i></div>
+        <div class="space-row"><span>--space-10</span><span>80</span><i style="width:80px"></i></div>
+      </div>
+      <div class="stack" style="gap:var(--space-6)">
+        <div class="panel">
+          <h4>Radius</h4>
+          <div class="radii">
+            <div style="border-radius:var(--radius-xs)">xs 2</div>
+            <div style="border-radius:var(--radius-sm)">sm 4</div>
+            <div style="border-radius:var(--radius-md)">md 6</div>
+            <div style="border-radius:var(--radius-lg)">lg 10</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h4>Elevation</h4>
+          <div class="elevs">
+            <div style="box-shadow:var(--elev-1)">elev-1</div>
+            <div style="box-shadow:var(--elev-2)">elev-2</div>
+            <div style="box-shadow:var(--elev-3)">elev-3</div>
+          </div>
+        </div>
+        <div class="panel">
+          <h4>Focus ring</h4>
+          <div class="btn-row"><button class="btn btn-secondary" style="box-shadow:var(--focus-ring)">Focused</button><span class="faint" style="font-size:var(--text-xs)">Tab through the page to see it everywhere</span></div>
+        </div>
+      </div>
+      <div class="panel motion-demo" id="motion" style="grid-column: 1 / -1">
+        <div class="demo-label"><h4>Motion</h4><button class="btn btn-secondary btn-sm" type="button" id="play-motion"><svg class="icon"><use href="#i-play"/></svg>Play</button></div>
+        <div class="motion-list">
+          <div class="motion-row"><code>press 120 / ease-out</code><div class="track"><i data-d="var(--dur-press)" data-e="var(--ease-out)"></i></div></div>
+          <div class="motion-row"><code>fast 160 / ease-out</code><div class="track"><i data-d="var(--dur-fast)" data-e="var(--ease-out)"></i></div></div>
+          <div class="motion-row"><code>enter 280 / ease-out</code><div class="track"><i data-d="var(--dur-enter)" data-e="var(--ease-out)"></i></div></div>
+          <div class="motion-row"><code>base 220 / in-out</code><div class="track"><i data-d="var(--dur-base)" data-e="var(--ease-in-out)"></i></div></div>
+          <div class="motion-row"><code>drawer 280 / drawer</code><div class="track"><i data-d="var(--dur-enter)" data-e="var(--ease-drawer)"></i></div></div>
+          <div class="motion-row"><code>tag 800 / spring</code><div class="track"><i data-d="var(--dur-tag)" data-e="var(--ease-spring)"></i></div></div>
+        </div>
+        <p class="motion-note">Presses scale to 0.97. Entrances ease out under 300ms, exits are faster than entrances. Hover is color only and gated to fine pointers. The spring is reserved for the toe tag landing. Under reduced motion, movement becomes a short fade and the spring becomes ease-out.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="components">
+    <div class="sec-head">
+      <div class="eyebrow">05</div>
+      <h2>Components</h2>
+      <p>Rendered with the demo incident: checkout crashes after deploy v412, the load exhausts the payments database, and the failure spreads to edge retries. Three teams, seven people, one conflict.</p>
+    </div>
+    <div class="stack">
+
+      <div class="demo">
+        <div class="demo-label"><h3>Incident header</h3><p>Pinned to the top of the wall screen</p></div>
+        <div class="card inc">
+          <div class="inc-head">
+            <div class="inc-top">
+              <span class="sev">SEV 1</span>
+              <span class="inc-id">INC-2041</span>
+              <span class="pill investigating">Investigating</span>
+              <span class="live">Live</span>
+            </div>
+            <h3 style="margin-top:14px">Checkout 502s, eu-west</h3>
+            <p class="src">Opened 14:02 by Dash0 alert <code>checkout-5xx-rate</code>, from an injected fault on the demo cluster.</p>
+          </div>
+          <dl class="inc-stats" style="margin:0">
+            <div class="clock"><dt>Elapsed</dt><dd>00<span>:</span>47<span>:</span>12</dd></div>
+            <div><dt>Open parts</dt><dd>2 <small>of 4</small></dd></div>
+            <div><dt>On it</dt><dd>7 <small>3 teams</small></dd></div>
+            <div><dt>Conflicts</dt><dd style="color:var(--conflict)">1</dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Status pills</h3><p>Shape and color both carry the state</p></div>
+        <div class="btn-row">
+          <span class="pill critical">Critical</span>
+          <span class="pill investigating">Investigating</span>
+          <span class="pill resolved">Resolved</span>
+          <span class="pill info">Decision</span>
+          <span class="pill quiet">Quiet 14m</span>
+          <span class="pill conflict">Conflict</span>
+          <span class="toe">Resolved 14:31</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Presence chip</h3><p>Online, quiet, offline, manager, root</p></div>
+        <div class="chips">
+          <button class="chip" type="button"><span class="av">DA</span><span class="who"><b>Dana <span class="mgr">MGR</span></b><small>Team A / Checkout</small></span></button>
+          <button class="chip" type="button"><span class="av">EL</span><span class="who"><b>Eli <span class="mgr">MGR</span></b><small>Team C / Payments</small></span></button>
+          <button class="chip" type="button"><span class="av quiet">CA</span><span class="who"><b>Cal</b><small class="warn">Quiet 14m, Team B / Edge</small></span></button>
+          <button class="chip offline" type="button"><span class="av offline">BE</span><span class="who"><b>Ben <span class="mgr gone">MGR</span></b><small>Offline since 14:31</small></span></button>
+          <button class="chip" type="button"><span class="av root">CM</span><span class="who"><b>CaptainMorgue</b><small>Root, holds the record</small></span></button>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Command tree</h3><p>Nested teams, managers, last update, quiet flag, election running</p></div>
+        <div class="card tree">
+          <ul>
+            <li>
+              <div class="trow team"><div class="who"><span class="av root">CM</span><div class="nm"><b>CaptainMorgue</b><span>Root, 3 teams, full record</span></div></div><div class="meta"><span class="pill critical">SEV 1</span></div></div>
+              <ul>
+                <li>
+                  <div class="trow team"><div class="who"><svg class="icon tglyph" style="width:16px;height:16px"><use href="#i-team"/></svg><div class="nm"><b>Team A / Checkout</b><span>2 people</span></div></div><div class="meta"><span class="pill investigating">Investigating</span></div></div>
+                  <ul>
+                    <li><div class="trow"><div class="who"><span class="av">DA</span><div class="nm"><b>Dana <span class="mgr">MGR</span></b><span>Incident manager, watching the tree</span></div></div><div class="meta"><span class="pill investigating">Investigating</span><time>1m</time></div></div></li>
+                    <li><div class="trow"><div class="who"><span class="av">AN</span><div class="nm"><b>Ana</b><span>Drafting the status page update</span></div></div><div class="meta"><span class="pill investigating">Working</span><time>3m</time></div></div></li>
+                  </ul>
+                </li>
+                <li>
+                  <div class="trow team electing"><div class="who"><svg class="icon tglyph" style="width:16px;height:16px"><use href="#i-team"/></svg><div class="nm"><b>Team B / Edge</b><span>Manager dropped off, vote running</span></div></div><div class="meta"><span class="votes" aria-label="2 of 4 votes cast"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="pill info">Electing</span></div></div>
+                  <ul>
+                    <li><div class="trow"><div class="who"><span class="av offline">BE</span><div class="nm"><b>Ben <span class="mgr gone">MGR</span></b><span>Offline</span></div></div><div class="meta"><span class="pill quiet">Offline</span><time>9m</time></div></div></li>
+                    <li><div class="trow"><div class="who"><span class="av">DE</span><div class="nm"><b>Dev</b><span>Rolling back checkout to v411</span></div></div><div class="meta"><span class="pill investigating">Working</span><time>0m</time></div></div></li>
+                    <li><div class="trow is-quiet"><div class="who"><span class="av quiet">CA</span><div class="nm"><b>Cal</b><span>Last: checked load balancer logs</span></div></div><div class="meta"><span class="pill quiet">Quiet</span><time class="stale">14m</time></div></div></li>
+                  </ul>
+                </li>
+                <li>
+                  <div class="trow team"><div class="who"><svg class="icon tglyph" style="width:16px;height:16px"><use href="#i-team"/></svg><div class="nm"><b>Team C / Payments</b><span>1 person, 1 sub-team</span></div></div><div class="meta"><span class="pill investigating">Investigating</span></div></div>
+                  <ul>
+                    <li><div class="trow"><div class="who"><span class="av">EL</span><div class="nm"><b>Eli <span class="mgr">MGR</span></b><span>Asked Agent0 about auth latency</span></div></div><div class="meta"><span class="pill investigating">Investigating</span><time>1m</time></div></div></li>
+                    <li>
+                      <div class="trow team"><div class="who"><svg class="icon tglyph" style="width:16px;height:16px"><use href="#i-team"/></svg><div class="nm"><b>Payments DB</b><span>2 people</span></div></div><div class="meta"><span class="pill resolved">Resolved</span></div></div>
+                      <ul>
+                        <li><div class="trow"><div class="who"><span class="av">GU</span><div class="nm"><b>Gus <span class="mgr">MGR</span></b><span>Raised pool size from 20 to 80</span></div></div><div class="meta"><span class="toe">Resolved 14:48</span><time>6m</time></div></div></li>
+                        <li><div class="trow"><div class="who"><span class="av">FA</span><div class="nm"><b>Fay</b><span>Fault test on staging</span></div></div><div class="meta"><span class="pill investigating">Working</span><time>2m</time></div></div></li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Event log</h3><p>Streams across every agent. Press Append to see a row arrive.</p></div>
+        <div class="card">
+          <div class="log-head">
+            <h4>Event log</h4>
+            <span class="live">Streaming</span>
+            <button class="btn btn-secondary btn-sm" type="button" id="append-ev">Append event</button>
+          </div>
+          <div class="filters" role="group" aria-label="Filter events">
+            <button type="button" aria-pressed="true">All<span>212</span></button>
+            <button type="button" aria-pressed="false">Actions<span>141</span></button>
+            <button type="button" aria-pressed="false">Decisions<span>18</span></button>
+            <button type="button" aria-pressed="false">Findings<span>27</span></button>
+            <button type="button" aria-pressed="false">Relays<span>24</span></button>
+            <button type="button" aria-pressed="false">Conflicts<span>1</span></button>
+          </div>
+          <ol class="log" id="log" aria-live="polite">
+            <li class="ev" data-type="resolved">
+              <time>14:31:40</time><span class="mk"><i></i></span>
+              <div class="ev-body">
+                <div class="ev-who"><b>Dev</b><span class="team">Team B / Edge</span><span class="type">Part resolved</span></div>
+                <p>Bad deploy v412: checkout is serving v411, 5xx rate back under 1%.</p>
+                <a class="artifact" href="#"><span class="src dash0">DASH0</span><span class="ttl">checkout-5xx-rate, last 30m</span><svg class="icon"><use href="#i-ext"/></svg></a>
+              </div>
+            </li>
+            <li class="ev" data-type="action">
+              <time>14:31:07</time><span class="mk"><i></i></span>
+              <div class="ev-body">
+                <div class="ev-who"><b>Dev</b><span class="team">Team B / Edge</span><span class="type">Action</span></div>
+                <p>Rolled back checkout to the last good revision.</p>
+                <code class="cmd">kubectl rollout undo deploy/checkout -n shop --to-revision=411</code>
+                <a class="artifact" href="#"><span class="src radar">RADAR</span><span class="ttl">deploy/checkout, revision 411, 6 of 6 ready</span><svg class="icon"><use href="#i-ext"/></svg></a>
+              </div>
+            </li>
+            <li class="ev" data-type="finding">
+              <time>14:24:52</time><span class="mk"><i></i></span>
+              <div class="ev-body">
+                <div class="ev-who"><b>Dash0 Agent0</b><span class="team">for Eli</span><span class="type">Finding</span></div>
+                <p>payment-auth p99 rose from 180ms to 1.9s at 14:05. 94% of the slow spans wait on a payments-db connection.</p>
+                <a class="artifact" href="#"><span class="src dash0">AGENT0</span><span class="ttl">Trace analysis, payment-auth, 14:00 to 14:25</span><svg class="icon"><use href="#i-ext"/></svg></a>
+              </div>
+            </li>
+            <li class="ev" data-type="action">
+              <time>14:18:02</time><span class="mk"><i></i></span>
+              <div class="ev-body">
+                <div class="ev-who"><b>Gus</b><span class="team">Payments DB</span><span class="type">Read logs</span></div>
+                <p>payments-db primary is refusing connections.</p>
+<pre class="excerpt"><span class="ln">14:17:58 LOG:  checkpoint starting: time</span><span class="err">14:17:59 FATAL: remaining connection slots are reserved for superuser</span><span class="err">14:17:59 FATAL: remaining connection slots are reserved for superuser</span><span class="ln">14:18:01 LOG:  pgbouncer pool payments: 20 active, 412 waiting</span></pre>
+              </div>
+            </li>
+            <li class="ev" data-type="conflict">
+              <time>14:12:15</time><span class="mk"><i></i></span>
+              <div class="ev-body">
+                <div class="ev-who"><b>CaptainMorgue</b><span class="type" style="color:var(--conflict)">Conflict</span></div>
+                <p>Cal's pod restart overlaps Dev's rollback of deploy/checkout. Both told, Dana copied.</p>
+              </div>
+            </li>
+            <li class="ev" data-type="decision">
+              <time>14:10:31</time><span class="mk"><i></i></span>
+              <div class="ev-body">
+                <div class="ev-who"><b>Dev</b><span class="team">Team B / Edge</span><span class="type">Decision</span></div>
+                <p>Roll back checkout from v412. Crashloops started 3 minutes after it shipped.</p>
+              </div>
+            </li>
+            <li class="ev" data-type="alert">
+              <time>14:02:00</time><span class="mk"><i></i></span>
+              <div class="ev-body">
+                <div class="ev-who"><b>CaptainMorgue</b><span class="type">Incident opened</span></div>
+                <p>Dash0 alert checkout-5xx-rate fired at 18.2%. Pulled in Team A and Team B from service ownership.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Swimlane timeline</h3><p>One lane per person on a shared clock. Scrolls sideways on small screens.</p></div>
+        <div class="card">
+          <div class="lanes">
+            <svg viewBox="0 0 960 296" role="img" aria-label="Timeline 14:00 to 15:10 across six lanes, with a conflict at 14:12 and the incident resolved at 15:05">
+              <g class="grid">
+                <line x1="120" y1="22" x2="120" y2="290"/><line x1="237" y1="22" x2="237" y2="290"/><line x1="354" y1="22" x2="354" y2="290"/><line x1="471" y1="22" x2="471" y2="290"/><line x1="589" y1="22" x2="589" y2="290"/><line x1="706" y1="22" x2="706" y2="290"/><line x1="823" y1="22" x2="823" y2="290"/><line x1="940" y1="22" x2="940" y2="290"/>
+              </g>
+              <g class="tick" text-anchor="middle">
+                <text x="120" y="14">14:00</text><text x="237" y="14">14:10</text><text x="354" y="14">14:20</text><text x="471" y="14">14:30</text><text x="589" y="14">14:40</text><text x="706" y="14">14:50</text><text x="823" y="14">15:00</text><text x="940" y="14">15:10</text>
+              </g>
+              <g class="lane-nm">
+                <text x="8" y="60" class="lane-nm" style="fill:var(--brass)">CaptainMorgue</text>
+                <text x="8" y="100" class="lane-nm">Dana</text>
+                <text x="8" y="140" class="lane-nm">Dev</text>
+                <text x="8" y="180" class="lane-nm">Cal</text>
+                <text x="8" y="220" class="lane-nm">Eli</text>
+                <text x="8" y="260" class="lane-nm">Gus</text>
+              </g>
+              <g>
+                <line class="span" x1="143" y1="56" x2="881" y2="56"/>
+                <line class="span" x1="143" y1="96" x2="881" y2="96"/>
+                <line class="span" x1="190" y1="136" x2="881" y2="136"/>
+                <line class="span" x1="214" y1="176" x2="401" y2="176"/>
+                <line class="span" x1="296" y1="216" x2="881" y2="216"/>
+                <line class="span" x1="331" y1="256" x2="881" y2="256"/>
+              </g>
+              <line class="res-line" x1="881" y1="22" x2="881" y2="290"/>
+              <text class="res-t" x="876" y="36" text-anchor="end">resolved 15:05</text>
+              <line class="conf-link" x1="237" y1="136" x2="261" y2="176"/>
+              <g>
+                <circle class="act mark" cx="143" cy="56" r="4.5"><title>14:02 Incident opened from Dash0 alert</title></circle>
+                <rect class="rel mark" x="280" y="52" width="8" height="8" rx="1"><title>14:14 Relay: Team C pulled in</title></rect>
+                <rect class="rel mark" x="397" y="52" width="8" height="8" rx="1"><title>14:24 Relay: question to Agent0</title></rect>
+                <rect class="rel mark" x="585" y="52" width="8" height="8" rx="1"><title>14:40 Vote: Dev elected Team B manager</title></rect>
+                <circle class="act mark" cx="143" cy="96" r="4.5"><title>14:02 Dana joins, first in, manager</title></circle>
+                <path class="dec mark" d="M179 89.5 L185.5 96 L179 102.5 L172.5 96z"><title>14:05 Dana dispatches edge checks to Team B</title></path>
+                <circle class="act mark" cx="284" cy="96" r="4.5"><title>14:14 Dana asks for payments</title></circle>
+                <circle class="act mark" cx="190" cy="136" r="4.5"><title>14:06 Dev joins</title></circle>
+                <path class="dec mark" d="M237 129.5 L243.5 136 L237 142.5 L230.5 136z"><title>14:10 Dev decides to roll back v412</title></path>
+                <circle class="act mark" cx="483" cy="136" r="4.5"><title>14:31 Rollback complete</title></circle>
+                <circle class="act mark" cx="214" cy="176" r="4.5"><title>14:08 Cal checks load balancer logs</title></circle>
+                <circle class="conf mark" cx="261" cy="176" r="7"><title>14:12 Cal restarts pods, conflicts with rollback</title></circle>
+                <circle class="act mark" cx="296" cy="216" r="4.5"><title>14:15 Eli joins for Payments</title></circle>
+                <circle class="act mark" cx="401" cy="216" r="4.5"><title>14:24 Eli asks Agent0</title></circle>
+                <circle class="act mark" cx="331" cy="256" r="4.5"><title>14:18 Gus reads payments-db logs</title></circle>
+                <circle class="act mark" cx="354" cy="256" r="4.5"><title>14:20 Gus broadcasts: DB failing over?</title></circle>
+              </g>
+              <text class="conf-t" x="273" y="196">restart pods vs rollback</text>
+              <text x="250" y="126" style="fill:var(--fg-2)">roll back v412</text>
+              <path class="res-tag mark" d="M478 128 h14 v12 h-14 l-5 -6z"><title>14:31 Part resolved: bad deploy v412</title></path>
+              <path class="res-tag mark" d="M677 248 h14 v12 h-14 l-5 -6z"><title>14:48 Part resolved: payments DB connections</title></path>
+              <text class="res-t" x="498" y="124">deploy 14:31</text>
+              <text class="res-t" x="697" y="244">pool 14:48</text>
+            </svg>
+          </div>
+          <div class="legend">
+            <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.5" fill="var(--fg)"/></svg>Action</span>
+            <span><svg viewBox="0 0 14 14"><rect x="3" y="3" width="8" height="8" fill="var(--info)" transform="rotate(45 7 7)"/></svg>Decision</span>
+            <span><svg viewBox="0 0 14 14"><rect x="3" y="3" width="8" height="8" rx="1" fill="var(--brass)"/></svg>Relay</span>
+            <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--conflict-bg)" stroke="var(--conflict)" stroke-width="2"/></svg>Conflict</span>
+            <span><svg viewBox="0 0 14 14"><path d="M4 1 h9 v12 h-9 l-3 -6z" fill="var(--tag-paper)" stroke="var(--tag-string)"/></svg>Part resolved</span>
+            <span><svg viewBox="0 0 14 14"><line x1="7" y1="0" x2="7" y2="14" stroke="var(--resolved)" stroke-width="1.5" stroke-dasharray="3 2"/></svg>Incident resolved</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Relay message</h3><p>Every hop goes through CaptainMorgue, with the reason for each recipient</p></div>
+        <article class="card relay">
+          <div class="route">
+            <span class="hop"><span class="av">GU</span>Gus</span>
+            <svg class="icon"><use href="#i-chev"/></svg>
+            <span class="hop root"><span class="av root">CM</span>CaptainMorgue</span>
+            <svg class="icon"><use href="#i-chev"/></svg>
+            <span class="hop"><span class="av">DE</span>Dev</span>
+            <span class="hop"><span class="av">EL</span>Eli</span>
+            <time>14:20:11</time>
+          </div>
+          <blockquote>Is the payments DB failing over? Seeing connection resets from checkout.</blockquote>
+          <div class="why">
+            <div class="eyebrow" style="margin-bottom:4px">Why these people</div>
+            <div class="why-row"><b>Dev</b><span>Rolled back deploy/checkout 10 minutes ago. The resets started after v412 shipped.</span></div>
+            <div class="why-row"><b>Eli</b><span>Manager of Team C, which owns payments-db in the Dash0 service catalog.</span></div>
+            <div class="why-row skip"><b>Team A</b><span>Not sent. No overlap with payments-db.</span></div>
+          </div>
+          <div class="relay-foot">
+            <span class="faint" style="font-size:var(--text-xs)">Picked by ownership and recent actions</span>
+            <button class="btn btn-ghost btn-sm" type="button">Correct routing</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Conflict alert</h3><p>Rule flags, the model confirms and explains</p></div>
+        <section class="card conflict-card" role="alert">
+          <div class="conflict-top">
+            <span class="pill conflict">Conflict</span>
+            <code>deploy/checkout, ns shop</code>
+            <time>14:12:15</time>
+          </div>
+          <h4>Cal's restart works against Dev's rollback</h4>
+          <div class="vs">
+            <div class="side">
+              <div class="side-who"><span class="av">DE</span><b>Dev</b><span class="pill info">Decision</span><time>14:10</time></div>
+              <p>Roll back checkout from v412 to v411.</p>
+            </div>
+            <div class="gap-note">Same resource<br>2m apart</div>
+            <div class="side">
+              <div class="side-who"><span class="av quiet">CA</span><b>Cal</b><span class="pill critical">Write</span><time>14:12</time></div>
+              <code class="cmd">kubectl rollout restart deploy/checkout -n shop</code>
+            </div>
+          </div>
+          <div class="model">
+            <div class="eyebrow">Model check: confirmed</div>
+            <p>The restart replaces pods while the rollback is still replacing them, so checkout cycles twice and nobody can tell whether v411 fixed the 502s. Hold the restart until the rollback reports all pods ready.</p>
+          </div>
+          <p class="notified">Told <b>Cal</b> and <b>Dev</b>. Copied <b>Dana</b>, because Team B's manager is offline.</p>
+          <div class="btn-row">
+            <button class="btn btn-primary" type="button">Hold restart</button>
+            <button class="btn btn-danger" type="button">Proceed anyway</button>
+            <button class="btn btn-ghost" type="button">Dismiss</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Workstreams</h3><p>Progress is signal recovery in Dash0. Resolve the last one to see the tag land.</p></div>
+        <ul class="card ws">
+          <li class="ws-row">
+            <div class="ws-main"><b>Bad deploy v412</b><span><em>Dev</em>, Team B / Edge. Rolled back to v411.</span></div>
+            <div class="meter"><div class="bar done" style="--p:100%"><i></i></div><small>5xx rate <b>0.4%</b> from 18.2%, normal 0.5%</small></div>
+            <div class="ws-state"><span class="toe">Resolved 14:31</span></div>
+          </li>
+          <li class="ws-row">
+            <div class="ws-main"><b>Payments DB connections</b><span><em>Gus</em>, Payments DB. Pool raised from 20 to 80.</span></div>
+            <div class="meter"><div class="bar done" style="--p:100%"><i></i></div><small>conn wait p99 <b>12ms</b> from 2.4s, normal 15ms</small></div>
+            <div class="ws-state"><span class="toe">Resolved 14:48</span></div>
+          </li>
+          <li class="ws-row" id="ws-retry">
+            <div class="ws-main"><b>Retry storm from edge</b><span><em>Cal</em>, Team B / Edge. Fault test on staging running.</span></div>
+            <div class="meter"><div class="bar" style="--p:62%"><i></i></div><small data-swap="retry 429s <b>0.6%</b> from 9.8%, normal 0.3%">retry 429s <b>3.8%</b> from 9.8%, normal 0.3%</small></div>
+            <div class="ws-state"><span class="pill investigating">62% recovered</span><button class="btn btn-tag btn-sm" type="button" id="resolve-ws">Resolve</button></div>
+          </li>
+          <li class="ws-row">
+            <div class="ws-main"><b>Customer comms</b><span><em>Ana</em>, Team A / Checkout. Status page draft.</span></div>
+            <div class="meter"><div class="bar cold" style="--p:8%"><i></i></div><small>no signal, closes when posted</small></div>
+            <div class="ws-state"><span class="pill quiet">Not started</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Manager election</h3><p>Team members plus CaptainMorgue vote, majority wins</p></div>
+        <section class="card elect" aria-label="Manager election for Team B">
+          <div class="elect-top">
+            <span class="pill info">Election</span>
+            <h4>Team B / Edge has a new manager</h4>
+            <time>14:31 to 14:40</time>
+          </div>
+          <p class="muted" style="font-size:var(--text-sm)">Ben dropped off at 14:31. Four voters: three team members and CaptainMorgue.</p>
+          <div class="ballots">
+            <div class="ballot"><span class="av">CA</span>Cal<span class="v">Dev</span></div>
+            <div class="ballot"><span class="av">DE</span>Dev<span class="v">Dev</span></div>
+            <div class="ballot"><span class="av root">CM</span>CaptainMorgue<span class="v">Dev</span></div>
+            <div class="ballot none"><span class="av offline">BE</span>Ben<span class="v">No vote</span></div>
+          </div>
+          <div class="elect-result">
+            <span class="tally"><span class="votes"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>3 of 4</span>
+            <span><b>Dev</b> elected at 14:40. Took over Team B's record from entry 188, nothing lost.</span>
+          </div>
+        </section>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>The record</h3><p>Written from the timeline at close</p></div>
+        <article class="card record">
+          <div class="rec-head">
+            <div>
+              <div class="eyebrow">Record, INC-2041</div>
+              <h4 style="margin-top:10px">Checkout 502s, eu-west</h4>
+              <p class="sub">A bad checkout deploy crashlooped, retries exhausted the payments database pool, and edge retries kept it saturated. Three teams, one conflict caught before it did damage.</p>
+              <dl class="facts">
+                <div><dt>Opened</dt><dd>14:02</dd></div>
+                <div><dt>Resolved</dt><dd>15:05</dd></div>
+                <div><dt>Duration</dt><dd>1h 03m</dd></div>
+                <div><dt>People</dt><dd>7</dd></div>
+                <div><dt>Parts</dt><dd>4</dd></div>
+                <div><dt>Conflicts</dt><dd>1</dd></div>
+              </dl>
+            </div>
+            <div class="tag-wrap">
+              <div class="tag-card" role="img" aria-label="Toe tag, closed 15:05">
+                <span class="stamp">Closed</span>
+                <div class="t-id">INC-2041</div>
+                <div class="t-title">Dead at 15:05</div>
+                <dl><dt>By</dt><dd>Dana, top manager</dd><dt>Signal</dt><dd>normal for 15m</dd></dl>
+              </div>
+            </div>
+          </div>
+          <div class="rec-body">
+            <div class="rec-sec">
+              <h5>How each part was resolved</h5>
+              <ol class="parts">
+                <li><a class="ts" href="#">14:31</a><span>Deploy v412 rolled back to v411 by Dev. 5xx rate back to normal within 4 minutes.</span></li>
+                <li><a class="ts" href="#">14:48</a><span>Payments DB pool raised from 20 to 80 by Gus. Fay's fault test on staging confirmed it.</span></li>
+                <li><a class="ts" href="#">14:58</a><span>Edge retry budget capped by Cal. Gitar confirmed CI green on the fix.</span></li>
+                <li><a class="ts" href="#">15:02</a><span>Status page posted and closed by Ana.</span></li>
+              </ol>
+            </div>
+            <div class="rec-sec">
+              <h5>Improvements</h5>
+              <div class="imp">
+                <div class="what"><b>Block pod restarts during an active rollback</b><span><a href="#">#418</a> by Ben, from the 14:12 conflict</span></div>
+                <div class="gitar"><span class="pill resolved">CI green</span><span>Gitar: 1 flaky test separated, not blocking</span></div>
+              </div>
+              <div class="imp">
+                <div class="what"><b>Alert on payments pool saturation at 80%</b><span><a href="#">#419</a> by Eli</span></div>
+                <div class="gitar"><span class="pill investigating">Gitar reviewing</span></div>
+              </div>
+              <div class="imp">
+                <div class="what"><b>Cap edge retries per client</b><span><a href="#">#420</a> by Cal</span></div>
+                <div class="gitar"><span class="pill critical">CI failing</span><span>Gitar: real failure in retry_test.go</span></div>
+              </div>
+              <div class="imp">
+                <div class="what"><b>Status page template for checkout outages</b><span>Issue, owner Ana</span></div>
+                <div class="gitar"><span class="pill quiet">Open issue</span></div>
+              </div>
+            </div>
+            <div class="rec-sec">
+              <h5>This happened before</h5>
+              <div class="before">
+                <div class="before-top"><span class="mono faint" style="font-size:var(--text-xs)">INC-1873, 2026-08-14</span><b>Payments pool exhausted after a checkout deploy</b><span class="score">0.87 match</span></div>
+                <dl class="diff" style="margin:0">
+                  <div><dt>Then</dt><dd>Gus raised the pool to 60. No alert was added.</dd></div>
+                  <div><dt>Now</dt><dd>Pool at 80, plus the saturation alert in #419 so it does not come back.</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Buttons</h3><p>Press scales to 0.97. Tag button is reserved for resolve and close.</p></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" type="button">Declare incident</button>
+          <button class="btn btn-secondary" type="button">Open in Radar</button>
+          <button class="btn btn-ghost" type="button">Mute</button>
+          <button class="btn btn-danger" type="button">Proceed anyway</button>
+          <button class="btn btn-tag" type="button">Close incident</button>
+          <button class="btn btn-secondary" type="button" disabled>Waiting on vote</button>
+          <button class="btn btn-secondary btn-sm" type="button">Small</button>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Inputs</h3><p>Focus ring on keyboard, inline validation</p></div>
+        <div class="forms">
+          <div class="field">
+            <label for="msg">Message CaptainMorgue</label>
+            <div class="composer"><span class="at">@</span><input id="msg" placeholder="Dev, is v411 fully rolled out?" autocomplete="off"><button class="btn btn-primary btn-sm" type="button"><svg class="icon"><use href="#i-send"/></svg>Send</button></div>
+            <span class="hint">CaptainMorgue picks who hears it and shows you why.</span>
+          </div>
+          <div class="field">
+            <label for="res">Resource</label>
+            <input class="input mono" id="res" value="deploy/checkout -n shopp" aria-invalid="true" aria-describedby="res-err">
+            <span class="err" id="res-err">No namespace called shopp in the demo cluster. Did you mean shop?</span>
+          </div>
+          <div class="field">
+            <label for="title">Incident title</label>
+            <input class="input" id="title" placeholder="What is broken, where">
+            <span class="hint">Shown on the wall screen. Keep it under 40 characters.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Empty state</h3><p>The workstream list once everything is closed</p></div>
+        <div class="card empty">
+          <div class="tags" aria-hidden="true"><span class="toe">14:31</span><span class="toe">14:48</span><span class="toe">14:58</span></div>
+          <h4>Nothing left open</h4>
+          <p>Every part has a toe tag. Close the incident to write the record.</p>
+          <button class="btn btn-tag" type="button">Close incident</button>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-label"><h3>Toast</h3><p>Bottom right, pauses on hover, exits faster than it enters</p></div>
+        <div class="btn-row" style="align-items:flex-start;gap:var(--space-4)">
+          <div class="toast toast-static" data-state="open">
+            <span class="toe">14:48</span>
+            <div><b>Payments DB connections resolved</b><p>Gus, conn wait back to 12ms.</p></div>
+            <button class="btn btn-ghost btn-sm" type="button" aria-label="Dismiss" style="padding:0 6px"><svg class="icon"><use href="#i-x"/></svg></button>
+          </div>
+          <button class="btn btn-secondary" type="button" id="show-toast">Show toast</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="foot">CaptainMorgue design system. Example data is the PRD demo incident and is static.</footer>
+</main>
+
+<div class="toaster" id="toaster" aria-live="polite"></div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var segButtons = document.querySelectorAll('[data-theme-set]');
+  function applyTheme(t) {
+    if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+    segButtons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.themeSet === t)); });
+  }
+  var saved = 'auto';
+  try { saved = localStorage.getItem('cm-theme') || 'auto'; } catch (e) {}
+  applyTheme(saved);
+  segButtons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      applyTheme(b.dataset.themeSet);
+      try { localStorage.setItem('cm-theme', b.dataset.themeSet); } catch (e) {}
+    });
+  });
+
+  document.querySelectorAll('.filters button').forEach(function (b, _, all) {
+    b.addEventListener('click', function () { all.forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); }); });
+  });
+
+  var queue = [
+    { time: '14:40:02', type: 'decision', who: 'CaptainMorgue', team: '', label: 'Election', text: 'Dev elected manager of Team B / Edge, 3 of 4 votes.' },
+    { time: '14:42:19', type: 'relay', who: 'Eli', team: 'Team C / Payments', label: 'Relay', text: 'To Gus and Fay: hold the pool change until Fay\'s staging test reports.' },
+    { time: '14:44:51', type: 'action', who: 'Fay', team: 'Payments DB', label: 'Action', text: 'Ran the connection storm fault test against staging.', cmd: 'make fault-test TARGET=payments-db ENV=staging' },
+    { time: '14:48:10', type: 'resolved', who: 'Gus', team: 'Payments DB', label: 'Part resolved', text: 'Payments DB connections: wait p99 back to 12ms.', art: ['dash0', 'DASH0', 'payments-db conn wait p99, last 1h'] }
+  ];
+  var qi = 0;
+  var log = document.getElementById('log');
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  document.getElementById('append-ev').addEventListener('click', function () {
+    var d = queue[qi++ % queue.length];
+    var li = el('li', 'ev is-new'); li.dataset.type = d.type;
+    li.appendChild(el('time', null, d.time));
+    var mk = el('span', 'mk'); mk.appendChild(el('i')); li.appendChild(mk);
+    var body = el('div', 'ev-body');
+    var who = el('div', 'ev-who'); who.appendChild(el('b', null, d.who));
+    if (d.team) who.appendChild(el('span', 'team', d.team));
+    who.appendChild(el('span', 'type', d.label)); body.appendChild(who);
+    body.appendChild(el('p', null, d.text));
+    if (d.cmd) body.appendChild(el('code', 'cmd', d.cmd));
+    if (d.art) {
+      var a = el('a', 'artifact'); a.href = '#';
+      a.appendChild(el('span', 'src ' + d.art[0], d.art[1])); a.appendChild(el('span', 'ttl', d.art[2]));
+      a.insertAdjacentHTML('beforeend', '<svg class="icon"><use href="#i-ext"/></svg>');
+      body.appendChild(a);
+    }
+    li.appendChild(body);
+    log.insertBefore(li, log.firstChild);
+    log.scrollTop = 0;
+    while (log.children.length > 9) log.removeChild(log.lastElementChild);
+    li.addEventListener('animationend', function (e) { if (e.target === li && e.animationName === 'ev-in') li.classList.remove('is-new'); });
+  });
+
+  var resolveBtn = document.getElementById('resolve-ws');
+  resolveBtn.addEventListener('click', function () {
+    var row = document.getElementById('ws-retry');
+    var bar = row.querySelector('.bar'); bar.classList.add('done'); bar.style.setProperty('--p', '100%');
+    var small = row.querySelector('small[data-swap]'); small.innerHTML = small.dataset.swap;
+    var state = row.querySelector('.ws-state');
+    state.textContent = '';
+    state.appendChild(el('span', 'toe is-new', 'Resolved 14:58'));
+  });
+
+  var motion = document.getElementById('motion');
+  motion.querySelectorAll('.track i').forEach(function (i) {
+    i.style.transition = 'transform ' + i.dataset.d + ' ' + i.dataset.e;
+  });
+  function sizeTracks() { motion.querySelectorAll('.track').forEach(function (t) { t.style.setProperty('--w', t.clientWidth + 'px'); }); }
+  sizeTracks(); window.addEventListener('resize', sizeTracks);
+  document.getElementById('play-motion').addEventListener('click', function () { motion.classList.toggle('is-playing'); });
+
+  var toaster = document.getElementById('toaster');
+  document.getElementById('show-toast').addEventListener('click', function () {
+    var t = el('div', 'toast'); t.setAttribute('role', 'status');
+    t.appendChild(el('span', 'toe', '14:58'));
+    var txt = el('div'); txt.appendChild(el('b', null, 'Retry storm from edge resolved')); txt.appendChild(el('p', null, 'Cal, retry 429s back to 0.6%.')); t.appendChild(txt);
+    var x = el('button', 'btn btn-ghost btn-sm'); x.type = 'button'; x.setAttribute('aria-label', 'Dismiss'); x.style.padding = '0 6px';
+    x.innerHTML = '<svg class="icon"><use href="#i-x"/></svg>'; t.appendChild(x);
+    toaster.appendChild(t);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { t.dataset.state = 'open'; }); });
+    var timer;
+    function close() {
+      clearTimeout(timer);
+      t.dataset.state = 'closing';
+      setTimeout(function () { t.remove(); }, 200);
+    }
+    function arm() { timer = setTimeout(close, 4000); }
+    t.addEventListener('mouseenter', function () { clearTimeout(timer); });
+    t.addEventListener('mouseleave', arm);
+    x.addEventListener('click', close);
+    arm();
+  });
+})();
+</script>
+</body>
+</html>
