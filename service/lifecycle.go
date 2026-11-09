@@ -27,6 +27,23 @@ type Moment struct {
 	Text  string    `json:"text"`
 }
 
+type Step struct {
+	TS         time.Time `json:"ts"`
+	Actor      string    `json:"actor"`
+	Text       string    `json:"text"`
+	Status     string    `json:"status"`
+	Resource   string    `json:"resource,omitempty"`
+	ExitCode   *int      `json:"exit_code,omitempty"`
+	DurationMS int       `json:"duration_ms,omitempty"`
+	Failed     bool      `json:"failed"`
+	Change     bool      `json:"change"`
+}
+
+type StepGroup struct {
+	Actor string `json:"actor"`
+	Steps []Step `json:"steps"`
+}
+
 type PR struct {
 	Service string    `json:"service"`
 	URL     string    `json:"url"`
@@ -198,8 +215,70 @@ func window(events []Event) Window {
 	return w
 }
 
+func actionStatus(text string) string {
+	for _, st := range []string{"ok", "failed", "interrupted"} {
+		if strings.HasSuffix(text, "("+st+")") {
+			return st
+		}
+	}
+	return ""
+}
+
 func failedAction(ev Event) bool {
-	return ev.Type == "action" && (strings.HasSuffix(ev.Text, "(failed)") || strings.HasSuffix(ev.Text, "(interrupted)"))
+	if ev.Type != "action" {
+		return false
+	}
+	st := actionStatus(ev.Text)
+	return st == "failed" || st == "interrupted" || (ev.ExitCode != nil && *ev.ExitCode != 0)
+}
+
+func steps(events []Event) (groups []StepGroup, changes []Step) {
+	groups, changes = []StepGroup{}, []Step{}
+	for _, ev := range events {
+		if ev.Type != "action" || ev.Actor == captainMorgue {
+			continue
+		}
+		st := Step{
+			TS: ev.TS, Actor: ev.Actor, Text: strings.TrimSuffix(ev.Text, " ("+actionStatus(ev.Text)+")"), Status: actionStatus(ev.Text),
+			ExitCode: ev.ExitCode, DurationMS: ev.DurationMS, Failed: failedAction(ev), Change: ev.Resource != nil && looksLikeWrite(ev),
+		}
+		if ev.Resource != nil {
+			st.Resource = resourceLabel(ev.Resource)
+		}
+		if st.Change {
+			changes = append(changes, st)
+		}
+		if n := len(groups); n > 0 && groups[n-1].Actor == ev.Actor {
+			groups[n-1].Steps = append(groups[n-1].Steps, st)
+			continue
+		}
+		groups = append(groups, StepGroup{Actor: ev.Actor, Steps: []Step{st}})
+	}
+	return groups, changes
+}
+
+func (st Step) line() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s %s", st.TS.UTC().Format(time.RFC3339), st.Text)
+	var tags []string
+	if st.Failed {
+		tags = append(tags, "FAILED")
+	} else if st.Status != "" {
+		tags = append(tags, st.Status)
+	}
+	if st.ExitCode != nil {
+		tags = append(tags, fmt.Sprintf("exit %d", *st.ExitCode))
+	}
+	if st.DurationMS > 0 {
+		tags = append(tags, fmt.Sprintf("%d ms", st.DurationMS))
+	}
+	if st.Resource != "" {
+		tags = append(tags, "on "+st.Resource)
+	}
+	if len(tags) > 0 {
+		fmt.Fprintf(&b, " (%s)", strings.Join(tags, ", "))
+	}
+	return b.String()
 }
 
 func moments(events []Event, keep func(Event) bool) []Moment {
@@ -363,6 +442,19 @@ func (rec Record) markdown() string {
 		items = append(items, item)
 	}
 	list("Action items", items)
+	var changes []string
+	for _, st := range rec.Changes {
+		changes = append(changes, st.Actor+": "+st.line())
+	}
+	line("\n## Appendix: steps taken")
+	list("Changes made", changes)
+	for _, g := range rec.Steps {
+		var lines []string
+		for _, st := range g.Steps {
+			lines = append(lines, st.line())
+		}
+		list(g.Actor, lines)
+	}
 	return b.String()
 }
 

@@ -143,6 +143,9 @@ if [ -n "${short:-}" ]; then
   echo "$pr checkin" | as dana registration pr >/dev/null
   check "pull request shows in state" 'jq -e --arg u "$pr" ".prs[] | select(.service == \"checkin\" and .url == \$u and .author == \"dana\")" <<<"$(state)" >/dev/null'
   check "fix points to the open pull request instead of opening another" 'echo "checkin raise the memory limit" | as dev platform fix | grep -q "already open in INC-1: $pr"'
+  post() { curl -s -o /dev/null -X POST "$CM_URL/events" -H "Authorization: Bearer $CM_TOKEN" -d "$1"; }
+  post '{"actor":"dana","type":"action","text":"Bash: kubectl -n team-captainmorgue rollout undo deploy/checkin (ok)","resource":{"kind":"Deployment","namespace":"team-captainmorgue","name":"checkin"},"duration_ms":840}'
+  post '{"actor":"dana","type":"action","text":"Bash: curl -fs http://checkin/healthz (failed)","exit_code":7}'
   echo 'resolved' | as dana registration status-set >/dev/null
   echo 'Rolled back checkin and raised its memory limit' | as dana registration close >/dev/null
   sleep 3
@@ -151,6 +154,8 @@ if [ -n "${short:-}" ]; then
   check "RFO lists the pull request and the action item with an owner and due hint" 'jq -e --arg u "$pr" "(.remediation[0].url == \$u) and (.action_items[] | select(.owner == \"ben\" and .due == \"within 1 week\"))" <<<"$rec" >/dev/null'
   check "action item owner gets it in their inbox" 'as ben platform inbox | grep -A3 "\[action\]" | grep -q "Add a memory alert on checkin"'
   check "status lists action items after close" 'as ben platform status </dev/null | grep -q "@ben: Add a memory alert on checkin"'
+  check "RFO lists each step taken, the failure and the cluster change" 'jq -e "([.steps[].steps[] | select(.actor == \"dana\")] | any(.text | test(\"rollout undo deploy/checkin\")) and any(.failed and .exit_code == 7)) and any(.changes[]; .resource == \"Deployment/checkin\" and .duration_ms == 840)" <<<"$rec" >/dev/null && curl -s "$CM_URL/record/INC-1.md" | grep -q "^## Changes made"'
+  check "archive lists the closed incident and the record keeps improvements" 'jq -e ".[0].id == \"INC-1\" and .[0].severity == \"sev2\"" <<<"$(curl -s "$CM_URL/records")" >/dev/null && jq -e ".improvements | length > 0" <<<"$rec" >/dev/null'
   check "RFO served as markdown" 'curl -s "$CM_URL/record/INC-1.md" | grep -q "^## Action items" && curl -s "$CM_URL/record/INC-1.md" | grep -q "checkin: $pr"'
 fi
 

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 )
@@ -138,6 +139,7 @@ type Record struct {
 	Teams               int           `json:"teams"`
 	Conflicts           int           `json:"conflicts"`
 	Summary             string        `json:"summary"`
+	FixedBy             string        `json:"fixed_by"`
 	RootCause           string        `json:"root_cause"`
 	ContributingFactors []string      `json:"contributing_factors"`
 	Timeline            []Moment      `json:"timeline"`
@@ -146,6 +148,9 @@ type Record struct {
 	Errors              []Moment      `json:"errors"`
 	Remediation         []PR          `json:"remediation"`
 	ActionItems         []Improvement `json:"action_items"`
+	Improvements        []Improvement `json:"improvements"`
+	Steps               []StepGroup   `json:"steps"`
+	Changes             []Step        `json:"changes"`
 	Parts               []RecordPart  `json:"parts"`
 	PastMatch           *PastMatch    `json:"past_match"`
 	Events              []Event       `json:"events"`
@@ -161,7 +166,7 @@ func (inc *Incident) record() Record {
 	rec := Record{
 		ID: inc.id, Title: inc.title, Status: status, Severity: severity, WrittenBy: by,
 		Opened: win.Opened, Resolved: win.Resolved, Duration: win.Duration, Window: win,
-		Summary: written.Summary, RootCause: written.RootCause, ContributingFactors: written.ContributingFactors,
+		Summary: written.Summary, FixedBy: written.FixedBy, RootCause: written.RootCause, ContributingFactors: written.ContributingFactors,
 		Timeline:    moments(inc.events, func(ev Event) bool { return keyEvents[ev.Type] }),
 		WentWell:    written.WentWell,
 		WentBadly:   written.WentBadly,
@@ -170,6 +175,7 @@ func (inc *Incident) record() Record {
 		ActionItems: explicitActionItems(inc.events, severity),
 		Parts:       written.Parts, PastMatch: inc.pastMatch, Events: inc.events,
 	}
+	rec.Steps, rec.Changes = steps(inc.events)
 	for _, a := range written.Improvements {
 		if a.Due == "" {
 			a.Due = dueBySeverity[severity]
@@ -187,18 +193,30 @@ func (inc *Incident) record() Record {
 	}
 	rec.People = len(people)
 	rec.Teams = len(inc.teamsInIncident())
+	rec.Improvements = rec.ActionItems
 	return rec
 }
 
 func (inc *Incident) handleRecord(w http.ResponseWriter, r *http.Request) {
 	id, asMarkdown := strings.CutSuffix(r.PathValue("id"), ".md")
-	if id != inc.id {
-		http.Error(w, "no such incident", http.StatusNotFound)
-		return
+	var rec Record
+	if id == inc.id {
+		inc.mu.Lock()
+		rec = inc.record()
+		inc.mu.Unlock()
+	} else {
+		stored, err := inc.storedRecord(r.Context(), id)
+		if err != nil {
+			slog.Error("read stored record", "id", id, "err", err)
+			http.Error(w, "the record could not be read", http.StatusBadGateway)
+			return
+		}
+		if stored == nil {
+			http.Error(w, "no such incident", http.StatusNotFound)
+			return
+		}
+		rec = *stored
 	}
-	inc.mu.Lock()
-	rec := inc.record()
-	inc.mu.Unlock()
 	if asMarkdown {
 		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 		if _, err := io.WriteString(w, rec.markdown()); err != nil {
@@ -210,6 +228,35 @@ func (inc *Incident) handleRecord(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(rec); err != nil {
 		slog.Debug("write record", "err", err)
 	}
+}
+
+func (inc *Incident) storedRecord(ctx context.Context, id string) (*Record, error) {
+	if inc.store == nil {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, esTimeout)
+	defer cancel()
+	return inc.store.getRecord(ctx, id)
+}
+
+func (inc *Incident) handleRecords(w http.ResponseWriter, r *http.Request) {
+	inc.mu.Lock()
+	rec := inc.record()
+	inc.mu.Unlock()
+	out := []RecordSummary{}
+	if inc.store != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), esTimeout)
+		stored, err := inc.store.listRecords(ctx)
+		cancel()
+		if err != nil {
+			slog.Error("list stored records", "err", err)
+		}
+		out = append(out, stored...)
+	}
+	if rec.Status == "closed" && !slices.ContainsFunc(out, func(s RecordSummary) bool { return s.ID == rec.ID }) {
+		out = append([]RecordSummary{{ID: rec.ID, Title: rec.Title, Severity: rec.Severity, Opened: rec.Opened, Resolved: rec.Resolved, Duration: rec.Duration, Summary: rec.Summary, FixedBy: rec.FixedBy}}, out...)
+	}
+	writeJSON(w, out)
 }
 
 func (inc *Incident) writeRecord() {
@@ -239,11 +286,16 @@ func (inc *Incident) writeRecord() {
 	if inc.store == nil {
 		return
 	}
+	stored := rec
+	stored.Events = nil
 	ctx, cancel := context.WithTimeout(context.Background(), esTimeout)
 	defer cancel()
 	err := inc.store.saveRecord(ctx, storedRecord{
 		PastMatch:    PastMatch{ID: inc.id, Summary: written.Summary, FixedBy: written.FixedBy},
 		Title:        rec.Title,
+		Severity:     rec.Severity,
+		Duration:     rec.Duration,
+		RFO:          &stored,
 		Opened:       rec.Opened,
 		Resolved:     rec.Resolved,
 		Parts:        written.Parts,

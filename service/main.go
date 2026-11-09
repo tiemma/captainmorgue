@@ -49,6 +49,7 @@ func main() {
 	mux.HandleFunc("POST /broadcast", inc.handleBroadcast)
 	mux.HandleFunc("GET /stream", inc.handleStream)
 	mux.HandleFunc("GET /record/{id}", inc.handleRecord)
+	mux.HandleFunc("GET /records", inc.handleRecords)
 	mux.HandleFunc("POST /incidents/{id}/join", inc.handleJoin)
 	mux.HandleFunc("POST /incidents/{id}/leave", inc.handleLeave)
 	mux.HandleFunc("POST /incidents/{id}/vote", inc.handleVote)

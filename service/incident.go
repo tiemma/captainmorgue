@@ -39,6 +39,8 @@ type Event struct {
 	ReplyTo    int        `json:"reply_to,omitempty"`
 	Service    string     `json:"service,omitempty"`
 	Signal     *Signal    `json:"signal,omitempty"`
+	ExitCode   *int       `json:"exit_code,omitempty"`
+	DurationMS int        `json:"duration_ms,omitempty"`
 	Status     string     `json:"status,omitempty"`
 	Severity   string     `json:"severity,omitempty"`
 }
