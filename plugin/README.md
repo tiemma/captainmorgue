@@ -27,7 +27,7 @@ Sends what you do in Claude Code to the CaptainMorgue incident timeline, and bri
 
 `cm console` (or `/captainmorgue:console`) splits the terminal with tmux: your shell on the left, a live CaptainMorgue pane on the right. Inside tmux it splits the current window; otherwise it starts a tmux session `captainmorgue` running `$CM_CONSOLE_CMD` (default your shell; `CM_CONSOLE_CMD=claude` runs Claude Code there) and attaches, or tells you to `tmux attach -t captainmorgue` when started from Claude Code. Without tmux, run `plugin/bin/cm pane` in a second terminal.
 
-The pane follows your inbox as it arrives and highlights asks you have not answered. Type:
+The pane follows your inbox as it arrives, stamps each message with your local time, colours it by kind (asks yellow; pages, conflicts and escalations red; joins and recoveries green; broadcasts cyan; `NO_COLOR=1` turns colour off) and shows a status line with the incident, commander, your role, open asks and who is online. Tab completes commands, open ask seqs, `@person` and `@team`; Up and Down walk your history. Type:
 
 | Input | What it does |
 |---|---|
@@ -36,8 +36,14 @@ The pane follows your inbox as it arrives and highlights asks you have not answe
 | `<seq> @who` | Route: ask @who the same question, then reply "Not me, asked @who" |
 | `b [@team or root] <text>` | Broadcast |
 | `a @who <text>` | Ask |
-| `l` | Redraw |
+| `o` | List the asks still waiting on you |
+| `w` | Who is online, with team, role and task |
+| `s` | Status line |
+| `l` or Enter | Redraw |
+| `?` or `help` | Help |
 | `q` | Quit |
+
+When the console starts your shell (zsh or bash), every command you type is posted to the incident timeline as an `action` event, `Shell: <command> (ok|failed)` with `exit_code`, `duration_ms` and `cwd`, in the background so the prompt never waits. Commands starting with a space, and commands mentioning a token, password, secret, authorization or API key, are not sent; long commands are cut at 300 characters. To record another terminal, run `eval "$(cm shell-hook zsh)"` (or `bash`) in it.
 
 The hooks never fail your turn: with `CM_URL` unset or the service down they do nothing. Failures are logged to `~/.captainmorgue/hook.log`, the poller's output to `~/.captainmorgue/poll.log`.
 
