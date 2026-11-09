@@ -180,6 +180,10 @@ svg .mcp { stroke: var(--info); stroke-width: 1.5; fill: none; }
         <path class="mcp" d="M290,62 L430,110"/>
         <path class="mcp" d="M480,62 L480,110"/>
         <path class="mcp" d="M670,62 L530,110"/>
+        <rect class="node svc" x="770" y="10" width="180" height="52" rx="8"/>
+        <text class="t-name" x="786" y="32">Gitar</text>
+        <text class="t-role" x="786" y="50">verifies fix pull requests</text>
+        <path class="mcp" d="M860,62 L580,132"/>
 
         <g transform="translate(0,90)">
         <rect class="node sys" x="20" y="24" width="190" height="56" rx="8"/>
@@ -296,6 +300,7 @@ svg .mcp { stroke: var(--info); stroke-width: 1.5; fill: none; }
           <li>CaptainMorgue holds the connections. People use them through their agent.</li>
           <li>Read through MCP first. Generated code against an API is the fallback, run in a sandbox and logged.</li>
           <li>Deep telemetry questions go to Dash0 Agent0.</li>
+          <li>Fixes ship as pull requests that Gitar reviews and confirms green.</li>
           <li>Text only at launch. Images, audio and video later.</li>
           <li>Fault injection tests CaptainMorgue: it breaks the demo cluster to start a real incident.</li>
         </ul>
