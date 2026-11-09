@@ -287,9 +287,10 @@ func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
 		Members  []MemberStatus `json:"members"`
 		Cursor   int            `json:"cursor"`
 	}{inc.id, req.Team, tc.manager, tc.term, inc.members(req.Team, now), a.cursor}
+	others := slices.DeleteFunc(c.joinedNames(), func(name string) bool { return name == req.Actor })
 	inc.mu.Unlock()
 
-	inc.append(Event{Actor: req.Actor, Team: req.Team, Type: "join", Text: text, Term: resp.Term})
+	inc.append(Event{Actor: req.Actor, Team: req.Team, Type: "join", Text: text, Term: resp.Term, To: others, Why: "everyone already in " + inc.id})
 	writeJSON(w, resp)
 }
 
