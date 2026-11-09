@@ -109,10 +109,6 @@ func (d *dash0) queryRange(ctx context.Context, query string, end time.Time) (ma
 	return out, nil
 }
 
-func signalKey(service, metric string) string {
-	return service + "_" + metric
-}
-
 func (s signalSpec) status(v float64) string {
 	switch {
 	case s.critical > 0 && v >= s.critical:
@@ -180,7 +176,7 @@ func (inc *Incident) refreshSignals(d *dash0) {
 				continue
 			}
 			v := series[len(series)-1]
-			fresh[signalKey(svc, spec.key)] = Signal{
+			fresh[svc+"_"+spec.key] = Signal{
 				Label: svc + " " + spec.label, Service: svc, Value: fmt.Sprintf(spec.format, v),
 				Status: spec.status(v), Series: series, Spark: spark(series),
 			}
