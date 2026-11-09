@@ -69,6 +69,19 @@ split_args() {
   rest="${rest#"${rest%%[![:space:]]*}"}"
 }
 
+take_part() {
+  part= text=$1
+  case "$text" in
+  --part[[:space:]]*)
+    text=${text#--part}
+    text="${text#"${text%%[![:space:]]*}"}"
+    part=${text%%[[:space:]]*}
+    text=${text#"$part"}
+    text="${text#"${text%%[![:space:]]*}"}"
+    ;;
+  esac
+}
+
 read_args() {
   args=$(cat)
   args="${args#"${args%%[![:space:]]*}"}"
@@ -235,9 +248,12 @@ status-set | state)
   read_args
   case "$first" in
   sev[123]) body=$(jq -nc --arg a "$ACTOR" --arg s "$first" --arg w "$rest" '{actor: $a, severity: $s, why: $w}') ;;
-  open | investigating | mitigated | resolved | closed) body=$(jq -nc --arg a "$ACTOR" --arg s "$first" --arg w "$rest" '{actor: $a, status: $s, why: $w}') ;;
+  open | investigating | mitigated | resolved | closed)
+    take_part "$rest"
+    body=$(jq -nc --arg a "$ACTOR" --arg s "$first" --arg w "$text" --arg p "$part" '{actor: $a, status: $s, why: $w, part: $p}')
+    ;;
   *)
-    echo "Usage: /captainmorgue:status-set <investigating|mitigated|resolved|closed|sev1|sev2|sev3> [why]"
+    echo "Usage: /captainmorgue:status-set <investigating|mitigated|resolved|closed|sev1|sev2|sev3> [--part <name>] [why]"
     exit 0
     ;;
   esac
@@ -250,9 +266,10 @@ close)
   ;;
 note)
   read_args
-  [ -n "$args" ] || { echo "Usage: /captainmorgue:note <finding, decision or evidence>"; exit 0; }
-  post_event "$(jq -nc --arg a "$ACTOR" --arg t "$args" '{actor: $a, type: "note", text: $t}')" "Recording the note"
-  echo "Noted: $args"
+  take_part "$args"
+  [ -n "$text" ] || { echo "Usage: /captainmorgue:note [--part <name>] <finding, decision or evidence>"; exit 0; }
+  post_event "$(jq -nc --arg a "$ACTOR" --arg t "$text" --arg p "$part" '{actor: $a, type: "note", text: $t, part: $p}')" "Recording the note"
+  echo "Noted${part:+ on $part}: $text"
   ;;
 action)
   read_args

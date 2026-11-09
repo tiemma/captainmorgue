@@ -81,8 +81,20 @@ export interface Envelope {
   reply_to?: number;
 }
 
+export interface Counts {
+  parts: number;
+  claims: number;
+  crew_online: number;
+  crew_total: number;
+  events: number;
+  open_asks: number;
+  open_prs: number;
+  action_items: number;
+}
+
 export interface IncidentState {
   commander?: string;
+  counts?: Counts;
   incident: {
     id: string;
     title: string;
@@ -284,7 +296,7 @@ export function heartbeat(actor: string, signal?: AbortSignal) {
 
 export function fetchInbox(actor: string, after: number | undefined, signal?: AbortSignal) {
   const query = after === undefined ? 'wait=25' : `after=${after}&wait=25`;
-  return request<{ messages: Envelope[] | null; cursor: number }>(`/inbox/${encodeURIComponent(actor)}?${query}`, undefined, signal);
+  return request<{ messages: Envelope[] | null; cursor: number; unread?: number }>(`/inbox/${encodeURIComponent(actor)}?${query}`, undefined, signal);
 }
 
 export function ackInbox(actor: string, seq: number) {
