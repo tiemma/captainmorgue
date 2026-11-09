@@ -118,9 +118,13 @@ func (inc *Incident) handleInbox(w http.ResponseWriter, r *http.Request) {
 			after, hasAfter = a.cursor, true
 		}
 		var msgs []Envelope
+		unread := 0
 		for _, m := range a.inbox {
 			if m.Seq > after {
 				msgs = append(msgs, m)
+			}
+			if m.Seq > a.cursor {
+				unread++
 			}
 		}
 		marked := false
@@ -136,13 +140,13 @@ func (inc *Incident) handleInbox(w http.ResponseWriter, r *http.Request) {
 			if marked {
 				inc.publishState()
 			}
-			writeJSON(w, map[string]any{"messages": msgs, "cursor": msgs[len(msgs)-1].Seq})
+			writeJSON(w, map[string]any{"messages": msgs, "cursor": msgs[len(msgs)-1].Seq, "unread": unread})
 			return
 		}
 		select {
 		case <-wake:
 		case <-timer.C:
-			writeJSON(w, map[string]any{"messages": []Envelope{}, "cursor": after})
+			writeJSON(w, map[string]any{"messages": []Envelope{}, "cursor": after, "unread": unread})
 			return
 		case <-r.Context().Done():
 			slog.Debug("inbox poll closed", "actor", actor, "err", r.Context().Err())

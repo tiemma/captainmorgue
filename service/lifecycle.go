@@ -69,6 +69,9 @@ func eventStatus(ev Event) string {
 	case "close":
 		return "closed"
 	}
+	if ev.Part != "" {
+		return ""
+	}
 	return ev.Status
 }
 
@@ -111,6 +114,7 @@ func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
 		Status   string `json:"status"`
 		Severity string `json:"severity"`
 		Why      string `json:"why"`
+		Part     string `json:"part"`
 	}
 	if !decodeBody(w, r, &req) {
 		return
@@ -133,10 +137,24 @@ func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
 	current, severity := inc.lifecycleStatus()
 	allowed := inc.mayResolve(req.Actor)
 	inc.mu.Unlock()
-	switch {
-	case current == "closed":
+	if current == "closed" {
 		http.Error(w, inc.id+" is closed", http.StatusConflict)
 		return
+	}
+	if req.Part != "" {
+		if req.Status != "mitigated" && req.Status != "resolved" {
+			http.Error(w, "a part moves to mitigated or resolved", http.StatusBadRequest)
+			return
+		}
+		text := "marked " + req.Part + " " + req.Status
+		if req.Why != "" {
+			text += ": " + req.Why
+		}
+		inc.append(Event{Actor: req.Actor, Type: "status", Status: req.Status, Part: req.Part, Why: req.Why, Text: text})
+		writeJSON(w, map[string]string{"status": current, "severity": severity})
+		return
+	}
+	switch {
 	case req.Status != "" && to <= slices.Index(lifecycle, current):
 		http.Error(w, fmt.Sprintf("%s is already %s; it only moves forward", inc.id, current), http.StatusConflict)
 		return
@@ -166,7 +184,10 @@ func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
 			ev.Text = "closed " + inc.id
 		}
 	}
-	inc.append(ev)
+	if inc.append(ev).Seq == 0 {
+		http.Error(w, inc.id+" is closed", http.StatusConflict)
+		return
+	}
 	writeJSON(w, map[string]string{"status": current, "severity": severity})
 }
 
