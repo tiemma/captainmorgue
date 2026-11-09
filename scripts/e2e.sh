@@ -59,6 +59,11 @@ echo "$seq_ask Nothing on our side" | as ben platform reply >/dev/null
 sleep 2
 check "reply goes back to the asker" 'inject dev platform | grep -q "Nothing on our side"'
 
+as kim registration join </dev/null >/dev/null
+sleep 3
+late=$(inject kim registration)
+check "late joiner gets a digest naming the earlier broadcast" 'grep -q "\[digest\]" <<<"$late" && grep -q "Check-in is slow" <<<"$late"'
+
 if [ -n "${short:-}" ]; then
   kill "$(cat "$work/home-ben/.captainmorgue/poll.pid" 2>/dev/null)" 2>/dev/null
   echo '@ben Are you there?' | as dana registration ask >/dev/null
@@ -67,6 +72,9 @@ if [ -n "${short:-}" ]; then
   check "silent member goes offline" '[ "$(jq -r ".people.ben.status" <<<"$s")" = offline ]'
   check "team elects a new manager" '[ "$(jq -r ".teams[] | select(.id==\"platform\") | .manager" <<<"$s")" = dev ]'
   check "unanswered ask auto-replies" 'inject dana registration | grep -qi "has not seen your ask"'
+  HOME=$work/home-ben CM_ACTOR=ben CM_TEAM=platform nohup "$root/plugin/bin/cm-poll" </dev/null >/dev/null 2>&1 &
+  sleep 4
+  check "returning member gets a digest naming the unanswered ask" 'as ben platform inbox | sed -n "/\[digest\]/,\$p" | grep -q "Are you there"'
 else
   echo "SKIP liveness, election and auto-reply (needs short timings; run without CM_URL)"
 fi
