@@ -1,7 +1,7 @@
 # Jubril: wall screen
 
 ## Now
-14:54 - Agent-first Storybook is ready for review on :6006: concise navigation, progressive disclosure, CostGraph typography, resizable inline inspector and active response timeline. Local sample interactions; live API integration remains next.
+15:00 - Postmortem library backend audit complete on main 7f93997; archive list/detail and summary exposure need Emmanuel/team API work.
 
 ## Start here (from Emmanuel, 15:20)
 
@@ -40,6 +40,7 @@ env -u CM_URL scripts/e2e.sh                                       # must print 
 `CM_URL` pointing at the live service makes e2e hit production; always unset it for e2e.
 
 ## Done
+- 15:00 - Reviewed postmortem support on main 7f93997: current-incident record exists; historical list/detail do not. Generated summary/fixed_by are stored but absent from GET record. No backend changes.
 - 14:54 - Typography (309cf23), inline panel (f61b6cb) and chronological timeline (e49a35e) integrated. Final app and static Storybook builds pass; all 14 browser tests pass, including inspector pointer/keyboard persistence, progressive disclosure, active/closed timeline and reduced motion. Desktop/mobile screenshots inspected; no overflow.
 - 14:49 - Main merged through 1eb6d6e (65009a7); preserved Emmanuel's plugin auto-install handoff. No backend or deployment changes.
 - 14:49 - 2991fc0 and cbb286d add CostGraph app patterns, progress states and agent approval workflows. 8ceb978 adds Requests/Record labels, closed Evidence/History/Details disclosures, and lifecycle stories. b4bcba5 adds 11 passing browser tests.
@@ -64,3 +65,5 @@ env -u CM_URL scripts/e2e.sh                                       # must print 
 ## Handing off
 - Emmanuel: P0 coordination and live-wall handoffs received. Code review confirms seen stops timeout even without a reply; please reconcile with dispatch 5b. Browser approval is not an existing backend state; it stays a labeled sample flow in Storybook. Storybook is separate under frontend/, with local sample interactions; no collision with web/index.html. Browser action gaps and reply/readiness questions are tracked in docs/frontend-design-plan.md.
 - Emmanuel: frontend proposal is React/Vite producing web/ static output; Docker will need a frontend build stage when implementation begins.
+
+- Emmanuel: Postmortems library needs a paginated list of stored records and historical detail by incident ID, including summary, resolution parts, fixed_by, improvements/owners, timestamps and timeline events. Current GET /record/{id} accepts only current incident and omits summary/fixed_by. Please expose generation readiness/error and restore generated record fields after restart. Service currently defaults to one INCIDENT_ID; unique incident IDs are needed to avoid overwriting archive documents. This is a requested contract addition, not implemented frontend/backend behavior.
