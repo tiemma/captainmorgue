@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -53,14 +54,23 @@ type sseMessage struct {
 type Incident struct {
 	id, title string
 	roster    Roster
+	store     *store
+	brain     *brain
 
-	mu     sync.Mutex
-	events []Event
-	subs   map[chan sseMessage]struct{}
+	mu        sync.Mutex
+	events    []Event
+	subs      map[chan sseMessage]struct{}
+	pastMatch *PastMatch
+	written   *writtenRecord
+	matchReq  chan struct{}
 }
 
-func newIncident(id, title string, roster Roster) *Incident {
-	return &Incident{id: id, title: title, roster: roster, subs: map[chan sseMessage]struct{}{}}
+func newIncident(id, title string, roster Roster, st *store, br *brain) *Incident {
+	return &Incident{
+		id: id, title: title, roster: roster, store: st, brain: br,
+		subs:     map[chan sseMessage]struct{}{},
+		matchReq: make(chan struct{}, 1),
+	}
 }
 
 func (inc *Incident) handleEvent(w http.ResponseWriter, r *http.Request) {
@@ -91,13 +101,24 @@ func (inc *Incident) append(ev Event) {
 		}
 	}
 	inc.events = append(inc.events, ev)
-	conflict, found := inc.conflictWith(ev)
+	prev, found := inc.conflictWith(ev)
 	inc.mu.Unlock()
 
+	inc.store.saveEvent(ev)
 	inc.publish(ev)
-	if found {
-		inc.append(conflict)
+	inc.refreshPastMatch()
+	if ev.Type == "close" {
+		go inc.writeRecord()
 	}
+	if !found {
+		return
+	}
+	conflict := conflictEvent(prev, ev)
+	if inc.brain == nil {
+		inc.append(conflict)
+		return
+	}
+	go inc.confirmConflict(prev, ev, conflict)
 }
 
 func looksLikeWrite(ev Event) bool {
@@ -128,17 +149,41 @@ func (inc *Incident) conflictWith(ev Event) (Event, bool) {
 		if !looksLikeWrite(prev) && !looksLikeWrite(ev) {
 			continue
 		}
-		target := ev.Resource.Kind + "/" + ev.Resource.Name
-		return Event{
-			Actor:    "captainmorgue",
-			Type:     "conflict",
-			Text:     fmt.Sprintf("%s is acting on %s while %s's %q is still in effect. Check with each other before going on.", ev.Actor, target, prev.Actor, prev.Text),
-			Resource: ev.Resource,
-			To:       []string{prev.Actor, ev.Actor},
-			Why:      fmt.Sprintf("Both acted on %s within %s.", target, conflictWindow),
-		}, true
+		return prev, true
 	}
 	return Event{}, false
+}
+
+func resourceLabel(r *Resource) string {
+	return r.Kind + "/" + r.Name
+}
+
+func conflictEvent(prev, ev Event) Event {
+	target := resourceLabel(ev.Resource)
+	return Event{
+		Actor:    "captainmorgue",
+		Type:     "conflict",
+		Text:     fmt.Sprintf("%s is acting on %s while %s's %q is still in effect. Check with each other before going on.", ev.Actor, target, prev.Actor, prev.Text),
+		Resource: ev.Resource,
+		To:       []string{prev.Actor, ev.Actor},
+		Why:      fmt.Sprintf("Both acted on %s within %s.", target, conflictWindow),
+	}
+}
+
+func (inc *Incident) confirmConflict(prev, ev, conflict Event) {
+	ctx, cancel := context.WithTimeout(context.Background(), modelTimeout)
+	defer cancel()
+	verdict, err := inc.brain.judgeConflict(ctx, prev, ev)
+	switch {
+	case err != nil:
+		slog.Warn("conflict check failed, keeping the rule", "err", err)
+	case !verdict.Conflict:
+		slog.Info("model dismissed conflict", "a", prev.ID, "b", ev.ID, "why", verdict.Why)
+		return
+	case verdict.Why != "":
+		conflict.Why = verdict.Why
+	}
+	inc.append(conflict)
 }
 
 func (inc *Incident) handleBroadcast(w http.ResponseWriter, r *http.Request) {
@@ -150,9 +195,27 @@ func (inc *Incident) handleBroadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "broadcast needs from and text", http.StatusBadRequest)
 		return
 	}
-	to := inc.managersOfOtherTeams(b.From)
-	inc.append(Event{Actor: b.From, Type: "relay", Text: b.Text, To: to, Why: "Managers of the other teams working this incident."})
+	go inc.relay(b.From, b.Text)
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (inc *Incident) relay(from, text string) {
+	to, why := inc.managersOfOtherTeams(from), "Managers of the other teams working this incident."
+	if inc.brain != nil {
+		inc.mu.Lock()
+		recent := inc.events[max(0, len(inc.events)-relayContext):]
+		recent = append([]Event(nil), recent...)
+		inc.mu.Unlock()
+		ctx, cancel := context.WithTimeout(context.Background(), modelTimeout)
+		pick, err := inc.brain.pickRecipients(ctx, inc.roster, from, text, recent)
+		cancel()
+		if err != nil {
+			slog.Warn("relay pick failed, using managers", "err", err)
+		} else if known := inc.roster.known(pick.To, from); len(known) > 0 {
+			to, why = known, pick.Why
+		}
+	}
+	inc.append(Event{Actor: from, Type: "relay", Text: text, To: to, Why: why})
 }
 
 func (inc *Incident) managersOfOtherTeams(from string) []string {
@@ -185,6 +248,10 @@ func (inc *Incident) publish(ev Event) {
 		slog.Error("marshal event", "err", err)
 		return
 	}
+	inc.broadcast(sseMessage{"event", evData})
+}
+
+func (inc *Incident) broadcast(msgs ...sseMessage) {
 	inc.mu.Lock()
 	defer inc.mu.Unlock()
 	stateData, err := json.Marshal(inc.state())
@@ -192,8 +259,9 @@ func (inc *Incident) publish(ev Event) {
 		slog.Error("marshal state", "err", err)
 		return
 	}
+	msgs = append(msgs, sseMessage{"state", stateData})
 	for ch := range inc.subs {
-		for _, m := range []sseMessage{{"event", evData}, {"state", stateData}} {
+		for _, m := range msgs {
 			select {
 			case ch <- m:
 			default:

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 )
@@ -43,4 +44,14 @@ func (r Roster) teamOf(actor string) (Team, bool) {
 		}
 	}
 	return Team{}, false
+}
+
+func (r Roster) known(logins []string, exclude string) []string {
+	var out []string
+	for _, l := range logins {
+		if _, ok := r.teamOf(l); ok && l != exclude && !slices.Contains(out, l) {
+			out = append(out, l)
+		}
+	}
+	return out
 }
