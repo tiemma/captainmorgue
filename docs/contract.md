@@ -25,6 +25,7 @@ The incident id is `INC-1` unless the service sets `INCIDENT_ID`. Routes with `{
 | `GET /stream` | | `200` `text/event-stream`, see [Stream](#stream) | `500` if streaming is unsupported | |
 | `GET /record/{id}` | | `200` [Record](#record) | `404` | |
 | `GET /record/{id}.md` | | `200` `text/markdown`, the RFO | `404` | |
+| `GET /records` | | `200` array of `{"id", "title", "severity", "opened", "resolved", "duration", "summary", "fixed_by"}`, newest first | | |
 | `POST /events` | an [Event](#event); needs `actor` and a `type` from: `alert action decision relay conflict investigation signal ship join close note action_item pr` | `202`, empty | `400` | that event; `close` also resolves the incident and writes the record |
 | `POST /broadcast` | `{"from": "login", "text": "..."}` | `202`, empty (the relay is appended a moment later) | `400` if `from` or `text` is empty | `relay` |
 | `POST /incidents/{id}/join` | `{"actor", "team"?, "role"?, "task"?, "repo"?, "tools"?: []}` | `200` [join response](#join-response) | `400` bad role, missing actor, team not in `roster.yaml`; `404` | `join`, then a `digest` for the joiner when they missed events |
@@ -166,6 +167,7 @@ When a signal's `status` changes (a new signal counts as changing from `ok`), th
 | `why` | string, omitted | Why those recipients, or why the service did it. |
 | `term` | int, omitted when 0 | Sender's team term. |
 | `reply_to` | int, omitted when 0 | The `seq` this answers or follows up. |
+| `exit_code`, `duration_ms` | int, omitted | On `action` events from the shell hook. Shown in the RFO steps. |
 | `status` | string, omitted | On `status` events, the state it moved to. |
 | `severity` | string, omitted | On `status` events, the severity it set. |
 
@@ -244,7 +246,7 @@ Delivery of `ask`, `broadcast`, `relay` and `conflict` is tracked in `state.deli
 
 ## Record
 
-`GET /record/{id}` is the Reason For Outage (RFO) as JSON; `GET /record/{id}.md` is the same as Markdown. Before close it is a live draft built from the events so far. At close Claude writes the narrative fields when `ANTHROPIC_API_KEY` is set; otherwise, or if Claude fails, the service builds them from the events. The window, timeline, errors, remediation and explicit action items always come from the events. The wall loads it on `close` and on each `action` from CaptainMorgue, and shows it in the Record tab.
+`GET /record/{id}` is the Reason For Outage (RFO) as JSON for the current incident, or for a past one stored in Elasticsearch (`404` when neither has it; `502` when Elasticsearch fails); `GET /records` lists closed incidents from Elasticsearch plus the current one once closed. `improvements` and `fixed_by` stay for older clients: `improvements` is the same list as `action_items`. `GET /record/{id}.md` is the same as Markdown. Before close it is a live draft built from the events so far. At close Claude writes the narrative fields when `ANTHROPIC_API_KEY` is set; otherwise, or if Claude fails, the service builds them from the events. The window, timeline, errors, remediation and explicit action items always come from the events. The wall loads it on `close` and on each `action` from CaptainMorgue, and shows it in the Record tab.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -263,6 +265,10 @@ Delivery of `ask`, `broadcast`, `relay` and `conflict` is tracked in `state.deli
 | `timeline[]` | `{"ts", "actor", "type", "text"}` | Key events: alerts, signals, status changes, close, conflicts, escalations, elections, investigations, decisions, notes, ships, pull requests, action items. |
 | `went_well[]`, `went_badly[]` | string | Fallback: time to mitigate, conflicts caught, claims that blocked a write, auto-replies, elections, asks answered, pull requests; escalations, silent managers, failed actions, alerts. |
 | `errors[]` | as `timeline` | Alerts, signals, failed or interrupted actions, conflicts, escalations. |
+| `fixed_by` | string | Who fixed it. Fallback: author of the latest `ship` or `pr`. |
+| `steps[]` | `{"actor", "steps": [Step]}` | Appendix: every `action` event, grouped into runs of consecutive steps by one person. Step: `{"ts", "actor", "text", "status" ("ok", "failed", "interrupted" or ""), "resource"?, "exit_code"?, "duration_ms"?, "failed", "change"}`. |
+| `changes[]` | [Step] | Steps that wrote to a cluster resource (a non-read action with a `resource`). |
+| `improvements[]` | as `action_items` | Same list, kept for older clients. |
 | `remediation[]` | as `state.prs` | Pull requests opened during the incident. |
 | `action_items[]` | `{"text", "owner", "link", "due"}` | Every `action_item` event, then Claude's extra ones. `due` is a hint from severity (sev1 within 2 days, sev2 within 1 week, otherwise within 2 weeks) unless Claude gives one. |
 | `parts[]` | `{"name", "how"}` | How each part was resolved; written by Claude at close, `[]` otherwise. |

@@ -65,6 +65,7 @@ export interface IncidentState {
     id: string;
     title: string;
     status: string;
+    severity?: string;
     opened: string | null;
     closed: string | null;
   };
@@ -77,6 +78,62 @@ export interface IncidentState {
   past_match: PastMatch | null;
   claims: Claim[] | null;
   deliveries: { [seq: string]: { [actor: string]: string } } | null;
+  prs?: PullRequest[] | null;
+}
+
+export interface PullRequest {
+  service: string;
+  url: string;
+  author: string;
+  ts: string;
+}
+
+export interface Moment {
+  ts: string;
+  actor: string;
+  type: string;
+  text: string;
+}
+
+export interface Step {
+  ts: string;
+  actor: string;
+  text: string;
+  status: string;
+  resource?: string;
+  exit_code?: number;
+  duration_ms?: number;
+  failed: boolean;
+  change: boolean;
+}
+
+export interface ImpactWindow {
+  opened: string | null;
+  detected: string | null;
+  mitigated: string | null;
+  resolved: string | null;
+  closed: string | null;
+  to_mitigate: string;
+  to_resolve: string;
+  duration: string;
+}
+
+export interface ActionItem {
+  text: string;
+  owner: string;
+  link: string;
+  due?: string;
+}
+
+export interface RecordSummary {
+  id: string;
+  title: string;
+  severity: string;
+  opened: string | null;
+  resolved: string | null;
+  duration: string;
+  summary: string;
+  fixed_by: string;
 }
 
 export interface IncidentRecord {
@@ -89,9 +146,25 @@ export interface IncidentRecord {
   teams: number;
   conflicts: number;
   parts: { name: string; how: string }[] | null;
-  improvements: { text: string; owner: string; link: string }[] | null;
+  improvements: ActionItem[] | null;
   past_match: PastMatch | null;
   events: IncidentEvent[] | null;
+  status?: string;
+  severity?: string;
+  written_by?: string;
+  window?: ImpactWindow;
+  summary?: string;
+  fixed_by?: string;
+  root_cause?: string;
+  contributing_factors?: string[] | null;
+  timeline?: Moment[] | null;
+  went_well?: string[] | null;
+  went_badly?: string[] | null;
+  errors?: Moment[] | null;
+  remediation?: PullRequest[] | null;
+  action_items?: ActionItem[] | null;
+  steps?: { actor: string; steps: Step[] }[] | null;
+  changes?: Step[] | null;
 }
 
 export type Record = IncidentRecord;
@@ -157,6 +230,22 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
 
 export function fetchRecord(id: string, signal?: AbortSignal) {
   return request<IncidentRecord>(`/record/${encodeURIComponent(id)}`, undefined, signal);
+}
+
+export function fetchRecords(signal?: AbortSignal) {
+  return request<RecordSummary[] | null>('/records', undefined, signal);
+}
+
+export function setIncidentStatus(
+  incidentId: string,
+  change: { actor: string; status?: string; severity?: string; why?: string },
+  signal?: AbortSignal,
+) {
+  return request<{ status: string; severity: string }>(
+    `/incidents/${encodeURIComponent(incidentId)}/status`,
+    change,
+    signal,
+  );
 }
 
 export function sendMessage(message: MessageRequest, signal?: AbortSignal) {
