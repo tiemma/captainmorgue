@@ -76,7 +76,8 @@ while :; do
   if [ -n "$rejoin" ]; then
     rejoin=""
     team=$(jq -r '.team // empty' "$SESSION" 2>/dev/null)
-    join_incident "${team:-${CM_TEAM:-}}" >/dev/null && log "rejoined $INCIDENT after the service forgot $ACTOR"
+    role=$(jq -r '.role // empty' "$SESSION" 2>/dev/null)
+    join_incident "${team:-${CM_TEAM:-}}" "${role:-${CM_ROLE:-}}" "${CM_TASK:-}" >/dev/null && log "rejoined $INCIDENT after the service forgot $ACTOR"
   fi
   cursor=$(read_seq "$CURSOR")
   started=$SECONDS

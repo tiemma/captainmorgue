@@ -18,7 +18,9 @@ type actorState struct {
 	joined   bool
 	lastSeen time.Time
 	cursor   int
+	digested int
 	status   string
+	profile  Profile
 	inbox    []Envelope
 	wake     chan struct{}
 }
@@ -43,12 +45,23 @@ type coord struct {
 	deliveries map[int]map[string]string
 	asks       map[int]Event
 	pending    []int
+	commander  string
 }
+
+type Profile struct {
+	Role  string   `json:"role,omitempty"`
+	Task  string   `json:"task,omitempty"`
+	Repo  string   `json:"repo,omitempty"`
+	Tools []string `json:"tools,omitempty"`
+}
+
+var roles = map[string]bool{"commander": true, "responder": true, "scribe": true}
 
 type Person struct {
 	Status   string     `json:"status"`
 	Team     string     `json:"team"`
 	LastSeen *time.Time `json:"last_seen"`
+	Profile
 }
 
 type MemberStatus struct {
@@ -225,7 +238,7 @@ func (inc *Incident) people(now time.Time) map[string]Person {
 			continue
 		}
 		seen := a.lastSeen
-		out[name] = Person{Status: inc.coord.status(name, now), Team: a.team, LastSeen: &seen}
+		out[name] = Person{Status: inc.coord.status(name, now), Team: a.team, LastSeen: &seen, Profile: a.profile}
 	}
 	return out
 }
@@ -253,8 +266,16 @@ func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Actor string `json:"actor"`
 		Team  string `json:"team"`
+		Profile
 	}
 	if !decodeBody(w, r, &req) {
+		return
+	}
+	if req.Role == "" {
+		req.Role = "responder"
+	}
+	if !roles[req.Role] {
+		http.Error(w, "role must be commander, responder or scribe; team managers are elected", http.StatusBadRequest)
 		return
 	}
 	if req.Team == "" {
@@ -271,25 +292,43 @@ func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
 	inc.mu.Lock()
 	c := &inc.coord
 	a := c.actor(req.Actor)
+	since, due := inc.digestDue(a, req.Actor, 0)
 	a.team, a.joined, a.lastSeen, a.status = req.Team, true, now, "online"
+	if c.commander == req.Actor {
+		c.commander = ""
+	}
+	if req.Role == "commander" {
+		if c.commander == "" {
+			c.commander = req.Actor
+		} else {
+			req.Role = "responder"
+		}
+	}
+	a.profile = req.Profile
 	tc := c.team(req.Team)
-	text := "joined " + inc.id
+	text := "joined " + inc.id + " as " + req.Role
 	if tc.manager != req.Actor && c.status(tc.manager, now) != "online" {
 		tc.manager, tc.election = req.Actor, nil
 		tc.term++
-		text = fmt.Sprintf("joined %s and manages %s, term %d", inc.id, rt.Name, tc.term)
+		text += fmt.Sprintf(" and manages %s, term %d", rt.Name, tc.term)
 	}
 	resp := struct {
-		Incident string         `json:"incident"`
-		Team     string         `json:"team"`
-		Manager  string         `json:"manager"`
-		Term     int            `json:"term"`
-		Members  []MemberStatus `json:"members"`
-		Cursor   int            `json:"cursor"`
-	}{inc.id, req.Team, tc.manager, tc.term, inc.members(req.Team, now), a.cursor}
+		Incident  string         `json:"incident"`
+		Team      string         `json:"team"`
+		Manager   string         `json:"manager"`
+		Term      int            `json:"term"`
+		Role      string         `json:"role"`
+		Commander string         `json:"commander"`
+		Members   []MemberStatus `json:"members"`
+		Cursor    int            `json:"cursor"`
+	}{inc.id, req.Team, tc.manager, tc.term, req.Role, c.commander, inc.members(req.Team, now), a.cursor}
+	others := slices.DeleteFunc(c.joinedNames(), func(name string) bool { return name == req.Actor })
 	inc.mu.Unlock()
 
-	inc.append(Event{Actor: req.Actor, Team: req.Team, Type: "join", Text: text, Term: resp.Term})
+	inc.append(Event{Actor: req.Actor, Team: req.Team, Type: "join", Text: text, Term: resp.Term, To: others, Why: "everyone already in " + inc.id})
+	if due {
+		go inc.sendDigest(req.Actor, since)
+	}
 	writeJSON(w, resp)
 }
 
@@ -315,6 +354,9 @@ func (inc *Incident) handleLeave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.joined, a.status = false, "offline"
+	if c.commander == req.Actor {
+		c.commander = ""
+	}
 	var follow []Event
 	if c.team(a.team).manager == req.Actor {
 		follow = inc.startElection(a.team, now)
@@ -326,6 +368,33 @@ func (inc *Incident) handleLeave(w http.ResponseWriter, r *http.Request) {
 	for _, ev := range follow {
 		inc.append(ev)
 	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (inc *Incident) handleTask(w http.ResponseWriter, r *http.Request) {
+	if r.PathValue("id") != inc.id {
+		http.Error(w, "no such incident", http.StatusNotFound)
+		return
+	}
+	var req struct {
+		Actor string `json:"actor"`
+		Task  string `json:"task"`
+	}
+	if !decodeBody(w, r, &req) {
+		return
+	}
+	inc.mu.Lock()
+	a, ok := inc.coord.actors[req.Actor]
+	if !ok || !a.joined {
+		inc.mu.Unlock()
+		http.Error(w, "join "+inc.id+" first", http.StatusNotFound)
+		return
+	}
+	a.profile.Task = req.Task
+	team := a.team
+	inc.mu.Unlock()
+
+	inc.append(Event{Actor: req.Actor, Team: team, Type: "action", Text: "Working on: " + req.Task})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -345,10 +414,17 @@ func (inc *Incident) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	}
 	a.lastSeen = time.Now().UTC()
 	changed := a.status != "online"
+	since, due := 0, false
+	if threshold, ok := returnThreshold[a.status]; ok {
+		since, due = inc.digestDue(a, req.Actor, threshold)
+	}
 	a.status = "online"
 	inc.mu.Unlock()
 	if changed {
 		inc.publishState()
+	}
+	if due {
+		go inc.sendDigest(req.Actor, since)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

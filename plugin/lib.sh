@@ -52,7 +52,9 @@ ack() {
 join_incident() {
   local resp cursor
   resp=$(CM_MAX_TIME=5 api POST "/incidents/$INCIDENT/join" \
-    "$(jq -nc --arg a "$ACTOR" --arg t "$1" '{actor: $a} + (if $t != "" then {team: $t} else {} end)')" 2>>"$LOG") || return 1
+    "$(jq -nc --arg a "$ACTOR" --arg t "$1" --arg role "$2" --arg task "$3" --arg repo "${CM_REPO:-}" --arg tools "${CM_TOOLS:-}" '
+      {actor: $a, role: $role, task: $task, repo: $repo, tools: ($tools | [splits(",") | gsub("^\\s+|\\s+$"; "") | select(. != "")])}
+      + (if $t != "" then {team: $t} else {} end)')" 2>>"$LOG") || return 1
   cursor=$(jq -r '.cursor // 0' <<<"$resp")
   write_file "$SESSION" "$resp"
   write_file "$CM_DIR/cursor" "$cursor"
@@ -78,6 +80,73 @@ snapshot() {
   rm -f "$f"
 }
 
+JQ_TARGET='
+def kinds: {
+  deploy: "Deployment", deployment: "Deployment", deployments: "Deployment",
+  rollout: "Rollout", rollouts: "Rollout", ro: "Rollout",
+  pod: "Pod", pods: "Pod", po: "Pod",
+  svc: "Service", service: "Service", services: "Service",
+  sts: "StatefulSet", statefulset: "StatefulSet", statefulsets: "StatefulSet",
+  ds: "DaemonSet", daemonset: "DaemonSet", daemonsets: "DaemonSet",
+  rs: "ReplicaSet", replicaset: "ReplicaSet", replicasets: "ReplicaSet",
+  job: "Job", jobs: "Job", cronjob: "CronJob", cronjobs: "CronJob", cj: "CronJob",
+  cm: "ConfigMap", configmap: "ConfigMap", configmaps: "ConfigMap",
+  secret: "Secret", secrets: "Secret",
+  cluster: "Cluster", clusters: "Cluster",
+  node: "Node", nodes: "Node", no: "Node",
+  ns: "Namespace", namespace: "Namespace", namespaces: "Namespace",
+  pvc: "PersistentVolumeClaim", persistentvolumeclaim: "PersistentVolumeClaim",
+  ing: "Ingress", ingress: "Ingress", ingresses: "Ingress",
+  hpa: "HorizontalPodAutoscaler", horizontalpodautoscaler: "HorizontalPodAutoscaler"
+};
+def kindof: kinds[ascii_downcase | split(".")[0]];
+def objname: test("^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$");
+def valueflags: "-o", "--output", "-l", "--selector", "-c", "--container", "--context",
+  "-f", "--filename", "--kubeconfig", "--cluster", "--user", "-p", "--patch", "--type",
+  "--values", "--set", "--set-string", "--set-file", "--version", "--repo", "--kube-context", "--timeout";
+
+def cli_args($bin):
+  [splits("\\s*(\\|\\||&&|;|\\||\\n)\\s*")]
+  | .[] | select(test("(^|\\s)" + $bin + "\\s"))
+  | capture($bin + "\\s+(?<a>.*)").a
+  | [splits("\\s+") | explode | map(select(. != 34 and . != 39)) | implode | select(length > 0)]
+  | reduce .[] as $t ({pos: [], ns: null, want: null};
+      if .want == "ns" then .ns = $t | .want = null
+      elif .want then .want = null
+      elif ($t | test("^(-n|--namespace)=")) then .ns = ($t | sub("^[^=]*="; ""))
+      elif $t == "-n" or $t == "--namespace" then .want = "ns"
+      elif ($t | IN(valueflags)) then .want = "skip"
+      elif ($t | startswith("-")) then .
+      else .pos += [$t] end);
+
+def kubectl_target:
+  .ns as $ns
+  | .pos as $p
+  | (if $p[0:2] == ["argo", "rollouts"] then
+      ($p[3:] | map(select(kindof != "Rollout")) | .[0]) as $n
+      | {read: ($p[2] | IN("get", "status", "list", "version")),
+        write: ($p[2] | IN("promote", "abort", "undo")), verb: ("argo rollouts " + $p[2]),
+        kind: "Rollout", name: $n}
+    else
+      ([$p[1:][] | select(test("^[A-Za-z.]+/[^/]+$")) | split("/") | {kind: (.[0] | kindof), name: .[1]} | select(.kind)][0]
+       // ([range(1; ($p | length) - 1) as $i | select($p[$i] | kindof) | {kind: ($p[$i] | kindof), name: $p[$i + 1]}][0]))
+      + {read: (($p[0] | IN("get", "describe", "logs", "top", "explain", "events", "diff"))
+                or ($p[0] == "rollout" and ($p[1] | IN("status", "history")))),
+         write: (($p[0] | IN("apply", "patch", "delete", "scale", "edit", "set", "annotate", "label"))
+                 or ($p[0] == "rollout" and ($p[1] | IN("status", "history") | not)))}
+    end)
+  | select(.name and (.name | objname))
+  | {read, write, verb: (.verb // ($p[0:2] | map(select(kindof == null and (test("/") | not))) | join(" "))),
+     resource: ({kind, name} + (if $ns then {namespace: $ns} else {} end))};
+
+def helm_target:
+  .ns as $ns
+  | select(.pos[0] | IN("upgrade", "install", "rollback", "uninstall", "delete"))
+  | select(.pos[1] and (.pos[1] | objname))
+  | {read: false, write: true, verb: ("helm " + .pos[0]),
+     resource: ({kind: "HelmRelease", name: .pos[1]} + (if $ns then {namespace: $ns} else {} end))};
+'
+
 JQ_DEFS='
 def name_or_none: if (. // "") == "" then "none" else . end;
 def status_of($a): if .state.people == null then "unknown" else (.state.people[$a] // "offline") | if type == "object" then .status // "unknown" else . end end;
@@ -85,14 +154,23 @@ def team_of($a): (.state.people[$a] | objects | .team) // ([.state.teams[]? | se
 def members_of($t): [.state.teams[]? | select(.id == $t) | (.manager | strings | select(. != "")), .members[]?] | unique;
 def latest($a; $n): [.events[] | select(.actor == $a)] | .[-$n:];
 def evline: "\(.ts // "" | .[11:16]) \(.type): \(.text)";
+def manages($a): any(.state.teams[]?; .manager == $a);
+def prof($a): (.state.people[$a] | objects) // {};
+def roles($a): (prof($a).role // "responder") + (if manages($a) then ", team manager" else "" end);
+def task_of($a): prof($a).task // "" | if . == "" then "not set" else . end;
+def kit($a): prof($a) | [(.repo // "" | select(. != "") | "repo: \(.)"), (.tools // [] | select(. != []) | "tools: \(join(", "))")] | join("; ");
+def commander: [.state.people // {} | to_entries[] | select(.value | objects | .role == "commander") | .key][0] | name_or_none;
 def person($a; $n): (latest($a; $n) | map(evline) | if . == [] then ["no events yet"] else . end) as $lines
-  | "- \($a) (\(status_of($a)), team \(team_of($a)))"
-    + (if $n == 1 then ": " + $lines[0] else "\n" + ($lines | map("    " + .) | join("\n")) end);
+  | "- \($a) (\(status_of($a)), team \(team_of($a)), \(roles($a)))",
+    "    working on: \(task_of($a))",
+    (kit($a) | select(. != "") | "    " + .),
+    ($lines[] | "    " + .);
 def teammates($s; $me): ((members_of($s.team) | if . == [] then [$s.members[]?.actor] else . end) - [$me])[] as $a | person($a; 1);
 def msgline: "- [\(.kind)] seq \(.seq) from \(.from)\(if .why and .why != "" then " (why: \(.why))" else "" end): \(.text)";
 def guidance: {
   ask: "For each ask: stop what you are doing. Show the ask to the person verbatim (seq, sender, why, text), then ask them how to answer with the AskUserQuestion tool, one question per ask, with the options \"Reply\" (they type the answer), \"I am on it\", \"Not me, route to someone\" and \"Let my agent handle it\". Reply: send their text. I am on it: send \"On it\". Route: ask who, run /captainmorgue:ask @them with the question and who asked it, then reply \"Not me, asked @them\". Let my agent handle it: do the work in a subagent (Agent tool) so their own task is not derailed, then reply with the result. Send every answer with /captainmorgue:reply <seq> <text>, then resume what you were doing. If nobody answers within 60 s, CaptainMorgue auto-replies with their current status.",
   conflict: "For each conflict: show it to the person now and stop any risky work on that resource until they decide.",
-  escalation: "For each escalation: show it to the person now."
+  escalation: "For each escalation: show it to the person now.",
+  digest: "For a digest: give the person this catch-up in a few lines before going on."
 };
 '

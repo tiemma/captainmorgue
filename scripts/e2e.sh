@@ -40,15 +40,26 @@ hook() {
 inject() {
   hook "$1" "$2" UserPromptSubmit | jq -r '.hookSpecificOutput.additionalContext // ""'
 }
+pretool() {
+  jq -nc --arg c "$2" '{hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: {command: $c}}' |
+    HOME=$work/home-$1 CM_ACTOR=$1 "$root/plugin/hooks/claim.sh"
+}
 state() { curl -s -N --max-time 2 "$CM_URL/stream" | grep '^data' | tail -1 | sed 's/^data: //'; }
 
 [ -n "${short:-}" ] && check "unauthenticated write is rejected" '[ "$(curl -s -o /dev/null -w %{http_code} -X POST "$CM_URL/heartbeat" -d "{\"actor\":\"dana\"}")" = 401 ]'
 
-as dana registration join </dev/null >"$work/join-dana"
-as gus registration join </dev/null >/dev/null
+echo 'commander Restore check-in at Hall B' | CM_REPO=conference CM_TOOLS='kubectl, radar' as dana registration join >"$work/join-dana"
+echo 'commander' | as gus registration join >"$work/join-gus"
 as ben platform join </dev/null >/dev/null
 as dev platform join </dev/null >/dev/null
 check "first to join manages the team" 'grep -q "manager dana" "$work/join-dana"'
+check "only one commander per incident" 'grep -q "Commander is already dana; you joined as responder" "$work/join-gus"'
+
+echo '@dana' | as ben platform status >"$work/status-dana"
+check "role and profile visible to another member" 'grep -q "(online, team registration, commander, team manager)" "$work/status-dana" && grep -q "repo: conference; tools: kubectl, radar" "$work/status-dana" && grep -q "working on: Restore check-in at Hall B" "$work/status-dana"'
+
+echo 'Rolling back checkin' | as dana registration task >/dev/null
+check "task update visible to another member" 'echo registration | as dev platform status | grep -q "working on: Rolling back checkin"'
 
 echo '@dana Is confdb failing over?' | as gus registration ask >/dev/null
 sleep 3
@@ -67,6 +78,20 @@ echo "$seq_ask Nothing on our side" | as ben platform reply >/dev/null
 sleep 2
 check "reply goes back to the asker" 'inject dev platform | grep -q "Nothing on our side"'
 
+as kim registration join </dev/null >/dev/null
+sleep 3
+late=$(inject kim registration)
+check "late joiner gets a digest naming the earlier broadcast" 'grep -q "\[digest\]" <<<"$late" && grep -q "Check-in is slow" <<<"$late"'
+
+write='kubectl -n team-captainmorgue rollout restart deploy/confdb'
+check "first write claims the resource" '[ -z "$(pretool dana "$write")" ] && jq -e ".claims[] | select(.key == \"team-captainmorgue/deployment/confdb\" and .actor == \"dana\")" <<<"$(state)" >/dev/null'
+denied=$(pretool dev "$write")
+check "second actor's write is denied naming the holder" '[ "$(jq -r .hookSpecificOutput.permissionDecision <<<"$denied")" = deny ] && jq -r .hookSpecificOutput.permissionDecisionReason <<<"$denied" | grep -q "held by dana"'
+check "read is never blocked" '[ -z "$(pretool dev "kubectl -n team-captainmorgue get pods")" ]'
+check "holder renews its own claim" '[ -z "$(pretool dana "$write")" ]'
+sleep 2
+check "holder is told someone was blocked" 'inject dana registration | grep -q "dev tried to"'
+
 if [ -n "${short:-}" ]; then
   kill "$(cat "$work/home-ben/.captainmorgue/poll.pid" 2>/dev/null)" 2>/dev/null
   echo '@ben Are you there?' | as dana registration ask >/dev/null
@@ -75,6 +100,9 @@ if [ -n "${short:-}" ]; then
   check "silent member goes offline" '[ "$(jq -r ".people.ben.status" <<<"$s")" = offline ]'
   check "team elects a new manager" '[ "$(jq -r ".teams[] | select(.id==\"platform\") | .manager" <<<"$s")" = dev ]'
   check "unanswered ask auto-replies" 'inject dana registration | grep -qi "has not seen your ask"'
+  HOME=$work/home-ben CM_ACTOR=ben CM_TEAM=platform nohup "$root/plugin/bin/cm-poll" </dev/null >/dev/null 2>&1 &
+  sleep 4
+  check "returning member gets a digest naming the unanswered ask" 'as ben platform inbox | sed -n "/\[digest\]/,\$p" | grep -q "Are you there"'
 else
   echo "SKIP liveness, election and auto-reply (needs short timings; run without CM_URL)"
 fi

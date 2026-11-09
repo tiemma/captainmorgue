@@ -66,6 +66,7 @@ type Incident struct {
 	written   *writtenRecord
 	matchReq  chan struct{}
 	coord     coord
+	claims    map[string]*Claim
 }
 
 func newIncident(id, title string, roster Roster, st *store, br *brain) *Incident {
