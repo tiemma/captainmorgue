@@ -1,7 +1,7 @@
 # Sammy: cluster, Radar and the story
 
 ## Now
-Emmanuel's infra handoff is complete. Radar is synced and healthy; CaptainMorgue, checkin, payments, kiosk, OTEL and confdb are healthy, and the public wall is serving the live incident.
+Emmanuel's infra handoff is complete. Sammy is online in the fresh INC-1 incident with Jubril (`s1ntaxe770r`); the fault/telemetry rehearsal is in progress, while the fault PR and Dash0 rule application remain permission-gated.
 
 ## Done
 - Pulled latest private repo (`1dfb941`) and cluster repo (`e3ea5b2`) on public `main`.
@@ -36,14 +36,28 @@ Emmanuel's infra handoff is complete. Radar is synced and healthy; CaptainMorgue
 - Completed `STORY.md` with the before/after Checks, deployment timeline, investigation evidence and Radar screenshot links in public commit `5b5fbd2`.
 - Ran the bounded live rehearsal: public `/healthz` returned 200, the incident record contained five events, and the wall displayed the investigation, signal and ship summary.
 - `## Before` in `STORY.md` (cluster repo).
+- Pulled private main through `4360ae3` and public main through `d20686e`; discovered public branches `feat/fault-injection` (`357a682`) and `feat/dash0-checks` (`0ff68da`) with the next rehearsal work.
+- Handed item 1 back to Emmanuel: Sammy lacks permission to trigger/add Gitar on the public cluster repo or merge PR #1.
+- Rejoined fresh INC-1 as Sammy, restored the local poller after its stale cursor skipped the reset sequence, and verified Sammy plus Jubril (`s1ntaxe770r`) online.
+- Completed the safe coordination portion of runbooks 01-06: Sammy joined, set the rehearsal task, broadcast to Platform, and recorded the non-destructive conflict action; asked Jubril to run the teammate-side steps.
+- Verified the current incident record persists the new rehearsal events; this confirms the live record path but does not prove Elasticsearch logs `elasticsearch=true`.
+- Public story update pushed in `captainmorgue-cluster` commit `8b85902`.
 
 ## Next
+- [ ] Emmanuel: review/merge public cluster PR #1 (`feat/fault-injection`) and grant/trigger Gitar on `tiemma/captainmorgue-cluster`; Sammy does not have the required repository permissions.
+- [ ] Apply the five Dash0 rules and webhook from public branch `feat/dash0-checks` after a Dash0 rules/channel API token is supplied; the existing Radar `dash0` Secret is only the collector credential.
+- [ ] Verify the deployed fault switch and Dash0 traces after PR #1 lands; current live check-in pods are still on the pre-fault-switch image.
+- [ ] Ask Emmanuel to verify CaptainMorgue logs for `elasticsearch=true`; the public health/record test passed but Sammy lacks Radar log permissions.
+- [ ] Finish the remaining multi-person runbook steps with Jubril and Emmanuel.
 - [ ] Grant the public cluster repository's GitHub Actions identity package-write access, rerun the failed `fefc494` image build, then verify the attendee-lookup image and promote the check-in canary.
 - [ ] Capture the final rehearsal screen recording.
 - [ ] Optional cleanup: review the remaining Radar Check findings and remove the unused legacy `my-secret` only with explicit approval.
 
 ## Blocked on
 - GHCR build for `fefc494` failed with `permission_denied: write_package`; the live Rollout remains healthy on image `a063365`.
+- Fault verification is blocked until Emmanuel merges PR #1 and the new image is deployed; Dash0 rule application is blocked without a Dash0 rules/channel API token.
+- Elasticsearch log confirmation and Gitar/PR actions require Emmanuel's repository/Radar permissions.
 - Screen recording remains pending after the computer-control session stopped while switching to the public wall; the live rehearsal verification itself passed and the agent is online.
 
 ## Handing off
+- Emmanuel: item 1 is handed back because Sammy lacks permission to add/trigger Gitar or merge public cluster PR #1. Please merge/enable it, then notify Sammy so the fault rehearsal can be verified.
