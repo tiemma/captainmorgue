@@ -1,16 +1,7 @@
 teams:
   - id: registration
     name: Registration
-    manager: dana
-    members: [ana, cal]
-    owns: [checkin, schedule]
-  - id: ticketing
-    name: Ticketing and Payments
-    manager: eli
-    members: [gus, fay]
-    owns: [tickets, payments]
+    owns: [checkin, kiosk]
   - id: platform
     name: Platform
-    manager: ben
-    members: [dev]
-    owns: [confdb]
+    owns: [confdb, otel-collector, captainmorgue]

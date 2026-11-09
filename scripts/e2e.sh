@@ -41,12 +41,12 @@ state() { curl -s -N --max-time 2 "$CM_URL/stream" | grep '^data' | tail -1 | se
 [ -n "${short:-}" ] && check "unauthenticated write is rejected" '[ "$(curl -s -o /dev/null -w %{http_code} -X POST "$CM_URL/heartbeat" -d "{\"actor\":\"dana\"}")" = 401 ]'
 
 as dana registration join </dev/null >"$work/join-dana"
-as gus ticketing join </dev/null >/dev/null
+as gus registration join </dev/null >/dev/null
 as ben platform join </dev/null >/dev/null
 as dev platform join </dev/null >/dev/null
 check "first to join manages the team" 'grep -q "manager dana" "$work/join-dana"'
 
-echo '@dana Is confdb failing over?' | as gus ticketing ask >/dev/null
+echo '@dana Is confdb failing over?' | as gus registration ask >/dev/null
 sleep 3
 check "ask reaches the recipient's session" 'inject dana registration | grep -q "Is confdb failing over"'
 

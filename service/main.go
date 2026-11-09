@@ -23,7 +23,7 @@ func main() {
 	}
 	br := newBrain()
 	slog.Info("intelligence", "elasticsearch", st != nil, "claude", br != nil, "loaded_events", len(events))
-	inc := newIncident(id, env("INCIDENT_TITLE", "Check-in kiosks failing at Hall B"), roster, st, br)
+	inc := newIncident(id, env("INCIDENT_TITLE", "Conference operations"), roster, st, br)
 	inc.events = events
 	if st != nil {
 		go inc.matchLoop()

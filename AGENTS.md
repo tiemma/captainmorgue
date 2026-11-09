@@ -56,7 +56,6 @@ When the service is deployed (Sammy's ledger says so), everyone does this once a
 ```bash
 docker compose up -d elasticsearch          # optional; add --profile kibana for Kibana on :5601
 cd service && ROSTER=../roster.yaml WEB_DIR=../web go run .
-CM_URL=http://localhost:8080 scripts/replay.sh   # plays the demo incident into it
 open http://localhost:8080
 ```
 
