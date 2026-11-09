@@ -29,6 +29,8 @@ Emmanuel's infra handoff is complete. Radar is synced and healthy; CaptainMorgue
 - Communication test passed: Sammy sent Emmanuel (`tiemma`) a direct ask on `INC-1`; CaptainMorgue delivered it as inbox sequence `30`.
 - End-to-end receive test passed: Emmanuel replied through CaptainMorgue as sequence `31`; Sammy's inbox received it and acknowledged it, with heartbeat returning `204`.
 - Registered the local `CaptainMorgue-Sammy-Agent` Windows logon task for background heartbeats, inbox polling, local inbox storage and Windows notifications; Radar now sees Sammy online continuously.
+- Repaired the local agent state path to `C:\Users\samlo\.captainmorgue-codex`; verified the task joined `INC-1`, received the catch-up inbox message, and Radar reported Sammy `online` with a fresh heartbeat (2026-11-09).
+- OBS Studio is available locally and was configured with a full-display capture source; no finalized recording file was produced because the Windows computer-control session stopped before the rehearsal capture could be completed.
 - Added the check-in attendee lookup and Argo Rollouts canary configuration in public cluster commit `fefc494`; fixed the Rollout ConfigMap reference in `aba247b`, with Radar confirming 17/17 resources healthy.
 - Started a Radar AI investigation for `confdb-ro`, posted the investigation, signal and ship evidence to `/events`, and verified the public wall renders the rehearsal timeline.
 - Completed `STORY.md` with the before/after Checks, deployment timeline, investigation evidence and Radar screenshot links in public commit `5b5fbd2`.
@@ -42,6 +44,6 @@ Emmanuel's infra handoff is complete. Radar is synced and healthy; CaptainMorgue
 
 ## Blocked on
 - GHCR build for `fefc494` failed with `permission_denied: write_package`; the live Rollout remains healthy on image `a063365`.
-- Screen recording requires a local recording tool or user handoff; the live rehearsal verification itself passed.
+- Screen recording remains pending after the computer-control session stopped while switching to the public wall; the live rehearsal verification itself passed and the agent is online.
 
 ## Handing off
