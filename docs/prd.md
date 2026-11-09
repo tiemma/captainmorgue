@@ -1,6 +1,6 @@
 # CaptainMorgue PRD
 
-Status: hackathon draft | Owner: Emmanuel Bakare | Related: Dash0 (observability), Radar (Kubernetes clusters)
+Status: hackathon draft (Cloud Native Hackathon, Radar AI SRE track, demo at 5:30 on 2026-11-09) | Owner: Emmanuel Bakare | Related: Dash0 (observability), Radar (Kubernetes clusters)
 
 Tagline: **Where incidents go to die.**
 
@@ -10,7 +10,8 @@ Tagline: **Where incidents go to die.**
 - CaptainMorgue gives every responder an agent on their laptop and coordinates all of them through one incident. It records what each person did, how far that moved the incident, and how it relates to everyone else's decisions.
 - Responders are organised as a tree of teams, each with one manager. Status flows up to managers, work is dispatched down, and CaptainMorgue sits at the top with the full record.
 - CaptainMorgue acts on its own. It pulls in the teams an incident affects, decides who needs to hear each message, and catches conflicting actions.
-- This is a hackathon build. CaptainMorgue proves itself by injecting faults into a demo cluster, starting a real incident, and handling it end to end in front of the judges.
+- This is a hackathon build for the Cloud Native Hackathon's Radar AI SRE track. The judges want a project running on Kubernetes with Radar used throughout, a Radar AI investigation of a real issue, and something that makes conferences easier. They also ask teams not to break things on purpose for the demo.
+- The conference angle: a conference is a pile of systems run by different teams (registration and check-in, the schedule, ticketing and payments, streaming, venue wifi) that all fail at the worst moment. CaptainMorgue is the incident desk for the organisers: it pulls in the right team, keeps everyone's agents in one record, and writes the record so next year's event does not repeat it. The demo app is a small conference app run by three teams.
 - When the incident ends, the record is already written: a timestamped log, how each part was resolved, and the improvements that stop it coming back.
 - Applications run on Kubernetes, and everything else is reached from the cluster. CaptainMorgue reads the cluster through Radar and telemetry through Dash0.
 - Out of scope for now: images, audio and video in the record, and systems that cannot be seen from Kubernetes.
@@ -34,7 +35,7 @@ Tagline: **Where incidents go to die.**
 | 13 | Who answers deep telemetry questions? | Dash0 Agent0. CaptainMorgue hands it the question and brings the answer back into the incident. |
 | 14 | Where do workloads run? | On Kubernetes. Databases, SaaS and cloud services are reached from the cluster, so every investigation starts there. |
 | 15 | What goes in the record? | Text at launch. Images, audio and video come later. |
-| 16 | What is fault injection for? | Testing CaptainMorgue. It breaks a demo cluster on purpose, so the demo shows a real incident from the first alert to the finished record and proves CaptainMorgue works. It is a test harness, not a feature responders use. |
+| 16 | What is fault injection for? | Testing CaptainMorgue before the demo. Bounded fault switches in the demo app let us rehearse a full incident and check every part of CaptainMorgue works. They are not used in the judged demo, which shows a real issue instead (decision 44). |
 | 17 | What is the agent on each laptop? | A Claude Code plugin. Responders already work in Claude Code, and the plugin sees every command and tool call the agent makes. |
 | 18 | What goes into the record? | Everything a person does: what their agent runs and reads, the commands they type, and the messages they send through their agent. |
 | 19 | Where are the screens? | A web app. One shared page shows the live tree, timeline, relay feed and record, and it goes on the big screen in the demo. |
@@ -59,9 +60,19 @@ Tagline: **Where incidents go to die.**
 | 38 | How does the onboarded tree relate to incidents? | Incidents use the onboarded tree and its managers by default. First-to-join becomes manager only when a team manager is not in the incident, and elections still cover a manager who drops off. |
 | 39 | How are relationships between teams shown? | A relationship view built from what CaptainMorgue collects: the team tree as the backbone, with arcs between teams for how they relate. Hovering a team highlights its arcs. |
 | 40 | What do the relationships mean? | A small fixed vocabulary: member of, manages, part of, owns, calls, uses, depends on, messaged, and shared an incident with. Each arc shows its relationship type and the evidence behind it. |
-| 41 | How are demo faults kept safe? | They are switches built into the demo app, inside our own namespace and resource budget, and they switch off instantly. The hackathon cluster refuses the privileged access chaos tools need and forbids unbounded breakage. We confirm with the organisers before the demo. |
+| 41 | How are demo faults kept safe? | They are switches built into the demo app, inside our own namespace and resource budget, used only in rehearsal, and they switch off instantly. The hackathon cluster refuses the privileged access chaos tools need, and the judges ask teams not to break things on purpose for the demo. |
 | 42 | How does CaptainMorgue recall the past? | By meaning, not just keywords. Every event and record is embedded when it is stored, so "this has happened before", who fixed it last time, who answered a similar question, and "ask the incident" all find matches even when the wording differs. |
 | 43 | Where does the demo run? | On the team cluster from the Cloud Native Hackathon starter, deployed through Git, reachable at https://captainmorgue.cnh.radarhq.io. |
+| 44 | What does the judged demo show? (suggested) | A real issue. Either an incident that really happened on our cluster during the day, replayed live from its record, or a real release shipped as a canary that misbehaves and gets aborted. CaptainMorgue runs a Radar AI investigation on it and brings the findings into the record. Fault switches stay a rehearsal tool. |
+| 45 | What if CaptainMorgue is down? (suggested) | Agents keep working and buffer events on the laptop with their sequence numbers, then replay them when CaptainMorgue is back, so nothing is lost and the order holds. The web app shows that it is reconnecting. One replica in the cluster; Argo CD and Kubernetes restart it. |
+| 46 | Must an elected manager accept? (suggested) | No. The elected person is told they now manage the team and can hand it off with one command, which starts a new vote. |
+| 47 | A one-person team directly under CaptainMorgue? (suggested) | That person reports straight to CaptainMorgue and manages themselves until someone joins. |
+| 48 | What happens to Agent0 and Radar investigation findings? (suggested) | A short summary is copied into the record with a link to the full investigation, so the record stands on its own. At most one Radar AI investigation and one Agent0 run per incident part, both from the hackathon allowance. When one is unavailable, CaptainMorgue falls back to its own reads through MCP. |
+| 49 | Is CaptainMorgue part of CostGraph? (suggested) | No. It is a separate hackathon project in its own repository. |
+| 50 | Other incident tools after the hackathon? (suggested) | CaptainMorgue sits beside paging and chat tools, not in place of them: PagerDuty for who is on call, Slack for notifications that point back to the incident, and a status page later. |
+| 51 | Who is it for, and why not existing tools? (suggested) | For any group running many systems through many teams under time pressure: conference organisers first, then platform and SRE teams whose incidents cross several teams and who already work with coding agents. incident.io, Rootly and PagerDuty coordinate people in chat but cannot see what each person and their agent actually did. Radar investigations and Dash0 Agent0 investigate for one person. Nothing coordinates many people and their agents into one ordered record, catches them working against each other, and writes the record from what happened. |
+| 52 | The demo script (suggested) | About 4 minutes. 0:00 the problem: a conference runs on systems owned by different teams. 0:20 a real issue on the conference app shows in Radar and Dash0 and CaptainMorgue opens the incident, shows a matching past incident, and pulls in three teams. 1:00 responders work it from Claude Code on their own laptops while the big screen streams every event. 1:40 a broadcast gets relayed with the reason, and a conflict on the database is flagged. 2:10 one manager closes their laptop and the team elects a new one. 2:30 the Radar AI investigation findings land in the record. 3:00 the fix ships through Git, Gitar checks it, Argo CD syncs, and signals recover. 3:30 the record and the team relationship view, and improvements opened as pull requests. 4:00 close on Radar timeline and Checks before and after. |
+| 53 | The hackathon (suggested) | Cloud Native Hackathon, Radar AI SRE track. Judged on: running on Kubernetes with Radar connected, Radar UI and MCP used throughout, a Radar AI investigation of a real issue, and making conferences easier. The story is due at 5:30 today. Team size is everyone with a laptop in the demo. |
 
 ## 3. What people see
 
@@ -103,7 +114,7 @@ Tagline: **Where incidents go to die.**
 
 ### 3.5 The demo
 
-- CaptainMorgue injects a fault into the demo cluster. The fault shows up in Dash0 and Radar like a real incident would.
+- The incident is a real one from the day, or a real release that misbehaves under a canary, not a fault switched on for the judges. A Radar AI investigation of it is part of the story.
 - Several real people, each on their own laptop with their own Claude Code agent, join and work the incident live. The web app on the big screen streams the event log across every agent as they go, with logs and other artifacts as they arrive. CaptainMorgue pulls in the right teams, relays messages, and flags a conflict.
 - The fix goes out as a pull request. Gitar reviews it and confirms CI is green, and the incident is resolved.
 - The record is on screen at the end, written from the timeline. It shows a past incident found in Elasticsearch, and its improvements open as pull requests for Gitar to check.
@@ -118,6 +129,8 @@ Proposed, for review. The demo needs, in order:
 4. **Fault injection** on the demo cluster, to start the incident.
 5. **The record** at the end.
 
+If time runs short before 5:30, the demo needs only: events from two laptops streaming to the web app, one relayed broadcast with its reason, one Radar AI investigation summarised into the record, and the finished record. Everything else is a bonus.
+
 After the hackathon: manager votes, conflict flags beyond the demo case, improvements tracked to done, and "this has happened before".
 
 ## 5. Success
@@ -130,17 +143,7 @@ Proposed, for review.
 
 ## 6. Open questions
 
-| #   | Question                                                                                                                                                           |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1 | What happens to the incident if CaptainMorgue itself is unavailable.                                                                                               |
-| 2 | Whether a person picked as manager by a vote must accept, and who takes it if they do not respond.                                                                 |
-| 3 | What happens to a team of one directly under CaptainMorgue, which has no team above to join.                                                                       |
-| 4 | Whether Agent0's findings are copied into the record or only linked. Who watches Agent0 credit use, and what happens when it runs out mid-incident.                |
-| 5 | Whether CaptainMorgue is part of CostGraph or a separate product.                                                                                                  |
-| 6 | Which other incident tools it connects to after the hackathon (PagerDuty for on-call is planned; chat and status page are open), or whether it replaces them.                                                                      |
-| 7 | The demo script: which fault, who does what, where the conflict happens, and when the record appears. |
-| 8 | Who CaptainMorgue is for, and why existing incident tools (incident.io, Rootly, PagerDuty, Radar Cloud, Dash0 Agent0) do not already do this. |
-| 9 | The hackathon itself: judging criteria, deadline and team size. |
+None open. Decisions marked (suggested) are proposals to confirm or change.
 
 ## 7. Sponsor technology
 
