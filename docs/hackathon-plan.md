@@ -169,6 +169,38 @@ plugin/commands/broadcast.md /broadcast <text>
 
 Budget: 2 CPU and 4 GiB of requests for everything in the cluster. Keep the service and app at 100m / 128Mi requests.
 
+## P0: what the 5:30 demo needs (everything else is cut)
+
+Built in parallel on three branches against the contract below. Cut to P1: auto mode and channels, Claude-picked recipients, CaptainMorgue's own Dash0/Radar connections, digests, folding teams into parents, stale-term handling, offline spooling.
+
+### P0 contract (additions to section 1)
+
+All calls send `Authorization: Bearer $CM_TOKEN`; the service checks it when its own `CM_TOKEN` is set (unset = local dev, no auth). Incident is `INC-1`.
+
+| Call | Body | Returns |
+|---|---|---|
+| `POST /incidents/INC-1/join` | `{actor, team}` | `{incident, team, manager, term, members: [{actor, status}], cursor}`; emits `join`; first online member of a team with no online manager becomes manager |
+| `POST /incidents/INC-1/leave` | `{actor}` | `204`; emits `leave`; manager leaving starts an election now |
+| `POST /heartbeat` | `{actor}` | `204`; every 5 s from the poller |
+| `GET /inbox/{actor}?after=<seq>&wait=25` | | `{messages: [envelope], cursor}`; long-poll, returns early on a new message |
+| `POST /inbox/{actor}/ack` | `{seq}` | `204`; marks every message up to `seq` seen |
+| `POST /messages` | `{from, to: ["dana" or "registration" or "root"], kind: "ask" or "broadcast", text, reply_to?}` | `{seq, to: [actors], why}`; a team id expands to its joined members, `root` to everyone joined |
+| `POST /incidents/INC-1/vote` | `{actor, term, candidate, granted}` | `204`; sent automatically by the poller |
+
+Envelope: `{id, seq, ts, from, to, kind, text, why, term, priority, reply_to}`; `kind` is one of `ask`, `broadcast`, `relay`, `conflict`, `election`, `vote_request`, `escalation`, `autoreply`; `priority` is `interrupt` (conflict, ask, vote_request, escalation) or `inject`.
+
+Rules: heartbeat 5 s, `suspect` after 15 s, `offline` after 30 s. Manager offline 30 s -> term + 1, candidate = online member with the highest acked cursor, `vote_request` to the team's online members, CaptainMorgue votes for the candidate, majority of (members + CaptainMorgue) wins, `election` event. An `ask` not acked in 60 s -> `autoreply` to the sender with the recipient's latest event, and `escalation` to the recipient's manager. Conflicts go to both parties as `interrupt`.
+
+`/stream` `state` adds: `people: {actor: {status, team, last_seen}}`, `teams[].term`, and `deliveries: {seq: {actor: "sent" or "delivered" or "seen"}}` for asks, broadcasts, relays and conflicts.
+
+### P0 branches
+
+| Branch | Builds | Owner |
+|---|---|---|
+| `feat/coord` | Service: join, leave, heartbeat, liveness, inbox, ack, messages, token, elections, escalation, auto-reply, state additions | crew agent, reviewed by Emmanuel |
+| `feat/plugin-receive` | Plugin: `join`, `leave`, `status`, `inbox`, `broadcast`, `ask` commands; poller (`plugin/bin/cm-poll`: heartbeat, long-poll, local inbox cache, desktop notification, auto-vote); hooks inject unread messages on SessionStart, UserPromptSubmit and PostToolUse and ack them; Stop blocks while an interrupt is unread | crew agent, reviewed by Emmanuel |
+| `feat/web-live` | Wall screen on `/stream`: live log, tree with online / suspect / offline and manager + term, ask and broadcast cards with sent / delivered / seen, conflicts, elections, record tab | crew agent starts it, **Jubril takes it over** |
+
 ## 5a. Joining, receiving and the plugin commands (owner: to assign)
 
 Design in [dispatch.md](dispatch.md) sections 3d-1 (joining), 5 (getting messages into a session) and 7a (failure modes). Not owned by Emmanuel; pick it up by adding it to your ledger.
