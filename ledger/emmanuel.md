@@ -4,6 +4,7 @@
 Reviewing `docs/dispatch.md` (messaging, raft-style elections, liveness) before building the inbox. Crew agents still on `feat/service-intel` and cluster `feat/infra`.
 
 ## Done
+- Merged to `main`: coordination layer (join, heartbeat, liveness, inbox, messages, replies, token auth, elections, auto-reply, escalation), Elasticsearch + Claude, live wall screen. Image `ghcr.io/tiemma/captainmorgue` is public and builds on every push to main.
 - `feat/infra` pushed to the cluster repo for Sammy (26bfbe8): conference app, confdb, CaptainMorgue as `app`, OTel collector to Dash0. Elastic Cloud chosen (ELSER does not fit the budget); Dash0 operator skipped (needs hostPath).
 - Dash0 token verified: region us-west-2, OTLP endpoint `ingress.us-west-2.aws.dash0.com:4317`.
 - Review decisions recorded in `docs/dispatch.md` section 9; CaptainMorgue's own connections designed in 5a.
@@ -24,5 +25,5 @@ Reviewing `docs/dispatch.md` (messaging, raft-style elections, liveness) before 
 - Nothing.
 
 ## Handing off
-- Sammy: `feat/infra` in `tiemma/captainmorgue-cluster` is pushed and ready for your review and merge. Secret `dash0`: `endpoint` = `ingress.us-west-2.aws.dash0.com:4317`, `token` from Emmanuel directly (never in git). Secret `captainmorgue` needs Elastic Cloud URL and key. CaptainMorgue image `ghcr.io/tiemma/captainmorgue` is not published yet; `feat/service-intel` adds the build workflow.
-- Jubril: `web/index.html` is `docs/demo.html`; wire it to `/stream`. Test with `scripts/replay.sh`. Wall screen also shows sent / delivered / seen per recipient (dispatch section 9).
+- Sammy: image `ghcr.io/tiemma/captainmorgue` is public; use tag `sha-<7 chars of main>` from the latest image workflow run (or `latest`). Secret `captainmorgue` also takes `cm-token` (team token, env `CM_TOKEN`); add it to the deployment env. Dash0 endpoint `ingress.us-west-2.aws.dash0.com:4317`, token from Emmanuel directly.
+- Jubril: live wall screen merged; check it against the new state (people objects, teams[].term, deliveries keyed by seq) and the new event types (reply, vote_request, leave).
