@@ -30,6 +30,21 @@ This repo ships project hooks. Claude Code asks you to trust them the first time
 
 Docs live in the repo. Anything written about the design (plans, specs, diagrams) goes into `docs/` and is pushed as it is written, so the hook carries it to everyone. `docs/dispatch.md` is the current draft for messaging, elections and liveness.
 
+## Testing as we go
+
+- `scripts/e2e.sh` builds the service, runs it with short timings, and drives the real plugin as four people: auth, join, ask reaches the recipient's session, broadcast to everyone, reply, a silent member going offline, an election, and an auto-reply. Run it before every merge to `main`; it must print `ALL PASSED`.
+- `CM_URL=https://captainmorgue.cnh.radarhq.io CM_TOKEN=<team token> scripts/e2e.sh` runs the same checks (minus the timed ones) against the deployed service. It posts as example people into the live incident, so run it before the rehearsal, not during it; a service restart clears it.
+
+## Milestone: set it up on your own agent
+
+When the service is deployed (Sammy's ledger says so), everyone does this once and ticks it in their ledger:
+
+1. In Claude Code: `/plugin marketplace add tiemma/captainmorgue`, then `/plugin install captainmorgue@captainmorgue`.
+2. In your shell profile: `export CM_URL=https://captainmorgue.cnh.radarhq.io CM_ACTOR=<your github login> CM_TEAM=<registration|ticketing|platform> CM_TOKEN=<team token> CM_LEDGER=<your ledger name>`. The team token comes from Emmanuel directly, never through git.
+3. Restart Claude Code, run `/captainmorgue:join`, then `/captainmorgue:status`.
+4. Ask someone else something with `/captainmorgue:ask @<login> ...` and answer the one you get with `/captainmorgue:reply`.
+5. Tick "Set up on my agent" in your ledger and push it. When all three are ticked, we start the rehearsal.
+
 ## Branches and merging
 
 - `main` always builds and runs. Work on a branch, merge to `main` when it runs locally, push.

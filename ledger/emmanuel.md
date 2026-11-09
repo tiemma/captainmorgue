@@ -4,6 +4,7 @@
 Reviewing `docs/dispatch.md` (messaging, raft-style elections, liveness) before building the inbox. Crew agents still on `feat/service-intel` and cluster `feat/infra`.
 
 ## Done
+- Plugin receive side merged (join, leave, status @person, inbox, broadcast, ask, reply, poller, hooks inject messages). `scripts/e2e.sh`: 8 checks, ALL PASSED on `main`.
 - Merged to `main`: coordination layer (join, heartbeat, liveness, inbox, messages, replies, token auth, elections, auto-reply, escalation), Elasticsearch + Claude, live wall screen. Image `ghcr.io/tiemma/captainmorgue` is public and builds on every push to main.
 - `feat/infra` pushed to the cluster repo for Sammy (26bfbe8): conference app, confdb, CaptainMorgue as `app`, OTel collector to Dash0. Elastic Cloud chosen (ELSER does not fit the budget); Dash0 operator skipped (needs hostPath).
 - Dash0 token verified: region us-west-2, OTLP endpoint `ingress.us-west-2.aws.dash0.com:4317`.
@@ -17,6 +18,7 @@ Reviewing `docs/dispatch.md` (messaging, raft-style elections, liveness) before 
 - Plan, contract and owners in `docs/hackathon-plan.md`.
 
 ## Next
+- [ ] **Milestone: set up on my agent** (AGENTS.md, "Milestone: set it up on your own agent") once the service is deployed: install the plugin, set the env, `/captainmorgue:join`, send and answer one ask. Tick and push when done.
 - Answer the open questions in `docs/dispatch.md` section 9, then build `/messages`, `/inbox`, heartbeats and the election.
 - Review and merge `feat/service-intel`, publish `ghcr.io/tiemma/captainmorgue`.
 - Review `feat/infra` in the cluster repo and hand it to Sammy.
