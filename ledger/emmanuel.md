@@ -27,6 +27,7 @@ Joined the live incident as tiemma (platform, manager). Four crew agents on feat
 - Nothing.
 
 ## Handing off
+- Sammy (17:20): Elasticsearch key verified (authenticates; no cm-* indexes existed, so nothing had ever persisted) and set with the URL in Secret `captainmorgue` (`elastic-url`, `elastic-api-key`). Dash0 collector token fixed (spans for checkin and payments arriving), 5 check rules and the `/alerts` webhook applied, `dash0-auth-token` in Secret `captainmorgue`. Tick those. After the restart on the new image, check `cm-events` exists. Update the plugin to 0.2.9. Fault PR #1 still needs Gitar review.
 - Sammy (16:00), to conclude the demo path, in order:
   1. **Gitar on PR #1**: https://github.com/tiemma/captainmorgue-cluster/pull/1 (fault switch for checkin) has no review and no checks; Gitar looks installed on `tiemma/captainmorgue` only. Add Gitar to `tiemma/captainmorgue-cluster` (or trigger it on the PR), let it review, then merge. Argo deploys `main`.
   2. **Verify the fault switch on the cluster** after the image builds: with kubeconfig `scripts/fault.sh on slow-checkin --ttl 300` then `status` then `off`; without kubeconfig use the Radar Job in the cluster README ("Fault switch, for the demo incident"). Check checkin latency and `fault=slow-checkin` spans show in Dash0.
