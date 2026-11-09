@@ -1,0 +1,25 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { CaptainWorkspace } from './screens';
+
+const meta = {
+  title: 'Screens/Workspace',
+  component: CaptainWorkspace,
+  parameters: { layout: 'fullscreen' },
+  argTypes: {
+    initialView: { control: 'select', options: ['incident', 'messages', 'crew', 'record', 'join'] },
+    scenario: { control: 'select', options: ['active', 'conflict', 'reconnecting', 'resolved', 'empty'] },
+    wallMode: { control: 'boolean' },
+  },
+  args: { initialView: 'incident', scenario: 'active', wallMode: false },
+  render: (args) => <CaptainWorkspace key={`${args.initialView}-${args.scenario}-${args.wallMode}`} {...args} />,
+} satisfies Meta<typeof CaptainWorkspace>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Incident: Story = {};
+export const Messages: Story = { args: { initialView: 'messages' } };
+export const Crew: Story = { args: { initialView: 'crew' } };
+export const Record: Story = { args: { initialView: 'record', scenario: 'resolved' } };
+export const Join: Story = { args: { initialView: 'join' } };
+export const WallScreen: Story = { args: { wallMode: true, scenario: 'conflict' } };
