@@ -1,4 +1,15 @@
 {
+  "extraKnownMarketplaces": {
+    "captainmorgue": {
+      "source": {
+        "source": "github",
+        "repo": "tiemma/captainmorgue"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "captainmorgue@captainmorgue": true
+  },
   "hooks": {
     "SessionStart": [
       {
