@@ -259,10 +259,6 @@ func writeJSON(w http.ResponseWriter, v any) {
 }
 
 func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
-	if r.PathValue("id") != inc.id {
-		http.Error(w, "no such incident", http.StatusNotFound)
-		return
-	}
 	var req struct {
 		Actor string `json:"actor"`
 		Team  string `json:"team"`
@@ -337,8 +333,8 @@ func (inc *Incident) handleJoin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (inc *Incident) handleLeave(w http.ResponseWriter, r *http.Request) {
-	if r.PathValue("id") != inc.id {
-		http.Error(w, "no such incident", http.StatusNotFound)
+	if !inc.routes(r.PathValue("id")) {
+		http.Error(w, "no such open incident", http.StatusNotFound)
 		return
 	}
 	var req struct {
@@ -376,8 +372,8 @@ func (inc *Incident) handleLeave(w http.ResponseWriter, r *http.Request) {
 }
 
 func (inc *Incident) handleTask(w http.ResponseWriter, r *http.Request) {
-	if r.PathValue("id") != inc.id {
-		http.Error(w, "no such incident", http.StatusNotFound)
+	if !inc.routes(r.PathValue("id")) {
+		http.Error(w, "no such open incident", http.StatusNotFound)
 		return
 	}
 	var req struct {
@@ -466,8 +462,8 @@ func (inc *Incident) startElection(team string, now time.Time) []Event {
 }
 
 func (inc *Incident) handleVote(w http.ResponseWriter, r *http.Request) {
-	if r.PathValue("id") != inc.id {
-		http.Error(w, "no such incident", http.StatusNotFound)
+	if !inc.routes(r.PathValue("id")) {
+		http.Error(w, "no such open incident", http.StatusNotFound)
 		return
 	}
 	var req struct {

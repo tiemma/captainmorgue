@@ -123,6 +123,7 @@ manager() { jq -r --arg t "$1" '.teams[] | select(.id == $t) | .manager' <<<"$s"
 reg=$(manager registration) plat=$(manager platform)
 paged=$(inject "$reg" registration)
 check "alert opens the incident titled from the alert" '[ "$(jq -r .incident.title <<<"$s")" = "checkin: Check-in 5xx rate at 40%" ] && [ "$(jq -r .incident.status <<<"$s")" = open ]'
+check "draft record is documented while the incident is open" 'jq -e "any(.[]; .id == \"INC-1\" and .status == \"open\")" <<<"$(curl -s "$CM_URL/records")" >/dev/null'
 check "alert pages the owning team's manager" 'grep -q "\[page\] .* from trigger" <<<"$paged" && grep -q "Let my agent investigate" <<<"$paged"'
 check "everyone else hears who is paged" 'inject dev platform | grep -q "checkin alert: Check-in 5xx rate at 40%. Registration owns it; $reg is paged."'
 trigger checkin 'Check-in 5xx rate at 55%'
@@ -197,6 +198,14 @@ if [ -n "${short:-}" ]; then
   check "archive lists the closed incident and the record keeps improvements" 'jq -e ".[0].id == \"INC-1\" and .[0].severity == \"sev2\"" <<<"$(curl -s "$CM_URL/records")" >/dev/null && jq -e ".improvements | length > 0" <<<"$rec" >/dev/null'
   check "RFO counts held approvals and lists the denial as an error" 'jq -e "any(.went_well[]; test(\"approval: 2\")) and any(.errors[]; .type == \"approval\" and (.text | test(\"denied\")))" <<<"$rec" >/dev/null'
   check "RFO served as markdown" 'curl -s "$CM_URL/record/INC-1.md" | grep -q "^## Action items" && curl -s "$CM_URL/record/INC-1.md" | grep -q "checkin: $pr"'
+  check "close finalises the draft record" 'jq -e ".[0].id == \"INC-1\" and .[0].status == \"closed\"" <<<"$(curl -s "$CM_URL/records")" >/dev/null'
+  before=$(curl -s "$CM_URL/record/INC-1" | jq -S 'del(.events)')
+  trigger checkin 'Check-in 5xx rate at 30% again'
+  sleep 3
+  check "a new alert after close opens INC-2" '[ "$(jq -r ".incident.id + \" \" + .incident.status" <<<"$(state)")" = "INC-2 open" ]'
+  check "INC-1 record is unchanged after INC-2 opens" '[ "$(curl -s "$CM_URL/record/INC-1" | jq -S "del(.events)")" = "$before" ]'
+  check "records list both incidents with full RFO sections" 'jq -e "(.[0].id == \"INC-2\" and .[0].status == \"open\") and any(.[]; .id == \"INC-1\" and (.timeline | length) > 0 and (.went_well | length) > 0 and .window.closed != null)" <<<"$(curl -s "$CM_URL/records?full=1")" >/dev/null'
+  check "status on the default id moves the open incident" 'echo "investigating checking checkin again" | as gus registration status-set | grep -q "INC-2 is investigating"'
 fi
 
 [ "$fails" -eq 0 ] && echo "ALL PASSED" || { echo "$fails FAILED"; [ -f "$work/service.log" ] && tail -20 "$work/service.log"; exit 1; }

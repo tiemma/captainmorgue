@@ -16,15 +16,15 @@ func main() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	id := env("INCIDENT_ID", "INC-1")
-	st, events, err := openStore(ctx, id)
+	st, events, records, err := openStore(ctx)
 	if err != nil {
 		slog.Error("elasticsearch unavailable, keeping the incident in memory", "err", err)
 	}
 	br := newBrain()
 	slog.Info("intelligence", "elasticsearch", st != nil, "claude", br != nil, "loaded_events", len(events))
-	inc := newIncident(id, env("INCIDENT_TITLE", "Conference operations"), roster, st, br)
-	inc.events = events
+	inc := newIncident(env("INCIDENT_ID", defaultIncident), env("INCIDENT_TITLE", "Conference operations"), roster, st, br)
+	inc.restore(events, records)
+	go inc.draftLoop(draftEvery)
 	if st != nil {
 		go inc.matchLoop()
 		inc.refreshPastMatch()

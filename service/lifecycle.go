@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"net/http"
 	"slices"
@@ -21,6 +22,7 @@ var keyEvents = map[string]bool{
 }
 
 type Moment struct {
+	Seq   int       `json:"seq"`
 	TS    time.Time `json:"ts"`
 	Actor string    `json:"actor"`
 	Type  string    `json:"type"`
@@ -33,6 +35,8 @@ type Step struct {
 	Text       string    `json:"text"`
 	Status     string    `json:"status"`
 	Resource   string    `json:"resource,omitempty"`
+	Tool       string    `json:"tool,omitempty"`
+	Command    string    `json:"command,omitempty"`
 	ExitCode   *int      `json:"exit_code,omitempty"`
 	DurationMS int64     `json:"duration_ms,omitempty"`
 	Failed     bool      `json:"failed"`
@@ -76,8 +80,12 @@ func eventStatus(ev Event) string {
 }
 
 func (inc *Incident) lifecycleStatus() (status, severity string) {
+	return lifecycleOf(inc.events)
+}
+
+func lifecycleOf(events []Event) (status, severity string) {
 	status = "open"
-	for _, ev := range inc.events {
+	for _, ev := range events {
 		if ev.Type == "open" {
 			severity = ""
 		}
@@ -105,8 +113,8 @@ func (inc *Incident) mayResolve(actor string) bool {
 }
 
 func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
-	if r.PathValue("id") != inc.id {
-		http.Error(w, "no such incident", http.StatusNotFound)
+	if !inc.routes(r.PathValue("id")) {
+		http.Error(w, "no such open incident", http.StatusNotFound)
 		return
 	}
 	var req struct {
@@ -134,6 +142,7 @@ func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	inc.mu.Lock()
+	id := inc.id
 	current, severity := inc.lifecycleStatus()
 	allowed := inc.mayResolve(req.Actor)
 	inc.mu.Unlock()
@@ -188,12 +197,16 @@ func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, inc.id+" is closed", http.StatusConflict)
 		return
 	}
-	writeJSON(w, map[string]string{"status": current, "severity": severity})
+	writeJSON(w, map[string]string{"incident": id, "status": current, "severity": severity})
 }
 
 func (inc *Incident) prs() []PR {
+	return prsOf(inc.currentEvents())
+}
+
+func prsOf(events []Event) []PR {
 	out := []PR{}
-	for _, ev := range inc.events {
+	for _, ev := range events {
 		if ev.Type == "pr" && ev.Resource != nil && len(ev.Artifacts) > 0 {
 			out = append(out, PR{Service: ev.Resource.Name, URL: ev.Artifacts[0].URL, Author: ev.Actor, TS: ev.TS})
 		}
@@ -249,7 +262,7 @@ func failedAction(ev Event) bool {
 	if ev.Type != "action" {
 		return false
 	}
-	st := actionStatus(ev.Text)
+	st := cmp.Or(ev.Outcome, actionStatus(ev.Text))
 	return st == "failed" || st == "interrupted" || (ev.ExitCode != nil && *ev.ExitCode != 0)
 }
 
@@ -260,7 +273,8 @@ func steps(events []Event) (groups []StepGroup, changes []Step) {
 			continue
 		}
 		st := Step{
-			TS: ev.TS, Actor: ev.Actor, Text: strings.TrimSuffix(ev.Text, " ("+actionStatus(ev.Text)+")"), Status: actionStatus(ev.Text),
+			TS: ev.TS, Actor: ev.Actor, Text: strings.TrimSuffix(ev.Text, " ("+actionStatus(ev.Text)+")"), Status: cmp.Or(ev.Outcome, actionStatus(ev.Text)),
+			Tool: ev.Tool, Command: ev.Command,
 			ExitCode: ev.ExitCode, DurationMS: ev.DurationMS, Failed: failedAction(ev), Change: ev.Resource != nil && looksLikeWrite(ev),
 		}
 		if ev.Resource != nil {
@@ -306,7 +320,7 @@ func moments(events []Event, keep func(Event) bool) []Moment {
 	out := []Moment{}
 	for _, ev := range events {
 		if keep(ev) {
-			out = append(out, Moment{TS: ev.TS, Actor: ev.Actor, Type: ev.Type, Text: ev.Text})
+			out = append(out, Moment{Seq: ev.Seq, TS: ev.TS, Actor: ev.Actor, Type: ev.Type, Text: ev.Text})
 		}
 	}
 	return out
@@ -499,8 +513,8 @@ func (inc *Incident) deliverActionItems(rec Record) {
 			Actor: captainMorgue,
 			Type:  "action",
 			To:    []string{owner},
-			Text:  "Action items for you from the " + inc.id + " RFO:\n" + strings.Join(byOwner[owner], "\n"),
-			Why:   "You own these follow-ups in the " + inc.id + " RFO.",
+			Text:  "Action items for you from the " + rec.ID + " RFO:\n" + strings.Join(byOwner[owner], "\n"),
+			Why:   "You own these follow-ups in the " + rec.ID + " RFO.",
 		})
 	}
 }

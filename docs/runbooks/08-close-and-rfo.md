@@ -16,5 +16,8 @@ Everyone has joined (runbook 1). Emmanuel is commander. Keep the wall screen ope
 7. **Jubril**: on the next prompt Claude shows `[action] ... Action items for you from the INC-1 RFO: - Add a memory alert on checkin (due within 1 week)`. `/captainmorgue:status` lists the action items.
 8. **Wall screen**: the Record tab shows the RFO: severity, detected, mitigated, resolved, time to mitigate, summary, root cause, timeline, errors, action items, remediation, what went well and badly, and a link to the Markdown.
 9. **Anyone**: open https://captainmorgue.cnh.radarhq.io/record/INC-1.md for the RFO as Markdown.
+10. **Wall screen, Postmortems tab**: while the incident was open it listed `INC-1` marked In progress (the draft saved on open and every 30 s); after close the same entry shows Closed with every RFO section.
+11. **Anyone**: `./scripts/trigger.sh checkin 'Check-in 5xx rate at 30% again'`. The alert opens `INC-2`; the wall header and the Record tab switch to `INC-2`, Postmortems lists `INC-2` In progress above `INC-1`, and `/record/INC-1.md` is unchanged.
+12. **Jubril**: `/captainmorgue:status-set investigating` answers `INC-2 is investigating.` The plugin's default `INC-1` routes to the open incident.
 
 Without `ANTHROPIC_API_KEY` the service writes every section from the events (`written_by: captainmorgue`). With it, Claude writes the narrative (`written_by: claude`) and the window, timeline, errors, remediation and your action items stay as recorded.

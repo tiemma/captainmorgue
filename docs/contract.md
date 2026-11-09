@@ -16,7 +16,7 @@ Any request body that is not valid JSON gets `400`.
 
 ## Routes
 
-The incident id is `INC-1` unless the service sets `INCIDENT_ID`. Routes with `{id}` answer `404 no such incident` for any other id.
+The service runs one incident at a time. The first is `INC-1` (or `INCIDENT_ID`); every alert that reopens it after a close starts a new id `INC-<n>`, n one above the highest id known (from Elasticsearch when on, else memory). Events keep the id they were written under. `POST /incidents/{id}/join` joins the open incident whatever the id and returns its real id. The other `/incidents/{id}/...` routes accept the current id, `INC-1`, or any unknown id, and act on the open incident; a past incident's id is `404 no such open incident`.
 
 | Method and path | Request body | Success | Errors | Emits |
 |---|---|---|---|---|
@@ -25,7 +25,7 @@ The incident id is `INC-1` unless the service sets `INCIDENT_ID`. Routes with `{
 | `GET /stream` | | `200` `text/event-stream`, see [Stream](#stream) | `500` if streaming is unsupported | |
 | `GET /record/{id}` | | `200` [Record](#record) | `404` | |
 | `GET /record/{id}.md` | | `200` `text/markdown`, the RFO | `404` | |
-| `GET /records` | | `200` array of `{"id", "title", "severity", "opened", "resolved", "duration", "summary", "fixed_by"}`, newest first | | |
+| `GET /records` | `?full=1` returns full [Records](#record) | `200` array of `{"id", "title", "status", "severity", "opened", "resolved", "duration", "summary", "fixed_by"}`, newest opened first, drafts and closed | | |
 | `POST /events` | an [Event](#event); needs `actor` and a `type` from: `alert action decision relay conflict investigation signal ship join close note action_item pr` | `202`, empty | `400`; `403` a `close` from anyone but the commander (or a team manager when there is no commander); `409` a `close` when already closed | that event; `close` also resolves the incident and writes the record |
 | `POST /broadcast` | `{"from": "login", "text": "..."}` | `202`, empty (the relay is appended a moment later) | `400` if `from` or `text` is empty | `relay` |
 | `POST /incidents/{id}/join` | `{"actor", "team"?, "role"?, "task"?, "repo"?, "tools"?: []}` | `200` [join response](#join-response) | `400` bad role, missing actor, team not in `roster.yaml`; `404` | `join`, then a `digest` for the joiner when they missed events |
@@ -75,7 +75,7 @@ Every `event` is followed by a `state`, so the wall can redraw panels from `stat
 
 | Field | Type | Meaning |
 |---|---|---|
-| `incident.id` | string | Incident id, `INC-1`. |
+| `incident.id` | string | Current incident id, `INC-<n>`. |
 | `incident.title` | string | Incident title (`INCIDENT_TITLE`). |
 | `incident.status` | `"open"` \| `"investigating"` \| `"mitigated"` \| `"resolved"` \| `"closed"` | The latest `status` event, `closed` once a `close` event exists. An `open` event (a new alert after close) starts over at `open` with no severity. |
 | `incident.severity` | `""` \| `"sev1"` \| `"sev2"` \| `"sev3"` | The latest severity set. |
@@ -179,7 +179,7 @@ When a signal's `status` changes (a new signal counts as changing from `ok`), th
 |---|---|---|
 | `id` | string | `<incident>-<seq>`. |
 | `seq` | int | 1-based position in the incident. Also the event count. |
-| `incident_id` | string | `INC-1`. |
+| `incident_id` | string | The incident it was written under, `INC-<n>`. |
 | `ts` | RFC 3339 time | When it happened (UTC). |
 | `actor` | string | Who did it: a login, `captainmorgue` for the service, or a tool (`dash0`, `radar`, `gitar`, `argo`). |
 | `team` | string, omitted when empty | Team the event belongs to; filled from the roster or the join when the poster leaves it out. |
@@ -271,7 +271,7 @@ Delivery of `ask`, `broadcast`, `relay`, `conflict` and `approval_request` is tr
 
 ## Record
 
-`GET /record/{id}` is the Reason For Outage (RFO) as JSON for the current incident, or for a past one stored in Elasticsearch (`404` when neither has it; `502` when Elasticsearch fails); `GET /records` lists closed incidents from Elasticsearch plus the current one once closed. `improvements` and `fixed_by` stay for older clients: `improvements` is the same list as `action_items`. `GET /record/{id}.md` is the same as Markdown. Before close it is a live draft built from the events so far. At close Claude writes the narrative fields when `ANTHROPIC_API_KEY` is set; otherwise, or if Claude fails, the service builds them from the events. The window, timeline, errors, remediation and explicit action items always come from the events. The wall loads it on `close` and on each `action` from CaptainMorgue, and shows it in the Record tab.
+`GET /record/{id}` is the Reason For Outage (RFO) as JSON for the current incident (live), or for any past one the service saved (`404` when none has it; `502` when Elasticsearch fails). Records are documented continuously: a draft (status `open` to `resolved`, sections built from events, no Claude call) is saved to `cm-records` when the incident opens and at most every 30 s while events change, and the final RFO overwrites it at close under the same id. `GET /records` lists drafts and closed records, the current incident live; `?full=1` returns full records (without `events`) so a client needs one request. `improvements` and `fixed_by` stay for older clients: `improvements` is the same list as `action_items`. `GET /record/{id}.md` is the same as Markdown. Before close it is a live draft built from the events so far. At close Claude writes the narrative fields when `ANTHROPIC_API_KEY` is set; otherwise, or if Claude fails, the service builds them from the events. The window, timeline, errors, remediation and explicit action items always come from the events. The wall loads it on `close` and on each `action` from CaptainMorgue, and shows it in the Record tab.
 
 | Field | Type | Meaning |
 |---|---|---|

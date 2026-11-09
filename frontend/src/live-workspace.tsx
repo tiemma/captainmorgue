@@ -15,7 +15,7 @@ import {
 import { Avatar, Badge, Button, Dialog, Panel, ProgressStatus } from "./ui";
 import type { Tone } from "./ui";
 import { SidePanel } from "./side-panel";
-import { Postmortems, RfoSections, recordToDocument } from "./postmortems";
+import { Postmortems, RfoSections, recordToDocument, timelineSteps } from "./postmortems";
 import type { PostmortemDocument } from "./postmortems";
 import { SAMPLE_POSTMORTEMS } from "./postmortems-fixtures";
 import { useIncident } from "./use-incident";
@@ -37,6 +37,8 @@ import {
 import type { Envelope, IncidentEvent, IncidentRecord, Person, TeamGraph } from "./service-client";
 import { TeamGraphView } from "./team-graph";
 import { ApprovalsPanel } from "./approvals-panel";
+import { EventLegend, eventCategory } from "./event-categories";
+import { RecordTimeline } from "./record-timeline";
 import "./live-workspace.css";
 
 type Tab = "Incident" | "Requests" | "Crew" | "Teams" | "Record" | "Postmortems";
@@ -145,7 +147,7 @@ function EventList({
   return (
     <ol className="cm-live-events">
       {events.map((event) => (
-        <li key={event.seq} data-status={event.type}>
+        <li key={event.seq} data-status={event.type} data-category={eventCategory(event.type)}>
           <div className="cm-live-event-marker" aria-hidden="true" />
           <div className="cm-live-event-content">
             <div className="cm-live-event-meta text-paragraph-xs">
@@ -382,14 +384,9 @@ export function LiveWorkspace() {
     const controller = new AbortController();
     setArchiveError("");
     fetchRecords(controller.signal)
-      .then((list) =>
-        Promise.all(
-          (list || []).map((item) => fetchRecord(item.id, controller.signal)),
-        ),
-      )
       .then((records) =>
         setArchive(
-          records.length ? records.map(recordToDocument) : SAMPLE_POSTMORTEMS,
+          records?.length ? records.map(recordToDocument) : SAMPLE_POSTMORTEMS,
         ),
       )
       .catch((reason: unknown) => {
@@ -401,7 +398,7 @@ export function LiveWorkspace() {
           );
       });
     return () => controller.abort();
-  }, [tab, state?.incident.closed, archiveAttempt]);
+  }, [tab, incidentId, state?.incident.status, state?.incident.closed, archiveAttempt]);
 
   async function moveIncident(status: "resolved" | "closed") {
     if (!incidentId || !identity || busy) return;
@@ -739,6 +736,7 @@ export function LiveWorkspace() {
                 )}
                 <div className="cm-live-incident-grid">
                   <Panel title="Activity">
+                    <EventLegend types={events.map((event) => event.type)} />
                     <EventList events={events} onSelect={inspect} />
                   </Panel>
                   <div className="cm-live-context">
@@ -1105,10 +1103,12 @@ export function LiveWorkspace() {
                       )}
                     </section>
                     <section>
-                      <h2 className="text-label-md">All events</h2>
-                      <EventList
-                        events={record.events || []}
-                        onSelect={inspect}
+                      <h2 className="text-label-md">Timeline</h2>
+                      <RecordTimeline
+                        steps={timelineSteps(record)}
+                        commands={record.commands || []}
+                        opened={record.opened}
+                        resolved={record.resolved}
                       />
                     </section>
                     <section>

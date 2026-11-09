@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +47,9 @@ type Event struct {
 	Status     string     `json:"status,omitempty"`
 	Severity   string     `json:"severity,omitempty"`
 	Part       string     `json:"part,omitempty"`
+	Tool       string     `json:"tool,omitempty"`
+	Command    string     `json:"command,omitempty"`
+	Outcome    string     `json:"outcome,omitempty"`
 }
 
 var eventTypes = map[string]bool{
@@ -55,7 +60,11 @@ var eventTypes = map[string]bool{
 
 var readVerbs = []string{"get ", "describe", "read", "checked", "logs", "list", "query"}
 
-const conflictWindow = 2 * time.Minute
+const (
+	conflictWindow  = 2 * time.Minute
+	defaultIncident = "INC-1"
+	draftEvery      = 30 * time.Second
+)
 
 type sseMessage struct {
 	name string
@@ -79,6 +88,9 @@ type Incident struct {
 	claims    map[string]*Claim
 	signals   map[string]Signal
 	approvals []Approval
+	records   map[string]Record
+	highest   int
+	saveMu    sync.Mutex
 }
 
 func newIncident(id, title string, roster Roster, st *store, br *brain) *Incident {
@@ -87,7 +99,48 @@ func newIncident(id, title string, roster Roster, st *store, br *brain) *Inciden
 		subs:     map[chan sseMessage]struct{}{},
 		matchReq: make(chan struct{}, 1),
 		signals:  map[string]Signal{},
+		records:  map[string]Record{},
+		highest:  incidentNumber(id),
 	}
+}
+
+func incidentNumber(id string) int {
+	n, err := strconv.Atoi(strings.TrimPrefix(id, "INC-"))
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+func (inc *Incident) restore(events []Event, records []Record) {
+	inc.events = events
+	for _, ev := range events {
+		inc.highest = max(inc.highest, incidentNumber(ev.IncidentID))
+		inc.id = ev.IncidentID
+		if ev.Type == "open" {
+			inc.title = strings.TrimPrefix(ev.Text, "Opened "+ev.IncidentID+": ")
+		}
+	}
+	for _, rec := range records {
+		inc.records[rec.ID] = rec
+		inc.highest = max(inc.highest, incidentNumber(rec.ID))
+	}
+}
+
+func (inc *Incident) reopen() {
+	inc.highest = max(inc.highest, incidentNumber(inc.id)) + 1
+	inc.id = fmt.Sprintf("INC-%d", inc.highest)
+	inc.written, inc.writtenBy, inc.pastMatch = nil, "", nil
+}
+
+func (inc *Incident) routes(id string) bool {
+	inc.mu.Lock()
+	defer inc.mu.Unlock()
+	if id == inc.id || id == defaultIncident {
+		return true
+	}
+	_, stored := inc.records[id]
+	return !stored && !slices.ContainsFunc(inc.events, func(ev Event) bool { return ev.IncidentID == id })
 }
 
 func (inc *Incident) handleEvent(w http.ResponseWriter, r *http.Request) {
@@ -143,7 +196,10 @@ func (inc *Incident) append(ev Event) Event {
 	inc.store.saveEvent(ev)
 	inc.publish(ev)
 	inc.refreshPastMatch()
-	if ev.Type == "close" {
+	switch ev.Type {
+	case "open":
+		go inc.saveDraft()
+	case "close":
 		go inc.writeRecord()
 	}
 	if !found {

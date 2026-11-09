@@ -33,6 +33,7 @@ type PastMatch struct {
 type storedRecord struct {
 	PastMatch
 	Title        string        `json:"title"`
+	Status       string        `json:"status"`
 	Severity     string        `json:"severity,omitempty"`
 	Duration     string        `json:"duration,omitempty"`
 	Opened       *time.Time    `json:"opened,omitempty"`
@@ -45,6 +46,7 @@ type storedRecord struct {
 type RecordSummary struct {
 	ID       string     `json:"id"`
 	Title    string     `json:"title"`
+	Status   string     `json:"status"`
 	Severity string     `json:"severity"`
 	Opened   *time.Time `json:"opened"`
 	Resolved *time.Time `json:"resolved"`
@@ -75,17 +77,21 @@ func newStore(ctx context.Context) (*store, error) {
 	return s, nil
 }
 
-func openStore(ctx context.Context, incidentID string) (*store, []Event, error) {
+func openStore(ctx context.Context) (*store, []Event, []Record, error) {
 	s, err := newStore(ctx)
 	if err != nil || s == nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	events, err := s.loadEvents(ctx, incidentID)
+	events, err := s.loadEvents(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+	records, err := s.listRecords(ctx)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	go s.writeLoop()
-	return s, events, nil
+	return s, events, records, nil
 }
 
 func keyword() types.Property { return types.NewKeywordProperty() }
@@ -136,28 +142,30 @@ func recordsMapping() *types.TypeMapping {
 
 func rfoMapping() map[string]types.Property {
 	return map[string]types.Property{
+		"status":   keyword(),
 		"severity": keyword(),
 		"duration": keyword(),
 		"rfo":      &types.ObjectProperty{Enabled: new(false)},
 	}
 }
 
-func (s *store) listRecords(ctx context.Context) ([]RecordSummary, error) {
+func (s *store) listRecords(ctx context.Context) ([]Record, error) {
 	res, err := s.es.Search().Index(recordsIndex).
-		Sort(&types.SortOptions{SortOptions: map[string]types.FieldSort{"resolved": {Order: &sortorder.Desc}}}).
-		SourceExcludes_("rfo").
+		Sort(&types.SortOptions{SortOptions: map[string]types.FieldSort{"opened": {Order: &sortorder.Desc}}}).
 		Size(100).
 		Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list records: %w", err)
 	}
-	out := make([]RecordSummary, 0, len(res.Hits.Hits))
+	out := make([]Record, 0, len(res.Hits.Hits))
 	for _, hit := range res.Hits.Hits {
 		var rec storedRecord
 		if err := json.Unmarshal(hit.Source_, &rec); err != nil {
 			return nil, fmt.Errorf("decode record: %w", err)
 		}
-		out = append(out, RecordSummary{ID: rec.ID, Title: rec.Title, Severity: rec.Severity, Opened: rec.Opened, Resolved: rec.Resolved, Duration: rec.Duration, Summary: rec.Summary, FixedBy: rec.FixedBy})
+		if rec.RFO != nil {
+			out = append(out, *rec.RFO)
+		}
 	}
 	return out, nil
 }
@@ -192,8 +200,20 @@ func (s *store) ensureIndex(ctx context.Context, name string, mapping *types.Typ
 	return nil
 }
 
-func (s *store) saveRecord(ctx context.Context, rec storedRecord) error {
-	if _, err := s.es.Index(recordsIndex).Id(rec.ID).Document(rec).Do(ctx); err != nil {
+func (s *store) saveRecord(ctx context.Context, rec Record) error {
+	doc := storedRecord{
+		PastMatch:    PastMatch{ID: rec.ID, Summary: rec.Summary, FixedBy: rec.FixedBy},
+		Title:        rec.Title,
+		Status:       rec.Status,
+		Severity:     rec.Severity,
+		Duration:     rec.Duration,
+		Opened:       rec.Opened,
+		Resolved:     rec.Resolved,
+		Parts:        rec.Parts,
+		Improvements: rec.ActionItems,
+		RFO:          &rec,
+	}
+	if _, err := s.es.Index(recordsIndex).Id(rec.ID).Document(doc).Do(ctx); err != nil {
 		return fmt.Errorf("index record %s: %w", rec.ID, err)
 	}
 	return nil
@@ -220,9 +240,8 @@ func (s *store) writeLoop() {
 	}
 }
 
-func (s *store) loadEvents(ctx context.Context, incidentID string) ([]Event, error) {
+func (s *store) loadEvents(ctx context.Context) ([]Event, error) {
 	res, err := s.es.Search().Index(eventsIndex).
-		Query(&types.Query{Term: map[string]types.TermQuery{"incident_id": {Value: incidentID}}}).
 		Sort(&types.SortOptions{SortOptions: map[string]types.FieldSort{"seq": {Order: &sortorder.Asc}}}).
 		Size(10000).
 		Do(ctx)

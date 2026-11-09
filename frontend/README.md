@@ -46,8 +46,16 @@ Current decisions: monochrome neutrals, one blue accent for focus, selection and
 
 ## Team graph
 
-The live Teams tab reads `GET /api/graph` (optional `start` and `end`, RFC 3339). The service builds it at read time from the roster and the incident events: the team tree (`part_of`, `member_of`, `manages`, `owns`) plus team-to-team arcs for `depends_on` (a team acted on a resource another team owns, inferred), `messaged` (asks, replies, relays and pages across teams) and `shared_incident` (teams pulled in together). Arcs stay hidden until a team is hovered or selected; the selected team is kept in `?focus=`. This draft draws with SVG and needs no graph library; `calls` and `uses` arrive when Dash0 traces and Radar topology feed the service. Fonts are bundled from `@fontsource`, so the app works offline.
+The live Teams tab reads `GET /api/graph` (optional `start` and `end`, RFC 3339). The service builds it at read time from the roster and the incident events: the team tree (`part_of`, `member_of`, `manages`, `owns`) plus team-to-team arcs for `depends_on` (a team acted on a resource another team owns, inferred), `messaged` (asks, replies, relays and pages across teams) and `shared_incident` (teams pulled in together). The view is a pan and zoom canvas (`@xyflow/react`, laid out by `elkjs`, which loads as its own chunk) with draggable nodes, zoom controls and a minimap. Arcs stay hidden until a team is hovered or selected; the selected team is kept in `?focus=`. `calls` and `uses` arrive when Dash0 traces and Radar topology feed the service. Fonts are bundled from `@fontsource`, so the app works offline.
+
+## Event colours
+
+Events are colour coded by kind everywhere they are listed (activity feed, record timeline, postmortems), with a legend: alerts and signals red, conflicts pink, investigation violet, decisions amber, commands and claims teal, messages blue, resolution green, crew and system grey. The mapping lives in `src/event-categories.tsx`; the colours are tokens in `src/tokens.css`.
+
+## Recordings
+
+The plugin sends every agent tool call and every console shell command with `tool`, `command` and `outcome` (plus `exit_code`, `duration_ms` and `cwd` from the console). Commands that look like they carry a secret are redacted. The service turns the event log into `steps` and `commands` on `GET /record/{id}`, `GET /postmortems` and `GET /postmortems/{id}`: each command is marked `changed` (not a read) and `led_to_resolution` (a successful change before the incident closed or recovered). Older plugins that only send `Bash: <command> (ok)` text are parsed the same way. The Record tab and each postmortem show these on a timeline: hover or focus a marker to see what ran, by whom and with what result. A postmortem also lists the commands that resolved the incident and can copy them as a runbook.
 
 ## Postmortems
 
-`Postmortems` accepts documents, loading, error and onRetry props. It does not fetch or invent archive routes. The library and document view are ready for the backend contract; sample data lives in postmortems-fixtures.ts and Storybook. Backend list/detail endpoints and summary exposure are pending Emmanuel.
+`Postmortems` accepts documents, loading, error and onRetry props. The live Postmortems tab loads them from `GET /postmortems`, which today serves the current incident from memory; listing past incidents from Elasticsearch is still to do. Sample data lives in postmortems-fixtures.ts and Storybook.

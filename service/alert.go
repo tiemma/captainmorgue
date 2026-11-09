@@ -104,6 +104,12 @@ func (inc *Incident) alertEvents(a alert, now time.Time) []Event {
 	everyone := c.joinedNames()
 	team, owned := inc.roster.owner(a.service)
 	last, alerting := inc.lastAlert(a.service)
+	open := inc.isOpen()
+	if !open && !a.resolved {
+		if status, _ := inc.lifecycleStatus(); status == "closed" {
+			inc.reopen()
+		}
+	}
 	if a.resolved {
 		if !alerting {
 			return nil
@@ -117,7 +123,7 @@ func (inc *Incident) alertEvents(a alert, now time.Time) []Event {
 	}
 	signal := &Signal{Value: a.summary, Status: "critical"}
 	var evs []Event
-	if !inc.isOpen() {
+	if !open {
 		inc.title = a.service + ": " + a.summary
 		evs = append(evs, Event{Actor: a.source, Type: "open", Text: "Opened " + inc.id + ": " + inc.title})
 	}

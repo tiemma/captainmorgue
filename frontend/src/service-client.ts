@@ -140,6 +140,7 @@ export interface PullRequest {
 }
 
 export interface Moment {
+  seq: number;
   ts: string;
   actor: string;
   type: string;
@@ -154,6 +155,8 @@ export interface Step {
   resource?: string;
   exit_code?: number;
   duration_ms?: number;
+  tool?: string;
+  command?: string;
   failed: boolean;
   change: boolean;
 }
@@ -174,17 +177,6 @@ export interface ActionItem {
   owner: string;
   link: string;
   due?: string;
-}
-
-export interface RecordSummary {
-  id: string;
-  title: string;
-  severity: string;
-  opened: string | null;
-  resolved: string | null;
-  duration: string;
-  summary: string;
-  fixed_by: string;
 }
 
 export interface IncidentRecord {
@@ -216,9 +208,26 @@ export interface IncidentRecord {
   action_items?: ActionItem[] | null;
   steps?: { actor: string; steps: Step[] }[] | null;
   changes?: Step[] | null;
+  commands?: CommandRun[] | null;
 }
 
 export type Record = IncidentRecord;
+
+export interface CommandRun {
+  seq: number;
+  ts: string;
+  actor: string;
+  team?: string;
+  tool: string;
+  command: string;
+  outcome: string;
+  exit_code?: number;
+  duration_ms?: number;
+  cwd?: string;
+  resource?: Resource;
+  changed: boolean;
+  led_to_resolution: boolean;
+}
 
 export interface MessageRequest {
   from: string;
@@ -284,7 +293,7 @@ export function fetchRecord(id: string, signal?: AbortSignal) {
 }
 
 export function fetchRecords(signal?: AbortSignal) {
-  return request<RecordSummary[] | null>('/records', undefined, signal);
+  return request<IncidentRecord[] | null>('/records?full=1', undefined, signal);
 }
 
 export function setIncidentStatus(

@@ -135,7 +135,7 @@ set_status() {
     echo "Not changed: ${resp:-the service did not answer, see $LOG}"
     exit 0
   fi
-  jq -r --arg inc "$INCIDENT" '"\($inc) is \(.status)" + (if .severity != "" then ", \(.severity)" else "" end) + "."' <<<"$resp"
+  jq -r --arg inc "$INCIDENT" '"\(.incident // $inc) is \(.status)" + (if .severity != "" then ", \(.severity)" else "" end) + "."' <<<"$resp"
 }
 
 case "$1" in
@@ -158,7 +158,7 @@ join)
   resp=$(join_incident "$team" "$role" "$task") || fail "Joining $INCIDENT"
   nohup "$BIN/cm-poll" </dev/null >>"$CM_DIR/poll.log" 2>&1 &
   jq -r --arg a "$ACTOR" --arg inc "$INCIDENT" --arg want "$role" --arg url "${CM_URL%/}/" "$JQ_DEFS"'
-    "Joined \($inc) as \($a) on team \(.team), role \(.role), manager \(.manager | name_or_none), term \(.term // "?"). Live view: \($url)",
+    "Joined \(.incident // $inc) as \($a) on team \(.team), role \(.role), manager \(.manager | name_or_none), term \(.term // "?"). Live view: \($url)",
     (if $want == "commander" and .role != "commander" then "Commander is already \(.commander); you joined as \(.role)." else "Commander: \(.commander | name_or_none)." end),
     "Online: " + ([.members[]? | "\(.actor) (\(.status))"] | join(", "))' <<<"$resp"
   ;;
@@ -343,9 +343,10 @@ shell-event)
   grep -Eiq 'token|password|secret|authorization|api[_-]?key' <<<"$cmd" && exit 0
   [ "$2" = 0 ] && result=ok || result=failed
   CM_MAX_TIME=3 api POST /events "$(jq -nc --arg inc "$INCIDENT" --arg a "$ACTOR" --arg t "${CM_TEAM:-}" \
-    --arg text "Shell: ${cmd:0:300} ($result)" --argjson code "$2" --arg cwd "$PWD" \
+    --arg text "Shell: ${cmd:0:300} ($result)" --arg cmd "${cmd:0:2000}" --arg result "$result" --argjson code "$2" --arg cwd "$PWD" \
     --argjson ms "$(awk -v a="$3" -v b="$4" 'BEGIN { printf "%d", (b - a) * 1000 }')" '
-    {incident_id: $inc, actor: $a, type: "action", text: $text, exit_code: $code, duration_ms: $ms, cwd: $cwd}
+    {incident_id: $inc, actor: $a, type: "action", text: $text, exit_code: $code, duration_ms: $ms, cwd: $cwd,
+     tool: "Shell", command: $cmd, outcome: $result}
     + (if $t != "" then {team: $t} else {} end)')" >/dev/null 2>>"$LOG"
   ;;
 approve-request)

@@ -211,58 +211,84 @@ type Record struct {
 	Changes             []Step        `json:"changes"`
 	Parts               []RecordPart  `json:"parts"`
 	PastMatch           *PastMatch    `json:"past_match"`
+	Commands            []CommandRun  `json:"commands"`
 	Events              []Event       `json:"events"`
 }
 
 func (inc *Incident) record() Record {
-	status, severity := inc.lifecycleStatus()
-	win := window(inc.events)
-	written, by := fallbackRecord(inc.title, inc.events), captainMorgue
-	if inc.written != nil && status == "closed" {
-		written, by = *inc.written, inc.writtenBy
+	return inc.recordOf(inc.id, inc.title, inc.currentEvents(), inc.written, inc.writtenBy)
+}
+
+func (inc *Incident) recordOf(id, title string, events []Event, written *writtenRecord, writtenBy string) Record {
+	status, severity := lifecycleOf(events)
+	win := window(events)
+	content, by := fallbackRecord(title, events), captainMorgue
+	if written != nil && status == "closed" {
+		content, by = *written, writtenBy
 	}
 	rec := Record{
-		ID: inc.id, Title: inc.title, Status: status, Severity: severity, WrittenBy: by,
+		ID: id, Title: title, Status: status, Severity: severity, WrittenBy: by,
 		Opened: win.Opened, Resolved: win.Resolved, Duration: win.Duration, Window: win,
-		Summary: written.Summary, FixedBy: written.FixedBy, RootCause: written.RootCause, ContributingFactors: written.ContributingFactors,
-		Timeline:    moments(inc.events, func(ev Event) bool { return keyEvents[ev.Type] }),
-		WentWell:    written.WentWell,
-		WentBadly:   written.WentBadly,
-		Errors:      incidentErrors(inc.events),
-		Remediation: inc.prs(),
-		ActionItems: explicitActionItems(inc.events, severity),
-		Parts:       written.Parts, PastMatch: inc.pastMatch, Events: inc.events,
+		Summary: content.Summary, FixedBy: content.FixedBy, RootCause: content.RootCause, ContributingFactors: content.ContributingFactors,
+		Timeline:    moments(events, func(ev Event) bool { return keyEvents[ev.Type] }),
+		WentWell:    content.WentWell,
+		WentBadly:   content.WentBadly,
+		Errors:      incidentErrors(events),
+		Remediation: prsOf(events),
+		ActionItems: explicitActionItems(events, severity),
+		Parts:       content.Parts, Events: events,
 	}
-	rec.Steps, rec.Changes = steps(inc.events)
-	for _, a := range written.Improvements {
+	if id == inc.id {
+		rec.PastMatch = inc.pastMatch
+	}
+	rec.Steps, rec.Changes = steps(events)
+	rec.Commands = commandRuns(events)
+	for _, a := range content.Improvements {
 		if a.Due == "" {
 			a.Due = dueBySeverity[severity]
 		}
 		rec.ActionItems = append(rec.ActionItems, a)
 	}
-	people := map[string]bool{}
-	for _, ev := range inc.events {
+	people, teams := map[string]bool{}, map[string]bool{}
+	for _, ev := range events {
 		if inc.teamOf(ev.Actor) != "" {
 			people[ev.Actor] = true
+		}
+		if ev.Team != "" {
+			teams[ev.Team] = true
 		}
 		if ev.Type == "conflict" {
 			rec.Conflicts++
 		}
 	}
 	rec.People = len(people)
-	rec.Teams = len(inc.teamsInIncident())
+	rec.Teams = len(teams)
 	rec.Improvements = rec.ActionItems
 	return rec
 }
 
+func (rec Record) summary() RecordSummary {
+	return RecordSummary{ID: rec.ID, Title: rec.Title, Status: rec.Status, Severity: rec.Severity, Opened: rec.Opened, Resolved: rec.Resolved, Duration: rec.Duration, Summary: rec.Summary, FixedBy: rec.FixedBy}
+}
+
+func (inc *Incident) currentEvents() []Event {
+	return slices.DeleteFunc(slices.Clone(inc.events), func(ev Event) bool { return ev.IncidentID != inc.id })
+}
+
+func (inc *Incident) documented() bool {
+	status, _ := inc.lifecycleStatus()
+	return status == "closed" || slices.ContainsFunc(inc.events, func(ev Event) bool { return ev.IncidentID == inc.id && ev.Type == "open" })
+}
+
 func (inc *Incident) handleRecord(w http.ResponseWriter, r *http.Request) {
 	id, asMarkdown := strings.CutSuffix(r.PathValue("id"), ".md")
-	var rec Record
+	inc.mu.Lock()
+	rec, found := inc.records[id]
 	if id == inc.id {
-		inc.mu.Lock()
-		rec = inc.record()
-		inc.mu.Unlock()
-	} else {
+		rec, found = inc.record(), true
+	}
+	inc.mu.Unlock()
+	if !found {
 		stored, err := inc.storedRecord(r.Context(), id)
 		if err != nil {
 			slog.Error("read stored record", "id", id, "err", err)
@@ -297,11 +323,15 @@ func (inc *Incident) storedRecord(ctx context.Context, id string) (*Record, erro
 	return inc.store.getRecord(ctx, id)
 }
 
+func openedAt(rec Record) time.Time {
+	if rec.Opened == nil {
+		return time.Time{}
+	}
+	return *rec.Opened
+}
+
 func (inc *Incident) handleRecords(w http.ResponseWriter, r *http.Request) {
-	inc.mu.Lock()
-	rec := inc.record()
-	inc.mu.Unlock()
-	out := []RecordSummary{}
+	byID := map[string]Record{}
 	if inc.store != nil {
 		ctx, cancel := context.WithTimeout(r.Context(), esTimeout)
 		stored, err := inc.store.listRecords(ctx)
@@ -309,19 +339,78 @@ func (inc *Incident) handleRecords(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			slog.Error("list stored records", "err", err)
 		}
-		out = append(out, stored...)
+		for _, rec := range stored {
+			byID[rec.ID] = rec
+		}
 	}
-	if rec.Status == "closed" && !slices.ContainsFunc(out, func(s RecordSummary) bool { return s.ID == rec.ID }) {
-		out = append([]RecordSummary{{ID: rec.ID, Title: rec.Title, Severity: rec.Severity, Opened: rec.Opened, Resolved: rec.Resolved, Duration: rec.Duration, Summary: rec.Summary, FixedBy: rec.FixedBy}}, out...)
+	inc.mu.Lock()
+	maps.Copy(byID, inc.records)
+	if inc.documented() {
+		rec := inc.record()
+		rec.Events = nil
+		byID[rec.ID] = rec
+	}
+	inc.mu.Unlock()
+	recs := slices.SortedFunc(maps.Values(byID), func(a, b Record) int { return openedAt(b).Compare(openedAt(a)) })
+	if r.URL.Query().Get("full") == "1" {
+		writeJSON(w, recs)
+		return
+	}
+	out := make([]RecordSummary, len(recs))
+	for i, rec := range recs {
+		out[i] = rec.summary()
 	}
 	writeJSON(w, out)
 }
 
+func (inc *Incident) saveRecord(rec Record) {
+	rec.Events = nil
+	inc.saveMu.Lock()
+	defer inc.saveMu.Unlock()
+	inc.mu.Lock()
+	prev, ok := inc.records[rec.ID]
+	final := ok && prev.Status == "closed" && rec.Status != "closed"
+	if !final {
+		inc.records[rec.ID] = rec
+	}
+	inc.mu.Unlock()
+	if final || inc.store == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), esTimeout)
+	defer cancel()
+	if err := inc.store.saveRecord(ctx, rec); err != nil {
+		slog.Error("store record", "id", rec.ID, "err", err)
+	}
+}
+
+func (inc *Incident) saveDraft() {
+	inc.mu.Lock()
+	open := inc.isOpen()
+	rec := inc.record()
+	inc.mu.Unlock()
+	if open {
+		inc.saveRecord(rec)
+	}
+}
+
+func (inc *Incident) draftLoop(every time.Duration) {
+	drafted := 0
+	for range time.Tick(every) {
+		inc.mu.Lock()
+		n, open := len(inc.events), inc.isOpen()
+		inc.mu.Unlock()
+		if open && n != drafted {
+			inc.saveDraft()
+			drafted = n
+		}
+	}
+}
+
 func (inc *Incident) writeRecord() {
 	inc.mu.Lock()
-	events := append([]Event(nil), inc.events...)
+	id, title, events := inc.id, inc.title, inc.currentEvents()
 	roster := inc.liveRoster()
-	title := inc.title
 	inc.mu.Unlock()
 
 	written, by := fallbackRecord(title, events), captainMorgue
@@ -336,32 +425,13 @@ func (inc *Incident) writeRecord() {
 		}
 	}
 	inc.mu.Lock()
-	inc.written, inc.writtenBy = &written, by
-	rec := inc.record()
+	if inc.id == id {
+		inc.written, inc.writtenBy = &written, by
+	}
+	rec := inc.recordOf(id, title, events, &written, by)
 	inc.mu.Unlock()
+	inc.saveRecord(rec)
 	inc.deliverActionItems(rec)
-
-	if inc.store == nil {
-		return
-	}
-	stored := rec
-	stored.Events = nil
-	ctx, cancel := context.WithTimeout(context.Background(), esTimeout)
-	defer cancel()
-	err := inc.store.saveRecord(ctx, storedRecord{
-		PastMatch:    PastMatch{ID: inc.id, Summary: written.Summary, FixedBy: written.FixedBy},
-		Title:        rec.Title,
-		Severity:     rec.Severity,
-		Duration:     rec.Duration,
-		RFO:          &stored,
-		Opened:       rec.Opened,
-		Resolved:     rec.Resolved,
-		Parts:        written.Parts,
-		Improvements: rec.ActionItems,
-	})
-	if err != nil {
-		slog.Error("store record", "err", err)
-	}
 }
 
 const matchEvents = 10
@@ -380,13 +450,14 @@ func (inc *Incident) matchLoop() {
 	var lastQuery string
 	for range inc.matchReq {
 		inc.mu.Lock()
-		query := incidentText(inc.title, inc.events[:min(len(inc.events), matchEvents)])
+		id, events := inc.id, inc.currentEvents()
+		query := incidentText(inc.title, events[:min(len(events), matchEvents)])
 		inc.mu.Unlock()
 		if query == lastQuery {
 			continue
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), esTimeout)
-		match, err := inc.store.closestRecord(ctx, inc.id, query)
+		match, err := inc.store.closestRecord(ctx, id, query)
 		cancel()
 		if err != nil {
 			slog.Error("find past match", "err", err)

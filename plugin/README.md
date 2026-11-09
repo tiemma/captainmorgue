@@ -43,7 +43,7 @@ The pane follows your inbox as it arrives, stamps each message with your local t
 | `?` or `help` | Help |
 | `q` | Quit |
 
-When the console starts your shell (zsh or bash), every command you type is posted to the incident timeline as an `action` event, `Shell: <command> (ok|failed)` with `exit_code`, `duration_ms` and `cwd`, in the background so the prompt never waits. Commands starting with a space, and commands mentioning a token, password, secret, authorization or API key, are not sent; long commands are cut at 300 characters. To record another terminal, run `eval "$(cm shell-hook zsh)"` (or `bash`) in it.
+When the console starts your shell (zsh or bash), every command you type is posted to the incident timeline as an `action` event, `Shell: <command> (ok|failed)` with `tool`, `command`, `outcome`, `exit_code`, `duration_ms` and `cwd`, in the background so the prompt never waits. Commands starting with a space, and commands mentioning a token, password, secret, authorization or API key, are not sent; long commands are cut at 300 characters. To record another terminal, run `eval "$(cm shell-hook zsh)"` (or `bash`) in it.
 
 The hooks never fail your turn: with `CM_URL` unset or the service down they do nothing. Failures are logged to `~/.captainmorgue/hook.log`, the poller's output to `~/.captainmorgue/poll.log`.
 
@@ -81,7 +81,7 @@ export CM_REPO=<the repo you work in>
 export CM_TOOLS=<tools you have connected, comma separated>
 ```
 
-With `CM_URL` unset the plugin does nothing. `CM_TEAM` is optional; the service looks it up from the roster. `CM_TOKEN` is sent as `Authorization: Bearer` on every call. `CM_INCIDENT` defaults to `INC-1`. `CM_ROLE`, `CM_TASK`, `CM_REPO` and `CM_TOOLS` are sent at join and shown to everyone; arguments to `/captainmorgue:join` override role and task.
+With `CM_URL` unset the plugin does nothing. `CM_TEAM` is optional; the service looks it up from the roster. `CM_TOKEN` is sent as `Authorization: Bearer` on every call. `CM_INCIDENT` defaults to the incident your last join returned, else `INC-1`; the service routes `INC-1` and unknown ids to the incident that is open now. `CM_ROLE`, `CM_TASK`, `CM_REPO` and `CM_TOOLS` are sent at join and shown to everyone; arguments to `/captainmorgue:join` override role and task.
 
 Then set up the MCP servers below, run `/captainmorgue:doctor`, and run `/captainmorgue:join` once in Claude Code. Outside Claude Code the same commands are `plugin/bin/cm join`, `plugin/bin/cm status`, `plugin/bin/cm doctor` and so on, with arguments on stdin.
 
