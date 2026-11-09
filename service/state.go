@@ -83,7 +83,12 @@ func (inc *Incident) state() State {
 	}
 	for i := range inc.events {
 		ev := &inc.events[i]
+		if ev.Signal != nil {
+			s.Signals[ev.Service] = *ev.Signal
+		}
 		switch ev.Type {
+		case "open":
+			s.Incident.Status, s.Incident.Opened, s.Incident.Closed = "open", &ev.TS, nil
 		case "relay", "broadcast":
 			s.Relay = &Relay{From: ev.Actor, To: ev.To, Text: ev.Text, Why: ev.Why}
 		case "conflict":
@@ -169,10 +174,10 @@ func (inc *Incident) writeRecord() {
 	roster := inc.liveRoster()
 	inc.mu.Unlock()
 
-	written := writtenRecord{Summary: incidentText(inc.title, events), Parts: []RecordPart{}, Improvements: []Improvement{}}
+	written := writtenRecord{Summary: incidentText(rec.Title, events), Parts: []RecordPart{}, Improvements: []Improvement{}}
 	if inc.brain != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), recordTimeout)
-		w, err := inc.brain.writeRecord(ctx, inc.title, roster, events)
+		w, err := inc.brain.writeRecord(ctx, rec.Title, roster, events)
 		cancel()
 		if err != nil {
 			slog.Error("write record with model", "err", err)
@@ -191,7 +196,7 @@ func (inc *Incident) writeRecord() {
 	defer cancel()
 	err := inc.store.saveRecord(ctx, storedRecord{
 		PastMatch:    PastMatch{ID: inc.id, Summary: written.Summary, FixedBy: written.FixedBy},
-		Title:        inc.title,
+		Title:        rec.Title,
 		Opened:       rec.Opened,
 		Resolved:     rec.Resolved,
 		Parts:        written.Parts,
