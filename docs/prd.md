@@ -59,6 +59,9 @@ Tagline: **Where incidents go to die.**
 | 38 | How does the onboarded tree relate to incidents? | Incidents use the onboarded tree and its managers by default. First-to-join becomes manager only when a team manager is not in the incident, and elections still cover a manager who drops off. |
 | 39 | How are relationships between teams shown? | A relationship view built from what CaptainMorgue collects: the team tree as the backbone, with arcs between teams for how they relate. Hovering a team highlights its arcs. |
 | 40 | What do the relationships mean? | A small fixed vocabulary: member of, manages, part of, owns, calls, uses, depends on, messaged, and shared an incident with. Each arc shows its relationship type and the evidence behind it. |
+| 41 | How are demo faults kept safe? | They are switches built into the demo app, inside our own namespace and resource budget, and they switch off instantly. The hackathon cluster refuses the privileged access chaos tools need and forbids unbounded breakage. We confirm with the organisers before the demo. |
+| 42 | How does CaptainMorgue recall the past? | By meaning, not just keywords. Every event and record is embedded when it is stored, so "this has happened before", who fixed it last time, who answered a similar question, and "ask the incident" all find matches even when the wording differs. |
+| 43 | Where does the demo run? | On the team cluster from the Cloud Native Hackathon starter, deployed through Git, reachable at https://captainmorgue.cnh.radarhq.io. |
 
 ## 3. What people see
 
