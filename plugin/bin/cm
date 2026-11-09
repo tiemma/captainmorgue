@@ -322,10 +322,33 @@ shell-event)
     {incident_id: $inc, actor: $a, type: "action", text: $text, exit_code: $code, duration_ms: $ms, cwd: $cwd}
     + (if $t != "" then {team: $t} else {} end)')" >/dev/null 2>>"$LOG"
   ;;
+approve-request)
+  [ -n "${2:-}" ] && [ -n "${3:-}" ] || { echo "Usage: cm approve-request \"<action>\" \"<why>\""; exit 0; }
+  if ! resp=$(CM_MAX_TIME=5 api POST /approvals "$(jq -nc --arg i "$INCIDENT" --arg a "$ACTOR" --arg act "$2" --arg w "$3" '{incident_id: $i, actor: $a, action: $act, why: $w}')" 2>>"$LOG"); then
+    echo "Not requested: ${resp:-the service did not answer, see $LOG}"
+    exit 0
+  fi
+  jq -r '"Approval \(.id) requested from \(.approver) for: \(.action). It expires at \(.expires[11:19]) UTC; retry the call once it is approved."' <<<"$resp"
+  ;;
+approve | deny)
+  decision=$1 first=${2:-} rest=${*:3}
+  [ -n "$first" ] || [ -t 0 ] || read_args
+  case "$first" in
+  *[!0-9]* | "") echo "Usage: cm approve <id> | cm deny <id> [why]"; exit 0 ;;
+  esac
+  if ! resp=$(CM_MAX_TIME=5 api POST "/approvals/$first" "$(jq -nc --arg a "$ACTOR" --arg d "$decision" --arg w "$rest" '{actor: $a, decision: $d, why: $w}')" 2>>"$LOG"); then
+    echo "Not decided: ${resp:-the service did not answer, see $LOG}"
+    exit 0
+  fi
+  jq -r '"Approval \(.id) \(.status): \(.actor) may \(if .status == "approved" then "now" else "not" end) run \(.action)."' <<<"$resp"
+  ;;
+approvals)
+  CM_MAX_TIME=5 api GET /approvals 2>>"$LOG" | jq -r 'if . == [] then "No approvals." else .[] | "- \(.id) \(.status): \(.actor) wants \(.action) (approver \(.approver)) why: \(.why)" + (if .note then " | \(.decided_by): \(.note)" else "" end) end' || fail "Listing approvals"
+  ;;
 console | pane)
   exec "$BIN/cm-pane" "$1"
   ;;
 *)
-  echo "Usage: cm join|leave|task|status|status-set|note|action|close|fix|pr|inbox|broadcast|ask|reply|console|pane|shell-hook|doctor"
+  echo "Usage: cm join|leave|task|status|status-set|note|action|close|fix|pr|inbox|broadcast|ask|reply|approve-request|approve|deny|approvals|console|pane|shell-hook|doctor"
   ;;
 esac

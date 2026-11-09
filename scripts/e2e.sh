@@ -94,6 +94,27 @@ check "holder renews its own claim" '[ -z "$(pretool dana "$write")" ]'
 sleep 2
 check "holder is told someone was blocked" 'inject dana registration | grep -q "dev tried to"'
 
+gate() {
+  jq -nc --arg c "$2" '{hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: {command: $c}}' |
+    HOME=$work/home-$1 CM_ACTOR=$1 "$root/plugin/hooks/approve.sh"
+}
+drop='kubectl -n team-captainmorgue delete pod confdb-0'
+action='kubectl delete pod confdb-0 -n team-captainmorgue'
+blocked=$(gate dev "$drop")
+check "destructive call is denied until approved" '[ "$(jq -r .hookSpecificOutput.permissionDecision <<<"$blocked")" = deny ] && jq -r .hookSpecificOutput.permissionDecisionReason <<<"$blocked" | grep -q "approve-request .*$action"'
+check "non-destructive write needs no approval" '[ -z "$(gate dev "kubectl -n team-captainmorgue scale deploy/confdb --replicas=3")" ]'
+appr=$(as dev platform approve-request "$action" "confdb-0 is wedged on a stale lock" </dev/null | sed -n 's/^Approval \([0-9]*\) requested from ben.*/\1/p')
+sleep 2
+check "approval request interrupts the requester's team manager" '[ -n "$appr" ] && as ben platform inbox | grep -q "\[approval_request\] .* from dev .*cm approve $appr"'
+check "non-manager cannot approve" 'as gus registration approve "$appr" </dev/null | grep -q "only ben or the commander" && [ -n "$(gate dev "$drop")" ]'
+check "manager approves and the retry passes" 'as ben platform approve "$appr" </dev/null | grep -q "approved" && [ -z "$(gate dev "$drop")" ] && jq -e --argjson i "$appr" ".approvals[] | select(.id == \$i and .status == \"approved\" and .decided_by == \"ben\")" <<<"$(state)" >/dev/null'
+zero='kubectl -n team-captainmorgue scale deploy/confdb --replicas=0'
+appr2=$(as dev platform approve-request "kubectl scale deploy/confdb -n team-captainmorgue" "drain confdb traffic" </dev/null | sed -n 's/^Approval \([0-9]*\).*/\1/p')
+check "denied approval keeps the call blocked" 'as ben platform deny "$appr2" not during check-in </dev/null | grep -q "denied" && [ "$(jq -r .hookSpecificOutput.permissionDecision <<<"$(gate dev "$zero")")" = deny ] && jq -e --argjson i "$appr2" ".approvals[] | select(.id == \$i and .status == \"denied\" and .note == \"not during check-in\")" <<<"$(state)" >/dev/null'
+sleep 2
+check "requester hears the denial" 'inject dev platform | grep -q "ben denied approval $appr2"'
+check "approvals can be switched off" '[ -z "$(jq -nc --arg c "$zero" "{tool_name: \"Bash\", tool_input: {command: \$c}}" | HOME=$work/home-dev CM_ACTOR=dev CM_APPROVALS=off "$root/plugin/hooks/approve.sh")" ]'
+
 trigger() { "$root/scripts/trigger.sh" "$@" >/dev/null; }
 trigger checkin 'Check-in 5xx rate at 40%'
 sleep 3
@@ -156,6 +177,7 @@ if [ -n "${short:-}" ]; then
   check "status lists action items after close" 'as ben platform status </dev/null | grep -q "@ben: Add a memory alert on checkin"'
   check "RFO lists each step taken, the failure and the cluster change" 'jq -e "([.steps[].steps[] | select(.actor == \"dana\")] | any(.text | test(\"rollout undo deploy/checkin\")) and any(.failed and .exit_code == 7)) and any(.changes[]; .resource == \"Deployment/checkin\" and .duration_ms == 840)" <<<"$rec" >/dev/null && curl -s "$CM_URL/record/INC-1.md" | grep -q "^## Changes made"'
   check "archive lists the closed incident and the record keeps improvements" 'jq -e ".[0].id == \"INC-1\" and .[0].severity == \"sev2\"" <<<"$(curl -s "$CM_URL/records")" >/dev/null && jq -e ".improvements | length > 0" <<<"$rec" >/dev/null'
+  check "RFO counts held approvals and lists the denial as an error" 'jq -e "any(.went_well[]; test(\"approval: 2\")) and any(.errors[]; .type == \"approval\" and (.text | test(\"denied\")))" <<<"$rec" >/dev/null'
   check "RFO served as markdown" 'curl -s "$CM_URL/record/INC-1.md" | grep -q "^## Action items" && curl -s "$CM_URL/record/INC-1.md" | grep -q "checkin: $pr"'
 fi
 

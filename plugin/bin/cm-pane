@@ -59,7 +59,7 @@ console() {
 
 FEED="$CM_DIR/pane.$$.jsonl"
 STATE="$CM_DIR/pane.$$.state"
-COLORS='{"ask":"1;33","page":"1;31","conflict":"1;31","escalation":"1;31","join":"32","recovered":"32","broadcast":"36","relay":"36"}'
+COLORS='{"ask":"1;33","page":"1;31","conflict":"1;31","escalation":"1;31","approval_request":"1;35","join":"32","recovered":"32","broadcast":"36","relay":"36"}'
 [ -n "${NO_COLOR:-}" ] && COLORS='{}'
 JQ_OPEN='def open($me; $done): .kind == "ask" and .from != $me and (.seq as $q | any($done[]; . == $q) | not);'
 
@@ -127,6 +127,7 @@ targets() {
 usage() {
   printf '  <seq> <text> reply   <seq> on  "On it"   <seq> @who  route to someone\n'
   printf '  b [@team|root] <text> broadcast   a @who <text> ask   o open asks   w who is online\n'
+  printf '  approve <id> | deny <id> [why]  decide a destructive action\n'
   printf '  s status   l redraw   ? help   q quit   Tab completes, Up/Down history\n'
 }
 
@@ -212,6 +213,7 @@ run() {
   o) open_asks | fmt | grep . || echo "No open asks." ;;
   b | b[[:space:]]*) "$BIN/cm" broadcast <<<"${1#b}" ;;
   a[[:space:]]*) "$BIN/cm" ask <<<"${1#a}" ;;
+  approve[[:space:]]* | deny[[:space:]]*) "$BIN/cm" "${1%%[[:space:]]*}" <<<"${1#*[[:space:]]}" ;;
   [0-9]*) answer "$1" ;;
   *) echo "Unknown command. ? shows the help." ;;
   esac

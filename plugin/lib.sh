@@ -175,6 +175,8 @@ def guidance: {
   alert: "For an alert: tell the person in one line which service is alerting, which team owns it and who is paged.",
   recovered: "For a recovery: tell the person the service recovered. If they are the commander and the fix is confirmed, suggest closing the incident.",
   digest: "For a digest: give the person this catch-up in a few lines before going on.",
-  action: "For action items: tell the person which follow-ups from the incident record they own."
+  action: "For action items: tell the person which follow-ups from the incident record they own.",
+  approval_request: "For each approval request: a teammate'"'"'s agent wants to run a destructive action and you approve it. Show it to the person verbatim (approval id, who, action, why), then ask them with the AskUserQuestion tool, one question per request, with the options \"Approve\" and \"Deny\". Approve: run /captainmorgue:approve <id>. Deny: ask why, then run /captainmorgue:deny <id> <why>. Never decide for them.",
+  approval: "For an approval decision: tell the person in one line. If approved, retry the exact call that was blocked; if denied, do not run it and tell them why."
 };
 '

@@ -64,6 +64,7 @@ type State struct {
 	Signals   map[string]Signal `json:"signals"`
 	PastMatch *PastMatch        `json:"past_match"`
 	Claims    []Claim           `json:"claims"`
+	Approvals []Approval        `json:"approvals"`
 	Commander string            `json:"commander"`
 	PRs       []PR              `json:"prs"`
 	Repos     map[string]Repo   `json:"repos"`
@@ -81,6 +82,7 @@ func (inc *Incident) state() State {
 		Signals:   maps.Clone(inc.signals),
 		PastMatch: inc.pastMatch,
 		Claims:    inc.activeClaims(now),
+		Approvals: inc.approvalList(now),
 		Commander: inc.coord.commander,
 		PRs:       inc.prs(),
 		Repos:     inc.roster.Services,

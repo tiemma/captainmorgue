@@ -296,6 +296,8 @@ func incidentErrors(events []Event) []Moment {
 		switch ev.Type {
 		case "alert", "page", "signal", "conflict", "escalation":
 			return true
+		case "approval":
+			return strings.Contains(ev.Text, " denied approval ")
 		}
 		return failedAction(ev)
 	})
@@ -368,6 +370,7 @@ func fallbackRecord(title string, events []Event) writtenRecord {
 	add(&w.WentWell, count["conflict"]-claimBlocks, "Conflicting actions caught and flagged to both people: %d")
 	add(&w.WentWell, claimBlocks, "Writes blocked by a claim before they collided: %d")
 	add(&w.WentWell, count["autoreply"], "Auto-replies telling askers what a busy responder was doing: %d")
+	add(&w.WentWell, count["approval_request"], "Destructive actions held for a manager's approval: %d")
 	add(&w.WentWell, count["election"], "Elections that kept every team managed: %d")
 	add(&w.WentWell, count["reply"], "Asks answered: %d")
 	add(&w.WentWell, count["pr"], "Fixes opened as pull requests: %d")

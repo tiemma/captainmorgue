@@ -77,6 +77,7 @@ type Incident struct {
 	coord     coord
 	claims    map[string]*Claim
 	signals   map[string]Signal
+	approvals []Approval
 }
 
 func newIncident(id, title string, roster Roster, st *store, br *brain) *Incident {

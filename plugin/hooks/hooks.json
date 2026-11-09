@@ -19,7 +19,8 @@
       {
         "matcher": "^(Bash|mcp__.*)$",
         "hooks": [
-          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/claim.sh\"", "timeout": 5 }
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/claim.sh\"", "timeout": 5 },
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/approve.sh\"", "timeout": 5 }
         ]
       }
     ],
