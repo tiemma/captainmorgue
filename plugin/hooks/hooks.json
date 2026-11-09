@@ -15,6 +15,14 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|mcp__.*)$",
+        "hooks": [
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/claim.sh\"", "timeout": 5 }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "^(Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*)$",

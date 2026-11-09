@@ -88,7 +88,8 @@ status)
     snapshot 3 | jq -r --slurpfile s "$SESSION" --arg me "$ACTOR" --arg inc "$INCIDENT" "$JQ_DEFS"'
       $s[0] as $s
       | "\($inc): \($me) on team \($s.team), manager \($s.manager | name_or_none), term \($s.term // "?").",
-        "Team:", teammates($s; $me)'
+        "Team:", teammates($s; $me),
+        "Claims:", ((.state.claims // []) | if . == [] then "- none" else .[] | "- \(.key) held by \(.actor) (\(.text)) until \(.expires[11:19])" end)'
   fi
   echo "Unread: $(unread_lines | wc -l | tr -d ' ')"
   if poller_alive "$(cat "$CM_DIR/poll.pid" 2>/dev/null)"; then

@@ -36,6 +36,10 @@ as() {
 inject() {
   echo '{"hook_event_name":"UserPromptSubmit"}' | HOME=$work/home-$1 CM_ACTOR=$1 CM_TEAM=$2 "$root/plugin/hooks/receive.sh" | jq -r '.hookSpecificOutput.additionalContext // ""'
 }
+pretool() {
+  jq -nc --arg c "$2" '{hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: {command: $c}}' |
+    HOME=$work/home-$1 CM_ACTOR=$1 "$root/plugin/hooks/claim.sh"
+}
 state() { curl -s -N --max-time 2 "$CM_URL/stream" | grep '^data' | tail -1 | sed 's/^data: //'; }
 
 [ -n "${short:-}" ] && check "unauthenticated write is rejected" '[ "$(curl -s -o /dev/null -w %{http_code} -X POST "$CM_URL/heartbeat" -d "{\"actor\":\"dana\"}")" = 401 ]'
@@ -58,6 +62,15 @@ seq_ask=$(echo '@ben What changed on confdb?' | as dev platform ask | sed -n 's/
 echo "$seq_ask Nothing on our side" | as ben platform reply >/dev/null
 sleep 2
 check "reply goes back to the asker" 'inject dev platform | grep -q "Nothing on our side"'
+
+write='kubectl -n team-captainmorgue rollout restart deploy/confdb'
+check "first write claims the resource" '[ -z "$(pretool dana "$write")" ] && jq -e ".claims[] | select(.key == \"team-captainmorgue/deployment/confdb\" and .actor == \"dana\")" <<<"$(state)" >/dev/null'
+denied=$(pretool dev "$write")
+check "second actor's write is denied naming the holder" '[ "$(jq -r .hookSpecificOutput.permissionDecision <<<"$denied")" = deny ] && jq -r .hookSpecificOutput.permissionDecisionReason <<<"$denied" | grep -q "held by dana"'
+check "read is never blocked" '[ -z "$(pretool dev "kubectl -n team-captainmorgue get pods")" ]'
+check "holder renews its own claim" '[ -z "$(pretool dana "$write")" ]'
+sleep 2
+check "holder is told someone was blocked" 'inject dana registration | grep -q "dev tried to"'
 
 if [ -n "${short:-}" ]; then
   kill "$(cat "$work/home-ben/.captainmorgue/poll.pid" 2>/dev/null)" 2>/dev/null

@@ -6,63 +6,10 @@
 command -v jq >/dev/null 2>&1 || exit 0
 command -v curl >/dev/null 2>&1 || exit 0
 
-event=$(jq -c --arg actor "$ACTOR" --arg team "${CM_TEAM:-}" --arg inc "$INCIDENT" '
+event=$(jq -c --arg actor "$ACTOR" --arg team "${CM_TEAM:-}" --arg inc "$INCIDENT" "$JQ_TARGET"'
   def trunc($n): if length > $n then .[:$n] + "..." else . end;
-  def kinds: {
-    deploy: "Deployment", deployment: "Deployment", deployments: "Deployment",
-    rollout: "Rollout", rollouts: "Rollout", ro: "Rollout",
-    pod: "Pod", pods: "Pod", po: "Pod",
-    svc: "Service", service: "Service", services: "Service",
-    sts: "StatefulSet", statefulset: "StatefulSet", statefulsets: "StatefulSet",
-    ds: "DaemonSet", daemonset: "DaemonSet", daemonsets: "DaemonSet",
-    rs: "ReplicaSet", replicaset: "ReplicaSet", replicasets: "ReplicaSet",
-    job: "Job", jobs: "Job", cronjob: "CronJob", cronjobs: "CronJob", cj: "CronJob",
-    cm: "ConfigMap", configmap: "ConfigMap", configmaps: "ConfigMap",
-    secret: "Secret", secrets: "Secret",
-    cluster: "Cluster", clusters: "Cluster",
-    node: "Node", nodes: "Node", no: "Node",
-    ns: "Namespace", namespace: "Namespace", namespaces: "Namespace",
-    pvc: "PersistentVolumeClaim", persistentvolumeclaim: "PersistentVolumeClaim",
-    ing: "Ingress", ingress: "Ingress", ingresses: "Ingress",
-    hpa: "HorizontalPodAutoscaler", horizontalpodautoscaler: "HorizontalPodAutoscaler"
-  };
-  def kindof: kinds[ascii_downcase | split(".")[0]];
-  def objname: test("^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$");
-  def valueflags: "-o", "--output", "-l", "--selector", "-c", "--container", "--context",
-    "-f", "--filename", "--kubeconfig", "--cluster", "--user", "-p", "--patch", "--type";
-
-  def kubectl_args:
-    [splits("\\s*(\\|\\||&&|;|\\||\\n)\\s*")]
-    | map(select(test("(^|\\s)kubectl\\s")))[0] // empty
-    | capture("kubectl\\s+(?<a>.*)").a
-    | [splits("\\s+") | explode | map(select(. != 34 and . != 39)) | implode | select(length > 0)]
-    | reduce .[] as $t ({pos: [], ns: null, want: null};
-        if .want == "ns" then .ns = $t | .want = null
-        elif .want then .want = null
-        elif ($t | test("^(-n|--namespace)=")) then .ns = ($t | sub("^[^=]*="; ""))
-        elif $t == "-n" or $t == "--namespace" then .want = "ns"
-        elif ($t | IN(valueflags)) then .want = "skip"
-        elif ($t | startswith("-")) then .
-        else .pos += [$t] end);
-
-  def kubectl_target:
-    .ns as $ns
-    | .pos as $p
-    | (if $p[0:2] == ["argo", "rollouts"] then
-        ($p[3:] | map(select(kindof != "Rollout")) | .[0]) as $n
-        | {read: ($p[2] | IN("get", "status", "list", "version")),
-          kind: "Rollout", name: $n}
-      else
-        ([$p[1:][] | select(test("^[A-Za-z.]+/[^/]+$")) | split("/") | {kind: (.[0] | kindof), name: .[1]} | select(.kind)][0]
-         // ([range(1; ($p | length) - 1) as $i | select($p[$i] | kindof) | {kind: ($p[$i] | kindof), name: $p[$i + 1]}][0]))
-        + {read: (($p[0] | IN("get", "describe", "logs", "top", "explain", "events", "diff"))
-                  or ($p[0] == "rollout" and ($p[1] | IN("status", "history"))))}
-      end)
-    | select(.name and (.name | objname))
-    | {read, resource: ({kind, name} + (if $ns then {namespace: $ns} else {} end))};
-
   def bash_target:
-    .tool_input.command // "" | kubectl_args | kubectl_target;
+    .tool_input.command // "" | cli_args("kubectl") | kubectl_target;
 
   def radar_target:
     select(.tool_name | test("^mcp__.*radar"; "i"))

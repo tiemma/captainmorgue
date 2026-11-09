@@ -47,6 +47,7 @@ func main() {
 	mux.HandleFunc("GET /inbox/{actor}", inc.handleInbox)
 	mux.HandleFunc("POST /inbox/{actor}/ack", inc.handleAck)
 	mux.HandleFunc("POST /messages", inc.handleMessages)
+	mux.HandleFunc("POST /claims", inc.handleClaim)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /", http.FileServer(http.Dir(env("WEB_DIR", "web"))))
 
