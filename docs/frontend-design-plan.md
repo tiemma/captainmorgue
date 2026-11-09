@@ -189,3 +189,12 @@ The context inspector occupies an in-page slot with its own scrolling body, a re
 Preview remains local sample state. Main's latest integration overview reports service and plugin deployment, but credential-dependent integrations and own-agent rehearsal have separate owners and checks. Incoming plugin auto-install task is retained in Jubril's ledger for follow-up; it is not part of this design refinement.
 
 Record uses a chronological response timeline with connected event markers and a small labeled Active glow while open; closed incidents use a static completion state. Prevention remains separate from the response history. Motion is disabled for reduced-motion users.
+
+
+## Postmortems and latest service handoff
+
+On main54c3380, the current roster is Registration (checkin, kiosk) and Platform (confdb, otel-collector, captainmorgue). The live wall renders teams and profiles from service state. Emmanuel's requested event labels, role/profile disclosures, claims visibility and delivery states take priority over earlier static team examples. Historical design stories are samples, not the deployed roster.
+
+Postmortems adds a searchable document library to the preview. Each document has Summary, Resolution, an optional Timeline, Prevention with owners/links, and collapsed Details. The reusable component takes documents/loading/error/onRetry; it does not guess archive endpoints. Sample documents are isolated in postmortems-fixtures.ts. Emmanuel received ask9 to own archive list/detail, summary/fixed_by exposure, persistent generated sections and generation readiness. The backend still only serves the current incident record.
+
+Use docs/local-development.md to run the real local wall on8080, the redesigned preview on5173, and Storybook on6006. Cloud integrations are optional for local startup. These are separate surfaces until the redesigned frontend is wired to the service.

@@ -2,6 +2,8 @@
 
 Local React + Vite + Storybook review surface for the frontend redesign. The screens use sample incident data and local state. They do not call the service or change a real incident.
 
+For the live local service, plugin CLI and preview commands, see [Local development](../docs/local-development.md).
+
 ## Start
 
 Requires Node 22.12+ and npm. From this directory:
@@ -13,7 +15,7 @@ npm run storybook
 
 Open http://127.0.0.1:6006. The sidebar contains:
 
-- Screens / Workspace: Incident, Messages, Crew, Record, Join and Wall Screen.
+- Screens / Workspace: Incident, Requests, Crew, Record, Postmortems, Join and Wall Screen.
 - States / Incident: conflict, reconnecting, resolved and no active incident.
 - Design system / Foundations: palette, typography and shared components.
 
@@ -40,3 +42,7 @@ Browser tests expect a Chromium installation supported by Playwright; install it
 - `.storybook/`: local review configuration; telemetry disabled.
 
 Current decisions: ivory workspace, ink navigation, amber actions, separate operational statuses; full responder workspace; every responder may perform incident actions for the demo. Emmanuel/team supplies the real action APIs. See [the frontend plan](../docs/frontend-design-plan.md) for screen behavior and integration handoffs.
+
+## Postmortems
+
+`Postmortems` accepts documents, loading, error and onRetry props. It does not fetch or invent archive routes. The library and document view are ready for the backend contract; sample data lives in postmortems-fixtures.ts and Storybook. Backend list/detail endpoints and summary exposure are pending Emmanuel.

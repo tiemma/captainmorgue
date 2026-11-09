@@ -6,6 +6,8 @@ Each responder gets an agent on their laptop, and CaptainMorgue coordinates all 
 
 ## Start here
 
+- [Local development](docs/local-development.md): start the live local app, React preview and Storybook.
+
 - [docs/overview.md](docs/overview.md): one-page overview of the whole design, open questions, and status. Start here.
 - [AGENTS.md](AGENTS.md): how we work together, the per-person ledger in `ledger/`, and how to run it locally.
 - [docs/hackathon-plan.md](docs/hackathon-plan.md): today's build. The contract, who does what, and the checkpoints. Read this first.
