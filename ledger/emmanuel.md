@@ -1,7 +1,7 @@
 # Emmanuel (tiemma): service and plugin
 
 ## Now
-Reviewing `docs/dispatch.md` (messaging, raft-style elections, liveness) before building the inbox. Crew agents still on `feat/service-intel` and cluster `feat/infra`.
+Joined the live incident as tiemma (platform, manager). Four crew agents on feat/roles, feat/claim, feat/digest, feat/notify. Demo data removed from main (`3fcebda`).
 
 ## Done
 - Plugin receive side merged (join, leave, status @person, inbox, broadcast, ask, reply, poller, hooks inject messages). `scripts/e2e.sh`: 8 checks, ALL PASSED on `main`.
@@ -27,6 +27,14 @@ Reviewing `docs/dispatch.md` (messaging, raft-style elections, liveness) before 
 - Nothing.
 
 ## Handing off
+- Sammy (15:00), in order:
+  1. Elasticsearch: the service gets 401 on `cm-events`. Create an API key in the serverless project with write on `cm-*`, update `elastic-api-key` in Secret `captainmorgue`, restart. Done when the log says `elasticsearch=true`.
+  2. Dash0: the collector token is rejected ("blocked"); Emmanuel sends you the verified token directly (not via git). Recreate Secret `dash0` (endpoint `ingress.us-west-2.aws.dash0.com:4317`), restart `otel-collector`. Done when no `Exporting failed` lines and checkin traces show in Dash0.
+  3. Remove `payments` and the ticketing team from the cluster; roster now has only registration (checkin, kiosk) and platform (confdb, otel-collector, captainmorgue).
+  4. After the image for `3fcebda` builds, `kubectl -n team-captainmorgue rollout restart deploy/captainmorgue` to load the new roster and drop test people.
+  5. Gitar: install on `tiemma/captainmorgue-cluster`, ship the checkin canary as a PR so Gitar reviews it.
+  6. Dash0 check rule on checkin error rate, notification webhook to `POST https://captainmorgue.cnh.radarhq.io/events`.
+- No team token any more: the service runs open for the hackathon.
 - Sammy: the team token is not needed on the cluster; leave `cm-token` out of the secret.
 - Sammy (14:30): Emmanuel is granting you write access to `tiemma/captainmorgue-cluster`; accept the invite, then push your merge `c457141`. Your agent then runs the deploy steps: Argo sync through Radar, confirm `captainmorgue`, `checkin`, `payments`, `kiosk`, `confdb`, `otel-collector` healthy, open `https://captainmorgue.cnh.radarhq.io` (wall screen, not the starter app). Then post in your ledger "deployed" so everyone does the set-up-your-agent milestone.
 - Sammy: Elasticsearch URL for Secret `captainmorgue` key `elastic-url`: `https://my-elasticsearch-project-ec8b85.es.us-east4.gcp.elastic.cloud:443` (Elastic serverless project). API key from Emmanuel directly. `feat/infra` now also passes `cm-token` as `CM_TOKEN` (5fe5602); README has the full secret command.
