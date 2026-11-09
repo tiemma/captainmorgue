@@ -22,6 +22,7 @@ import { useIncident } from "./use-incident";
 import {
   ackInbox,
   broadcast,
+  decideApproval,
   fetchGraph,
   fetchInbox,
   fetchRecord,
@@ -35,6 +36,7 @@ import {
 } from "./service-client";
 import type { Envelope, IncidentEvent, IncidentRecord, Person, TeamGraph } from "./service-client";
 import { TeamGraphView } from "./team-graph";
+import { ApprovalsPanel } from "./approvals-panel";
 import "./live-workspace.css";
 
 type Tab = "Incident" | "Requests" | "Crew" | "Teams" | "Record" | "Postmortems";
@@ -750,6 +752,19 @@ export function LiveWorkspace() {
                         <Empty>No active resource claims.</Empty>
                       )}
                     </Panel>
+                    <ApprovalsPanel
+                      approvals={state?.approvals || []}
+                      identity={identity}
+                      commander={state?.commander}
+                      busy={busy}
+                      onDecide={(approval, decision, why) =>
+                        run(
+                          () => decideApproval(approval.id, identity, decision, why),
+                          `Approval ${approval.id} ${decision === "approve" ? "approved" : "denied"}.`,
+                          "The approval did not change.",
+                        )
+                      }
+                    />
                     {!!state?.parts?.length && (
                       <Panel title="Work">
                         {state.parts.map((part) => (

@@ -101,6 +101,23 @@ export interface IncidentState {
   claims: Claim[] | null;
   deliveries: { [seq: string]: { [actor: string]: string } } | null;
   prs?: PullRequest[] | null;
+  approvals?: Approval[] | null;
+}
+
+export interface Approval {
+  id: number;
+  actor: string;
+  approver: string;
+  action: string;
+  resource?: Resource;
+  why: string;
+  status: 'pending' | 'approved' | 'denied' | 'expired';
+  requested: string;
+  expires: string;
+  decided_by?: string;
+  decided: string | null;
+  note?: string;
+  usable: boolean;
 }
 
 export interface PullRequest {
@@ -297,6 +314,10 @@ export function broadcast(from: string, text: string) {
 
 export function updateTask(incidentId: string, actor: string, task: string) {
   return request<void>(`/incidents/${encodeURIComponent(incidentId)}/task`, { actor, task });
+}
+
+export function decideApproval(id: number, actor: string, decision: 'approve' | 'deny', why?: string) {
+  return request<Approval>(`/approvals/${id}`, { actor, decision, why });
 }
 
 export function leave(incidentId: string, actor: string) {
