@@ -26,15 +26,15 @@ The incident id is `INC-1` unless the service sets `INCIDENT_ID`. Routes with `{
 | `GET /record/{id}` | | `200` [Record](#record) | `404` | |
 | `GET /record/{id}.md` | | `200` `text/markdown`, the RFO | `404` | |
 | `GET /records` | | `200` array of `{"id", "title", "severity", "opened", "resolved", "duration", "summary", "fixed_by"}`, newest first | | |
-| `POST /events` | an [Event](#event); needs `actor` and a `type` from: `alert action decision relay conflict investigation signal ship join close note action_item pr` | `202`, empty | `400` | that event; `close` also resolves the incident and writes the record |
+| `POST /events` | an [Event](#event); needs `actor` and a `type` from: `alert action decision relay conflict investigation signal ship join close note action_item pr` | `202`, empty | `400`; `403` a `close` from anyone but the commander (or a team manager when there is no commander); `409` a `close` when already closed | that event; `close` also resolves the incident and writes the record |
 | `POST /broadcast` | `{"from": "login", "text": "..."}` | `202`, empty (the relay is appended a moment later) | `400` if `from` or `text` is empty | `relay` |
 | `POST /incidents/{id}/join` | `{"actor", "team"?, "role"?, "task"?, "repo"?, "tools"?: []}` | `200` [join response](#join-response) | `400` bad role, missing actor, team not in `roster.yaml`; `404` | `join`, then a `digest` for the joiner when they missed events |
 | `POST /incidents/{id}/leave` | `{"actor"}` | `204` | `404` not joined or wrong incident | `leave`, then `vote_request` when the leaver managed the team |
 | `POST /incidents/{id}/task` | `{"actor", "task"}` | `204` | `404` not joined or wrong incident | `action` with text `Working on: <task>` |
-| `POST /incidents/{id}/status` | `{"actor", "status"?, "severity"?, "why"?}`; `status` one of `investigating mitigated resolved closed`, `severity` one of `sev1 sev2 sev3` | `200` `{"status", "severity"}` | `400` bad value or neither given; `403` resolved or closed by anyone but the commander (or a team manager when there is no commander); `409` not forward, or already closed; `404` | `status`, or `close` for `closed` (text is `why`, the summary) |
+| `POST /incidents/{id}/status` | `{"actor", "status"?, "severity"?, "why"?, "part"?}`; `status` one of `investigating mitigated resolved closed`, `severity` one of `sev1 sev2 sev3`; with `part`, `status` must be `mitigated` or `resolved` and applies to that part only | `200` `{"status", "severity"}` (the incident's) | `400` bad value or neither given, or a part status other than `mitigated`/`resolved`; `403` resolved or closed by anyone but the commander (or a team manager when there is no commander); `409` not forward, or already closed; `404` | `status`, or `close` for `closed` (text is `why`, the summary) |
 | `POST /incidents/{id}/vote` | `{"actor", "term", "candidate"?, "granted": bool}` | `204` | `409` no election open for that term and candidate; `404` | `election` once a majority grants |
 | `POST /heartbeat` | `{"actor"}` | `204` | `404` not joined | no event; a `state` when the actor's status flips back to online, and a `digest` when they come back after missing enough |
-| `GET /inbox/{actor}?after=<seq>&wait=<seconds>` | | `200` `{"messages": [Envelope], "cursor": <seq>}` | `400` when `after` or `wait` is not a number | marks `sent` deliveries `delivered`, then a `state` |
+| `GET /inbox/{actor}?after=<seq>&wait=<seconds>` | | `200` `{"messages": [Envelope], "cursor": <seq>, "unread": <n>}` | `400` when `after` or `wait` is not a number | marks `sent` deliveries `delivered`, then a `state` |
 | `POST /inbox/{actor}/ack` | `{"seq"}` | `204` | | marks every delivery up to `seq` `seen`, then a `state` |
 | `POST /messages` | `{"from", "to": [], "kind": "ask"\|"broadcast"\|"reply", "text", "reply_to"?}` | `200` `{"seq", "to": [], "why"}` | `400` missing fields, unknown recipient, no recipient, `reply_to` not an ask | `ask`, `broadcast` or `reply` |
 | `POST /claims` | `{"actor", "text", "resource": {"kind", "namespace"?, "name"}}` | `200` `{"granted": true, "key", "holder"}` or `{"granted": false, "key", "holder", "reason"}` | `400` missing actor, kind or name | `claim` on a new grant (not a renewal); `conflict` to the holder when refused |
@@ -42,9 +42,9 @@ The incident id is `INC-1` unless the service sets `INCIDENT_ID`. Routes with `{
 Notes:
 
 - `join`: `role` is `commander`, `responder` (default) or `scribe`. Team managers are elected, never chosen. Only one commander: a second `commander` join comes back with `role: "responder"`. `team` defaults to the actor's team in `roster.yaml`. The first online joiner of a team with no online manager becomes its manager and the term goes up by one.
-- `inbox`: without `after`, the actor's acked cursor is used. `wait` long-polls, capped at 25 s; it returns as soon as a message lands. An empty poll returns `{"messages": [], "cursor": <after>}`.
+- `inbox`: without `after`, the actor's acked cursor is used. `wait` long-polls, capped at 25 s; it returns as soon as a message lands. An empty poll returns `{"messages": [], "cursor": <after>, "unread": <n>}`. `unread` is how many inbox messages are after the actor's acked cursor, whatever `after` was; the web nav badge shows it.
 - `messages` `to` entries are a login, a team id (everyone joined in that team), or `root` (everyone joined). The sender is never in `to`. A `reply` goes to the asker of `reply_to` and ignores `to`.
-- `status`: the incident only moves forward through `open investigating mitigated resolved closed` and may skip steps. Anyone may move it to `investigating` or `mitigated` and set severity. Only the commander, or any team manager when nobody is commander, may move it to `resolved` or `closed`. `POST /events` with `type: close` is not checked; prefer `status`.
+- `status`: the incident only moves forward through `open investigating mitigated resolved closed` and may skip steps. Anyone may move it to `investigating` or `mitigated` and set severity. Only the commander, or any team manager when nobody is commander, may move it to `resolved` or `closed`. `POST /events` with `type: close` goes through the same check (`403`). Only one `close` is ever appended per open incident: a second, even concurrent, gets `409`, so the RFO is written once. A status with `part` never moves the incident.
 - `claims`: the key is `namespace/kind/name`, kind lowercased. A grant holds for 5 minutes; the same actor claiming again renews it. A claim stops counting once it expires or its holder goes offline.
 
 ### Join response
@@ -77,6 +77,7 @@ Every `event` is followed by a `state`, so the wall can redraw panels from `stat
 | `incident.severity` | `""` \| `"sev1"` \| `"sev2"` \| `"sev3"` | The latest severity set. |
 | `incident.opened` | RFC 3339 time or null | Timestamp of the first event. |
 | `incident.closed` | RFC 3339 time or null | Timestamp of the `close` event. |
+| `counts` | object | Ready-to-show totals for the KPI row: `parts` (`parts[]`), `claims` (active `claims[]`), `crew_online` (`people` online), `crew_total` (`people`), `events` (all events), `open_asks` (`ask` events with no `reply`), `open_prs` (`prs[]`), `action_items` (`action_item` events with an owner). |
 | `teams[]` | array, roster order | One entry per team in `roster.yaml`, live. |
 | `teams[].id`, `.name` | string | From the roster. |
 | `teams[].manager` | string | Current manager's login, `""` when nobody manages. |
@@ -97,7 +98,7 @@ Every `event` is followed by a `state`, so the wall can redraw panels from `stat
 | `conflict` | [Event](#event) or null | The latest `conflict` event, whole. |
 | `claims[]` | array, oldest first | Active claims only: `{"key": "ns/kind/name", "actor", "text", "since", "expires"}`, times RFC 3339. |
 | `deliveries` | object, seq (as a string key) to object of login to status | Per recipient delivery of every `ask`, `broadcast`, `relay` and `conflict`: `sent` (queued), `delivered` (their poller fetched it), `seen` (they acked it, or replied to the ask). |
-| `parts[]` | array | Reserved for incident parts `{"id", "name", "owner", "progress", "status", "resolved_at", "note"}`. Always `[]` today. |
+| `parts[]` | array, first named first | One per distinct problem named with `part` on a `note` (`/captainmorgue:note --part <name> <text>`) or on a part status (`/captainmorgue:status-set mitigated --part <name> [why]`). `{"id", "name"}` are the name, `owner` who first named it, `note` the latest note text on it, `status` `investigating` until a part status sets `mitigated` or `resolved`, `progress` 0, 50 or 100 to match, `resolved_at` the first part status time. An `open` event starts the list over. |
 | `signals` | object, key to Signal | Two sources, one shape, see [Signals](#signals): `<service>` from the latest `alert`/`recovered` event carrying a `signal`, and `<service>_<metric>` from live Dash0 queries. `{}` when neither has happened. |
 | `prs[]` | array, oldest first | Pull requests opened for affected services: `{"service", "url", "author", "ts"}`, one per `pr` event. |
 | `repos` | object or null | From `roster.yaml` `services`: service name to `{"repo", "paths": []}`. `/captainmorgue:fix` reads it. |
@@ -170,6 +171,7 @@ When a signal's `status` changes (a new signal counts as changing from `ok`), th
 | `exit_code`, `duration_ms` | int, omitted | On `action` events from the shell hook. Shown in the RFO steps. |
 | `status` | string, omitted | On `status` events, the state it moved to. |
 | `severity` | string, omitted | On `status` events, the severity it set. |
+| `part` | string, omitted | On `note` and `status` events, the incident part it is about. See `state.parts`. |
 
 ### Event types
 
@@ -181,9 +183,9 @@ When a signal's `status` changes (a new signal counts as changing from `ok`), th
 | `decision` | `POST /events` | `resource` | A decision; counts as a write for conflict checks. |
 | `signal` | `POST /events`, or the service when a Dash0 signal changes status | `team` | A telemetry signal. |
 | `ship` | `POST /events` (Gitar, Argo) | `artifacts` | A fix shipped. |
-| `status` | `POST /incidents/{id}/status` | `status`, `severity`, `why` | The incident moved state or changed severity; text is `moved INC-1 to <status>, set severity <sev>: <why>`. |
+| `status` | `POST /incidents/{id}/status` | `status`, `severity`, `why`, `part`? | The incident moved state or changed severity; text is `moved INC-1 to <status>, set severity <sev>: <why>`. With `part`, only that part moved; text is `marked <part> <status>: <why>`. |
 | `close` | `POST /incidents/{id}/status` with `closed`, or `POST /events` | | Incident closed; text is the closing summary. The RFO is written right after, then each action item owner gets an `action`. |
-| `note` | `POST /events` (`/captainmorgue:note`) | | A finding, decision or piece of evidence (a Radar investigation, a Dash0 query). The latest is the fallback root cause. |
+| `note` | `POST /events` (`/captainmorgue:note`) | `part`? | A finding, decision or piece of evidence (a Radar investigation, a Dash0 query). The latest is the fallback root cause. |
 | `action_item` | `POST /events` (`/captainmorgue:action`) | `to` (the owner) | A follow-up for the RFO. A URL in the text becomes its `link`. |
 | `pr` | `POST /events` (`cm pr`) | `resource` `{"kind": "Service", "name": <service>}`, `artifacts` `[{"label": "pull request", "url"}]` | A pull request opened for an affected service. Becomes `state.prs` and the RFO's remediation. |
 | `action` from `captainmorgue` | service, after the RFO is written | `to` (one owner), `why` | That owner's action items, one per line. |
