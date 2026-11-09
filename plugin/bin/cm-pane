@@ -98,7 +98,7 @@ pane() {
   : >"$FEED"
   follow &
   POLL=$!
-  local shown=0 n line status
+  local shown=0 n line status read_started
   trap 'kill $POLL 2>/dev/null; rm -f "$FEED"' EXIT
   trap 'exit 0' INT TERM HUP
   redraw
@@ -111,9 +111,10 @@ pane() {
       shown=$n
       printf '> '
     fi
+    read_started=$SECONDS
     IFS= read -r -t 1 line
     status=$?
-    if [ "$status" -gt 128 ]; then
+    if [ "$status" -gt 128 ] || { [ "$status" -ne 0 ] && [ "$SECONDS" -gt "$read_started" ]; }; then
       continue
     elif [ "$status" -ne 0 ]; then
       break
