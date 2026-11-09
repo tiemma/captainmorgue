@@ -27,6 +27,14 @@ Joined the live incident as tiemma (platform, manager). Four crew agents on feat
 - Nothing.
 
 ## Handing off
+- Sammy (16:00), to conclude the demo path, in order:
+  1. **Gitar on PR #1**: https://github.com/tiemma/captainmorgue-cluster/pull/1 (fault switch for checkin) has no review and no checks; Gitar looks installed on `tiemma/captainmorgue` only. Add Gitar to `tiemma/captainmorgue-cluster` (or trigger it on the PR), let it review, then merge. Argo deploys `main`.
+  2. **Verify the fault switch on the cluster** after the image builds: with kubeconfig `scripts/fault.sh on slow-checkin --ttl 300` then `status` then `off`; without kubeconfig use the Radar Job in the cluster README ("Fault switch, for the demo incident"). Check checkin latency and `fault=slow-checkin` spans show in Dash0.
+  3. **Dash0**: recreate Secret `dash0` with the token above, restart `otel-collector`, confirm no `Exporting failed` lines.
+  4. **Elasticsearch**: new API key with write on `cm-*` in the serverless project, update `elastic-api-key`, restart `captainmorgue`; log must say `elasticsearch=true`.
+  5. **Dash0 check rule** on checkin p95 latency or 5xx rate, notification webhook `POST https://captainmorgue.cnh.radarhq.io/alerts` (endpoint lands from feat/alert shortly; `scripts/trigger.sh` is the manual fallback).
+  6. **Rehearse** `docs/runbooks/` 01-06 with Emmanuel and Jubril, then 07 (alert to triage) and 08 (close and RFO) when they land. Update the plugin first (0.2.4+).
+  7. **Story**: STORY.md beats: fault on -> Dash0 alert -> CaptainMorgue opens the incident and pages Platform -> claims stop two people restarting confdb -> Radar investigation -> fix -> recovered -> close -> RFO with action items.
 - Everyone (15:40): plugin is now 0.2.1. Run `claude plugin marketplace update captainmorgue && claude plugin update captainmorgue@captainmorgue`, restart Claude Code, then `/captainmorgue:join` again (the service was restarted). New: roles (`CM_ROLE`), task (`/captainmorgue:task`), asks shown in chat with a picker, `/captainmorgue:console` (needs tmux), one persistent alert for asks, conflicts, escalations and joins, claims before cluster writes, catch-up digest. Runbooks: `docs/runbooks/`.
 - Sammy: Dash0 token for Secret `dash0` key `token` (endpoint `ingress.us-west-2.aws.dash0.com:4317`), verified against Dash0: `auth_PwAyysWcXH4VRJVkr9MUAlsF3aIgVCR7`. Recreate the secret, restart `otel-collector`, confirm no `Exporting failed` lines.
 - Sammy (15:00), in order:
