@@ -19,7 +19,15 @@ Sends what you do in Claude Code to the CaptainMorgue incident timeline, and bri
 | `/captainmorgue:ask @person-or-team <question>` | Direct question |
 | `/captainmorgue:reply <seq> <text>` | Answer an ask |
 
-The hooks never fail your turn: with `CM_URL` unset or the service down they do nothing. Failures are logged to `~/.captainmorgue/hook.log`, the poller's output to `~/.captainmorgue/poll.log`. Needs `bash`, `jq` and `curl`.
+The hooks never fail your turn: with `CM_URL` unset or the service down they do nothing. Failures are logged to `~/.captainmorgue/hook.log`, the poller's output to `~/.captainmorgue/poll.log`.
+
+## Requirements
+
+- macOS: `jq` and `curl` (`brew install jq`); the system bash 3.2 is enough. Notifications use the built-in Notification Center.
+- Linux: `bash`, `jq`, `curl`. Notifications use `notify-send` (libnotify) when installed.
+- Windows: Git for Windows (Claude Code runs the hooks in Git Bash) or WSL, plus `jq` on the PATH (`winget install jqlang.jq`); `curl` ships with both. Notifications use a Windows balloon via `powershell.exe`, no modules needed.
+
+Without a notifier the poller rings the terminal bell and writes the message to `~/.captainmorgue/poll.log`.
 
 ## Install
 

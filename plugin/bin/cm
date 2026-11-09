@@ -48,7 +48,7 @@ unread_lines() {
 stop_poller() {
   local pid
   pid=$(cat "$CM_DIR/poll.pid" 2>/dev/null)
-  ps -p "${pid:-0}" -o command= 2>/dev/null | grep -q cm-poll || return 0
+  poller_alive "$pid" || return 0
   kill "$pid"
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     kill -0 "$pid" 2>/dev/null || return 0
@@ -91,7 +91,7 @@ status)
         "Team:", teammates($s; $me)'
   fi
   echo "Unread: $(unread_lines | wc -l | tr -d ' ')"
-  if ps -p "$(cat "$CM_DIR/poll.pid" 2>/dev/null || echo 0)" >/dev/null 2>&1; then
+  if poller_alive "$(cat "$CM_DIR/poll.pid" 2>/dev/null)"; then
     echo "Poller: running"
   else
     echo "Poller: stopped"
