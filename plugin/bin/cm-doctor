@@ -67,7 +67,11 @@ while IFS=$'\t' read -r name target status; do
   esac
   if [ "$status" = Connected ]; then
     pass "MCP $name connected"
-    connected="$connected${connected:+, }${name##*:}"
+    case $name in
+    *dash0* | *radar* | *github* | *grafana* | *signoz* | *datadog* | *pagerduty* | *incident* | *kube* | *argo*)
+      connected="$connected${connected:+, }${name##*:}"
+      ;;
+    esac
   else
     fail "MCP $name $status" "$fix"
   fi
@@ -77,5 +81,5 @@ case $seen in *dash0*) ;; *) fail "Dash0 MCP not configured" "/plugin update cap
 case $seen in *radar*) ;; *) fail "Radar MCP not configured" "/plugin update captainmorgue@captainmorgue, then restart Claude Code" ;; esac
 
 write_file "$CM_DIR/tools" "$connected"
-echo "Connected MCP servers, sent as your tools on /captainmorgue:join: ${connected:-none}"
+echo "Connected MCP servers, incident tools sent on /captainmorgue:join: ${connected:-none}"
 if [ "$failed" = 0 ]; then echo "All checks passed."; else echo "$failed checks failed."; fi
