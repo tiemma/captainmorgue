@@ -1,6 +1,14 @@
 # Hackathon build plan
 
-Four hours, three people, demo at 5:30. This is the cut of [prd.md](prd.md) and [architecture.md](architecture.md) that we build today. Agree section 1 in the first 10 minutes, then work in parallel.
+Four hours, three people, demo at 5:30.
+
+| Who | Owns | Branch to start from |
+|---|---|---|
+| Emmanuel (tiemma) | The CaptainMorgue service and the Claude Code plugin: coordination, ordering, relay, conflicts, the record | `feat/service`, `feat/plugin`, `feat/service-intel` |
+| Jubril | The wall screen: `web/index.html` on the live stream, the record tab, the team view | `feat/service` (`web/index.html` is `docs/demo.html` today) |
+| Sammy | The cluster: conference app, Elasticsearch, Dash0, deploying CaptainMorgue, Gitar, the canary release, the Radar AI investigation, and the 5:30 story | `feat/infra` in `tiemma/captainmorgue-cluster` |
+
+The public URL `https://captainmorgue.cnh.radarhq.io` is the CaptainMorgue service: it serves the wall screen and the API. The conference app is internal and is watched through Radar. This is the cut of [prd.md](prd.md) and [architecture.md](architecture.md) that we build today. Agree section 1 in the first 10 minutes, then work in parallel.
 
 ## 0. What the judges score
 
@@ -110,7 +118,7 @@ scripts/replay.sh posts the demo.html events to /events for testing (person 2)
 
 The app and its deploy manifests live in `tiemma/captainmorgue-cluster` (person 3).
 
-## 3. Person 1: the service
+## 3. Emmanuel: the service and the plugin
 
 Go, one binary, serves the API and `web/index.html`.
 
@@ -125,15 +133,15 @@ Libraries: stdlib `net/http` for the server and SSE, `gopkg.in/yaml.v3`, `github
 
 Config: `PORT`, `ROSTER`, `ELASTIC_URL`, `ELASTIC_API_KEY`, `ANTHROPIC_API_KEY`. Credentials go into a Kubernetes Secret created by hand, never into git (the cluster repo is public).
 
-## 4. Person 2: agent and wall screen
+## 4. Jubril: the wall screen
 
 | By | Done when |
 |---|---|
-| 1:00 | Plugin hooks send events to `$CM_URL/events`. `/broadcast` command posts to `/broadcast`. Tested against person 1's laptop. `scripts/replay.sh` replays the demo events. |
+| 1:00 | `scripts/replay.sh` (on `feat/plugin`) replays the demo events into a local service, and the page is wired to it. |
 | 2:00 | `web/index.html` is `docs/demo.html` with the built-in `EVENTS` replaced by `new EventSource("/stream")`: `event` messages append log rows, `state` messages re-render the tree, parts, relay, conflict, investigation and signals. Playback controls removed. |
 | 2:45 | Record tab reads `/record/INC-1`. The "happened before" card shows `past_match`. |
 
-Plugin layout:
+Plugin layout (Emmanuel, on `feat/plugin`):
 
 ```
 plugin/.claude-plugin/plugin.json
@@ -147,21 +155,23 @@ plugin/commands/broadcast.md /broadcast <text>
 - `resource` is filled when the command names a Kubernetes object (`kubectl ... deploy/checkin`) or a Radar MCP call carries `kind` and `name`.
 - `send.sh` must never block or fail the Claude Code turn: short timeout, errors ignored after logging to a file.
 
-## 5. Person 3: cluster, Radar and the story
+## 5. Sammy: the cluster, Radar and the story
 
 | By | Done when |
 |---|---|
-| 0:15 | `## Before` in `STORY.md` with Radar Checks for `team-captainmorgue`, plus a screenshot. Everyone signed in to Radar Cloud. |
-| 1:00 | Conference app (check-in and payments, one small service is fine) with a CloudNativePG Postgres, shipped through Argo CD and visible in Radar. Prometheus scrape annotations on it. |
-| 1:30 | CaptainMorgue service deployed from person 1's image, with its Secret, reachable at `https://captainmorgue.cnh.radarhq.io`. Gitar installed on the app repo. |
-| 2:45 | A real release of the app shipped as a canary through Radar. Whatever it shows (a real problem or an all-clear), run a Radar AI investigation and post its summary to `/events` as `type: investigation`. Post Prometheus readings as `signal` events. |
+| 0:15 | Done: `## Before` is in `STORY.md`. Everyone signed in to Radar Cloud. |
+| 1:00 | Review and merge `feat/infra`: the conference app (check-in and payments on a CloudNativePG Postgres, with team labels, Prometheus scraping and a rehearsal-only slow switch), CaptainMorgue as Service `app`, and the Dash0 and Elasticsearch resources. Create the hand-made Secrets (`captainmorgue`, Dash0 token) through Radar `apply_resource`. Sync through Radar and confirm every workload is healthy. |
+| 1:30 | Make the GHCR package `ghcr.io/tiemma/captainmorgue` public, deploy it, and open `https://captainmorgue.cnh.radarhq.io`. Install Gitar on `tiemma/captainmorgue-cluster`. Check Dash0 receives the app's telemetry and Elasticsearch is green. |
+| 2:15 | Write the real release: a small change to check-in (a new attendee lookup) shipped as an Argo Rollouts canary through Radar. |
+| 2:45 | Whatever the canary shows (a real problem or an all-clear), run a Radar AI investigation on it, promote or abort, and post the summary to `/events` as `type: investigation`. Post the Prometheus or Dash0 readings as `signal` events. |
+| 3:00 | Lead the rehearsal and screen-record it. |
 | 4:00 | `## The story` in `STORY.md` from the `demo-story` skill: timeline, investigation, Checks before and after. Screenshots taken. |
 
 Budget: 2 CPU and 4 GiB of requests for everything in the cluster. Keep the service and app at 100m / 128Mi requests.
 
 ## 6. Checkpoints
 
-- **1:00** Person 2's hooks land in person 1's service. The app is live on the cluster.
+- **1:00** The plugin's events land in the service, the wall screen draws them, and `feat/infra` is merged.
 - **2:00** The service runs in the cluster. Two laptops stream into the wall screen.
 - **2:45** One full run: release, broadcasts, a conflict, the investigation, the record.
 - **3:00** Rehearsal with all three laptops, screen-recorded as the fallback.
