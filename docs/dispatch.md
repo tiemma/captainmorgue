@@ -169,8 +169,51 @@ sequenceDiagram
 
 - **Upward by default.** A member's event goes to the incident log; only their manager is *notified*. Managers summarise upward; CaptainMorgue sees everything. Matches the PRD's "dispatch upwards".
 - **Sideways only through CaptainMorgue.** `@dana` or `/captainmorgue:broadcast` go to CaptainMorgue, which routes and explains why. No agent-to-agent channel.
+- **Broadcasts are scoped by the team tree.** A broadcast to a team reaches every member downstream of it: `registration` reaches Registration and every sub-team under it; the root reaches everyone. CaptainMorgue already knows every connected member (each one holds an inbox poll open), so a broadcast is one delivery per connected member in that subtree, plus queued deliveries for members who are offline. No routing decision, no model call. The Claude relay pick is only for *unscoped* asks ("who knows about confdb?").
 - **Downward from managers and CaptainMorgue.** `dispatch` (do this part), `vote_request`, `conflict`, `election` result.
 - **Every message carries a reason** (`why`) and a term, so a person can tell who asked and whether that authority is still current.
+
+## 3d-1. Joining an incident
+
+Nobody is in an incident until they join it. Joining is what turns a laptop into a crew member: it starts the heartbeat, opens the inbox, and puts the person in the tree.
+
+```mermaid
+sequenceDiagram
+  participant U as Person
+  participant P as Plugin (cm)
+  participant CM as CaptainMorgue
+  U->>P: /captainmorgue:join INC-1 (or SessionStart sees an open incident for my team)
+  P->>CM: POST /incidents/INC-1/join {actor, team} + team token
+  CM->>CM: actor known in roster? team pulled in? add member, cursor = 0
+  CM-->>P: {incident, team, manager, term, members online, token, cursor}
+  P->>P: write ~/.captainmorgue/session.json, start poller (monitor)
+  P-->>U: briefing as SessionStart / prompt context
+  CM->>CM: emit join event -> wall screen tree, manager notified
+```
+
+- **How you learn there is an incident:** CaptainMorgue opens it (alert, or someone runs `/captainmorgue:open`), pulls in teams by ownership, and every member of those teams who has the plugin installed sees it on their next prompt or session start ("INC-1 is open, Registration was pulled in, run /captainmorgue:join"). The monitor also raises a desktop notification.
+- **Auto-join is off** (proposed): a person chooses to join, so the tree shows who is actually working, not who happens to have Claude Code open.
+- **Joining a team that is not pulled in yet** is allowed: it pulls the team in, and the manager is notified.
+- **First member of a team to join** becomes its manager if the roster has none online (PRD: first to join manages), term 1.
+- **Leaving:** `/captainmorgue:leave` hands open parts to the manager, closes the inbox, and if the leaver manages the team, starts an election straight away instead of waiting for the lease to expire.
+- **Rejoining** after a crash or a new session: join is idempotent; the server returns the stored cursor, so nothing is missed or repeated.
+
+### Plugin commands
+
+| Command | What it does |
+|---|---|
+| `/captainmorgue:join [incident] [team]` | Join, start heartbeat and poller, brief the session. Defaults: the open incident, your roster team. |
+| `/captainmorgue:leave` | Hand over parts, stop poller, election if you manage. |
+| `/captainmorgue:status` | Incident, your team, manager and term, who is online, your unread count, your open parts. |
+| `/captainmorgue:inbox` | Show and ack unread messages. |
+| `/captainmorgue:broadcast [team] <text>` | Broadcast to a team subtree; no team = your own team; `root` = everyone (managers only). |
+| `/captainmorgue:ask @who <text>` | Direct ask; `@who` can be a person, a team, or omitted to let CaptainMorgue pick. |
+| `/captainmorgue:take <part>` | Claim a part of the incident. |
+| `/captainmorgue:resolve <part> <how>` | Mark a part resolved; CaptainMorgue checks signals before tagging it. |
+| `/captainmorgue:open <title>` | Open an incident by hand (alerts open them automatically). |
+| `/captainmorgue:close` | Propose closing; the incident manager confirms. |
+
+Existing hooks keep sending activity. New: `SessionStart` briefs, `UserPromptSubmit` and `PostToolUse` inject unread messages, `Stop` blocks while an interrupt is unread, a monitor runs the poller.
 
 ## 3e. Demo beats this enables (all real, nothing faked)
 
@@ -244,6 +287,33 @@ Semantics: **at-least-once**, ordered per incident by `seq`, deduped on `id` by 
 - **Secrets.** Tool output is never sent. Prompt text and Bash commands are, so a pasted key in a command leaks. Scrub on the laptop before send (gitleaks rules) is the PRD answer; today it is not done.
 - **Hierarchy.** The PRD has per-team ordered subtrees carried upward and a raft-style manager election. This design is flat (one sequencer). The tree comes back as routing scopes (`team.registration.>`) and as the election's voter set, not as separate logs, until there is a reason to shard.
 
+## 7a. Failure modes of this design
+
+Where this design itself can go wrong, how we notice, and what we do about it. Separate from 3c, which is about people going quiet.
+
+| # | Failure mode | Effect | Detection | Mitigation (today / later) |
+|---|---|---|---|---|
+| 1 | **CaptainMorgue is a single point of failure**: sequencer, router, transport and a voter in one process | No messages, no elections, no wall screen | Hooks get connection errors; Radar shows the pod down | Hooks spool to disk and resend; one replica restarts fast and reloads from Elasticsearch / lease-based second replica |
+| 2 | **Split brain after a restart**: a second replica starts sequencing before the first is gone | Two events with the same seq; two managers in one term | Duplicate `seq` on write | `replicas: 1` and `strategy: Recreate` / lease in ES or Postgres before sequencing |
+| 3 | **Elasticsearch refresh lag** (~1 s) | An inbox read misses an event just written | Cursor gaps in tests | Serve inbox from the in-memory tail, ES only for history / Postgres if it bites |
+| 4 | **Event lost between append and persist** (crash after ack, before the async ES write) | Hole in the record | seq gap on reload | Write to ES before returning 202 for message kinds; activity events may stay async |
+| 5 | **Lost ack** (hook injected the message, ack request failed) | Message shown twice | Duplicate `id` seen by the hook | Dedupe by `id` in `~/.captainmorgue/seen`; at-least-once is the contract |
+| 6 | **False suspicion**: laptop on flaky Wi-Fi misses 3 heartbeats | Healthy manager deposed; churn of elections | Elections with the old manager back within seconds | 30 s lease, not 15; randomised election delay; a returning manager with the most-advanced cursor can win the next term back / adaptive timeout |
+| 7 | **Thundering herd** on reconnect (whole room back on Wi-Fi) | Burst of long-polls and 37-event digests | Service CPU spike | Digest instead of replay; jittered reconnect in the poller |
+| 8 | **No quorum**: team of 2 with one offline (2 of 3 voters needed, only member + CM) | Still elects (member + CM = 2 of 3), fine; team of 3 with 2 offline cannot | Election fails | Fold into parent team (PRD rule) |
+| 9 | **CaptainMorgue decides elections alone** in small teams (it is a voter and the transport) | One process effectively picks the manager | By design | Acceptable and stated; the vote rule (highest cursor) is deterministic and auditable in the record |
+| 10 | **Clock skew** across laptops | Wrong order if sorted by laptop time | Out-of-order timeline | Order by server `seq` only; laptop time kept as metadata |
+| 11 | **Spoofed actor**: anyone with the URL posts as anyone | Fake decisions, fake votes | None today | Team token at join; actor bound to token / GitHub OAuth |
+| 12 | **Secrets in prompts or commands** sent to the service | Credential leak into the record and the wall screen | Nothing today | Never send tool output; scrub prompt and command text with gitleaks rules on the laptop / plus server-side scrub |
+| 13 | **Context flooding**: injecting every message into every session | Claude loses track of its own task; token cost | Long hook outputs | Inject only `interrupt` and `inject` kinds for that person; cap per turn, link the rest to `/captainmorgue:inbox` |
+| 14 | **Hook latency** on every prompt | Typing feels slow | Prompt delay | Inbox read is a local cache filled by the poller; the hook reads the file, not the network |
+| 15 | **Idle sessions never see messages** (hooks cannot start a turn) | Ask goes unanswered while the person is in another window | `delivered` but not `seen` | Desktop notification from the monitor; escalation after 60 s / channels push |
+| 16 | **Monitors and channels are experimental / research preview** | Feature missing on a teammate's Claude Code version | Join reports no poller | Fallback: a plain background `cm poll &` started by the join command |
+| 17 | **Model-picked recipients are wrong** for an unscoped ask | Wrong people interrupted | Recipients reply "not me" | Scoped broadcasts need no model; model pick shows `why`, falls back to managers on error |
+| 18 | **Conflict rule false positives** (read + write on the same object) | Warnings people learn to ignore | Many conflicts per incident | Read verbs marked by the plugin (`Checked:`); model confirms before sending |
+| 19 | **Stale manager acts after losing its lease** (laptop was asleep) | Orders from an old term | Term on every decision | Decisions with an old term are recorded as `stale_term` and not routed |
+| 20 | **Public cluster budget** (2 CPU / 4 GiB) | Elasticsearch and the service starve each other | Radar shows OOMKilled / throttling | Elastic Cloud if in-cluster ES does not fit |
+
 ## 8. Hackathon cut vs later
 
 | Today (4 h) | Later |
@@ -261,7 +331,7 @@ Semantics: **at-least-once**, ordered per incident by `seq`, deduped on `id` by 
 2. Broker today: **A (Elasticsearch)** or **B (Postgres, already in the cluster)**? A keeps one store; B gives exact cursors and instant wake-up.
 3. Do conflicts **interrupt** (desktop notification) or only inject on the next prompt?
 4. Should a person's own agent auto-reply ("Dana is mid-rollback, will answer in 5 min") or always wait for the human?
-5. Who can broadcast to everyone, managers only or anyone?
+5. Root broadcast (everyone): managers only, as proposed in 3d-1?
 6. Team token per incident, or one shared token for the hackathon?
 7. Does the wall screen show delivery state (sent / seen) per recipient?
 

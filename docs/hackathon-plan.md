@@ -169,6 +169,17 @@ plugin/commands/broadcast.md /broadcast <text>
 
 Budget: 2 CPU and 4 GiB of requests for everything in the cluster. Keep the service and app at 100m / 128Mi requests.
 
+## 5a. Joining, receiving and the plugin commands (owner: to assign)
+
+Design in [dispatch.md](dispatch.md) sections 3d-1 (joining), 5 (getting messages into a session) and 7a (failure modes). Not owned by Emmanuel; pick it up by adding it to your ledger.
+
+| Piece | Done when |
+|---|---|
+| Service: `POST /incidents/{id}/join`, `/leave`, `POST /heartbeat`, `GET /inbox/{actor}?after=`, `POST /inbox/{actor}/ack` | Join returns team, manager, term, cursor; inbox long-polls; broadcast to a team delivers to every connected member of that subtree |
+| Plugin commands: `join`, `leave`, `status`, `inbox`, `broadcast [team]`, `ask @who`, `take`, `resolve`, `open`, `close` | Each command posts to the service and prints what happened |
+| Plugin receive path: `SessionStart` briefing, unread messages injected on `UserPromptSubmit` and `PostToolUse`, `Stop` blocks while a conflict is unread | Verified in a real session with two laptops |
+| Poller (plugin monitor, fallback `cm poll &`): heartbeat every 5 s, held `/inbox`, desktop notification, local inbox cache the hooks read | Closing a laptop shows amber at 15 s, election at 30 s |
+
 ## 6. Checkpoints
 
 - **1:00** The plugin's events land in the service, the wall screen draws them, and `feat/infra` is merged.
