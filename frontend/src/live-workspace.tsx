@@ -19,14 +19,19 @@ import type { PostmortemDocument } from "./postmortems";
 import { SAMPLE_POSTMORTEMS } from "./postmortems-fixtures";
 import { useIncident } from "./use-incident";
 import {
+  ackInbox,
+  broadcast,
+  fetchInbox,
   fetchRecord,
   fetchRecords,
   heartbeat,
   join,
+  leave,
   sendMessage,
   setIncidentStatus,
+  updateTask,
 } from "./service-client";
-import type { IncidentEvent, IncidentRecord, Person } from "./service-client";
+import type { Envelope, IncidentEvent, IncidentRecord, Person } from "./service-client";
 import "./live-workspace.css";
 
 type Tab = "Incident" | "Requests" | "Crew" | "Record" | "Postmortems";
@@ -95,6 +100,23 @@ function safeUrl(value?: string) {
   } catch {
     return undefined;
   }
+}
+
+function Spark({ points }: { points?: number[] }) {
+  if (!points || points.length < 2) return null;
+  return (
+    <svg className="cm-live-spark" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+      <polyline
+        points={points
+          .map((point, index) => `${(index / (points.length - 1)) * 100},${24 - point * 24}`)
+          .join(" ")}
+      />
+    </svg>
+  );
+}
+
+function errorText(reason: unknown, fallback: string) {
+  return reason instanceof Error ? reason.message : fallback;
 }
 
 function Empty({ children }: { children: string }) {
@@ -175,7 +197,9 @@ export function LiveWorkspace() {
   );
   const [task, setTask] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [kind, setKind] = useState<"ask" | "broadcast">("ask");
+  const [kind, setKind] = useState<"ask" | "broadcast" | "relay">("ask");
+  const [inbox, setInbox] = useState<Envelope[]>([]);
+  const [taskDraft, setTaskDraft] = useState("");
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState<IncidentEvent>();
   const [busy, setBusy] = useState(false);
@@ -210,6 +234,94 @@ export function LiveWorkspace() {
     }, 5000);
     return () => window.clearInterval(interval);
   }, [identity, browserPresence]);
+
+  useEffect(() => {
+    if (!identity) return;
+    const controller = new AbortController();
+    setInbox([]);
+    (async () => {
+      let after: number | undefined;
+      while (!controller.signal.aborted) {
+        try {
+          const page = await fetchInbox(identity, after, controller.signal);
+          after = page.cursor;
+          if (page.messages?.length)
+            setInbox((current) => [...current, ...page.messages!].slice(-50));
+        } catch (reason) {
+          if (controller.signal.aborted) return;
+          setActionError(errorText(reason, "Inbox could not be read."));
+          await new Promise((resolve) => window.setTimeout(resolve, 5000));
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, [identity]);
+
+  async function run(action: () => Promise<unknown>, success: string, fallback: string) {
+    if (busy) return;
+    setBusy(true);
+    setActionError("");
+    setNotice("");
+    try {
+      await action();
+      setNotice(success);
+    } catch (reason) {
+      setActionError(errorText(reason, fallback));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const markSeen = () => {
+    const last = inbox[inbox.length - 1];
+    if (!identity || !last) return;
+    run(
+      async () => {
+        await ackInbox(identity, last.seq);
+        setInbox([]);
+      },
+      "Inbox marked seen.",
+      "Inbox could not be acknowledged.",
+    );
+  };
+
+  const saveTask = (event: FormEvent) => {
+    event.preventDefault();
+    if (!identity || !incidentId || !taskDraft.trim()) return;
+    run(
+      async () => {
+        await updateTask(incidentId, identity, taskDraft.trim());
+        setTaskDraft("");
+      },
+      "Task updated.",
+      "Task could not be updated.",
+    );
+  };
+
+  const leaveIncident = () => {
+    if (!identity || !incidentId) return;
+    run(
+      async () => {
+        await leave(incidentId, identity);
+        setIdentity("");
+        setBrowserPresence(false);
+        setInbox([]);
+        setReply(undefined);
+      },
+      "You left the incident.",
+      "Could not leave the incident.",
+    );
+  };
+
+  const startReply = (event: IncidentEvent) => {
+    if (busy) return;
+    if (message.trim() && reply?.seq !== event.seq) {
+      setNotice("Send or clear your current draft before replying to another ask.");
+      return;
+    }
+    setReply(event);
+    setRecipient(event.actor);
+  };
 
   useEffect(() => {
     if (tab !== "Record" || !incidentId) return;
@@ -313,7 +425,7 @@ export function LiveWorkspace() {
       !identity ||
       !connected ||
       !message.trim() ||
-      !(reply?.actor || recipient.trim()) ||
+      !(reply?.actor || recipient.trim() || kind === "relay") ||
       busy
     )
       return;
@@ -321,18 +433,20 @@ export function LiveWorkspace() {
     setActionError("");
     setNotice("");
     try {
-      await sendMessage({
-        from: identity,
-        to: reply
-          ? [reply.actor]
-          : recipient
-              .split(",")
-              .map((value) => value.trim())
-              .filter(Boolean),
-        kind: reply ? "reply" : kind,
-        text: message.trim(),
-        ...(reply ? { reply_to: reply.seq } : {}),
-      });
+      const text = message.trim();
+      if (reply)
+        await sendMessage({ from: identity, to: [reply.actor], kind: "reply", text, reply_to: reply.seq });
+      else if (kind === "relay") await broadcast(identity, text);
+      else
+        await sendMessage({
+          from: identity,
+          to: recipient
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
+          kind,
+          text,
+        });
       setMessage("");
       setReply(undefined);
       setNotice(
@@ -532,11 +646,33 @@ export function LiveWorkspace() {
                     </Button>
                   </section>
                 )}
+                {state?.relay && (
+                  <section className="cm-live-attention">
+                    <Badge tone="info">Broadcast</Badge>
+                    <p className="text-paragraph-sm">
+                      {state.relay.from}: {state.relay.text}
+                      {!!state.relay.to?.length && (
+                        <span className="cm-live-caption text-paragraph-xs">
+                          {" "}To {state.relay.to.join(", ")}. {state.relay.why}
+                        </span>
+                      )}
+                    </p>
+                  </section>
+                )}
                 <div className="cm-live-incident-grid">
                   <Panel title="Activity">
                     <EventList events={events} onSelect={inspect} />
                   </Panel>
                   <div className="cm-live-context">
+                    <Panel title="Alerts">
+                      <EventList
+                        events={events
+                          .filter((event) => ["alert", "signal"].includes(event.type))
+                          .slice(-5)
+                          .reverse()}
+                        onSelect={inspect}
+                      />
+                    </Panel>
                     <Panel title="Claims">
                       {claims.length ? (
                         <ul className="cm-live-claims">
@@ -581,12 +717,13 @@ export function LiveWorkspace() {
                       </Panel>
                     )}
                     {!!Object.keys(state?.signals || {}).length && (
-                      <details className="cm-disclosure cm-signals-disclosure">
+                      <details className="cm-disclosure cm-signals-disclosure" open>
                         <summary>Signals</summary>
                         {Object.entries(state?.signals || {}).map(
                           ([name, signal]) => (
                             <div className="cm-live-signal" key={name}>
-                              <span className="text-paragraph-sm">{name}</span>
+                              <span className="text-paragraph-sm">{signal.label || name}</span>
+                              <Spark points={signal.spark} />
                               <Badge
                                 tone={
                                   signal.status === "critical" ? "danger" : signal.status === "warn" ? "amber" : "neutral"
@@ -605,6 +742,40 @@ export function LiveWorkspace() {
             )}
             {tab === "Requests" && (
               <>
+                {identity && (
+                  <Panel
+                    title="Inbox"
+                    action={
+                      <Button disabled={busy || !inbox.length} onClick={markSeen}>
+                        Mark seen
+                      </Button>
+                    }
+                  >
+                    {inbox.length ? (
+                      <ul className="cm-live-claims">
+                        {inbox.map((item) => {
+                          const ask = events.find((event) => event.seq === item.seq);
+                          return (
+                            <li key={item.seq}>
+                              <div>
+                                <span className="text-label-sm">{item.from}</span>
+                                <Badge tone={item.priority === "interrupt" ? "danger" : "neutral"}>
+                                  {item.kind}
+                                </Badge>
+                              </div>
+                              <p className="text-paragraph-sm">{item.text}</p>
+                              {item.kind === "ask" && ask && (
+                                <Button onClick={() => startReply(ask)}>Reply</Button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <Empty>{`Nothing waiting for ${identity}.`}</Empty>
+                    )}
+                  </Panel>
+                )}
                 <Panel title="Messages">
                   <EventList
                     events={events.filter((event) =>
@@ -612,19 +783,7 @@ export function LiveWorkspace() {
                     )}
                     onSelect={inspect}
                     deliveries={state?.deliveries}
-                    onReply={
-                      identity
-                        ? (event) => {
-                            if (busy) return;
-                            if (message.trim() && reply?.seq !== event.seq) {
-                              setNotice("Send or clear your current draft before replying to another ask.");
-                              return;
-                            }
-                            setReply(event);
-                            setRecipient(event.actor);
-                          }
-                        : undefined
-                    }
+                    onReply={identity ? startReply : undefined}
                   />
                 </Panel>
                 {identity ? (
@@ -651,7 +810,7 @@ export function LiveWorkspace() {
                       </p>
                     ) : (
                       <div className="cm-live-form-grid">
-                        <label className="cm-field">
+                        {kind !== "relay" && <label className="cm-field">
                           To
                           <input
                             disabled={busy}
@@ -662,18 +821,19 @@ export function LiveWorkspace() {
                             placeholder="Actor, team, or root"
                             required
                           />
-                        </label>
+                        </label>}
                         <label className="cm-field">
                           Kind
                           <select
                             disabled={busy}
                             value={kind}
                             onChange={(event) =>
-                              setKind(event.target.value as "ask" | "broadcast")
+                              setKind(event.target.value as typeof kind)
                             }
                           >
                             <option value="ask">Ask</option>
                             <option value="broadcast">Broadcast</option>
+                            <option value="relay">Relay (CaptainMorgue picks)</option>
                           </select>
                         </label>
                       </div>
@@ -700,7 +860,7 @@ export function LiveWorkspace() {
                           !connected ||
                           busy ||
                           !message.trim() ||
-                          !(reply?.actor || recipient.trim())
+                          !(reply?.actor || recipient.trim() || kind === "relay")
                         }
                       >
                         <Send size={14} />
@@ -715,6 +875,34 @@ export function LiveWorkspace() {
                   </p>
                 )}
               </>
+            )}
+            {tab === "Crew" && identity && (
+              <form className="cm-live-compose" onSubmit={saveTask}>
+                <div className="cm-live-compose-header">
+                  <h2 className="text-label-sm">
+                    {identity}: {people[identity]?.task || "No current task recorded"}
+                  </h2>
+                  <Button disabled={busy} onClick={leaveIncident}>
+                    Leave
+                  </Button>
+                </div>
+                <label className="cm-field">
+                  Task
+                  <input
+                    disabled={busy}
+                    value={taskDraft}
+                    onChange={(event) => setTaskDraft(event.target.value)}
+                    placeholder="What are you working on now?"
+                    required
+                  />
+                </label>
+                <div className="cm-live-compose-footer">
+                  <span className="text-paragraph-xs">Shown to the crew as your current task.</span>
+                  <Button type="submit" tone="amber" disabled={busy || !connected || !taskDraft.trim()}>
+                    Update task
+                  </Button>
+                </div>
+              </form>
             )}
             {tab === "Crew" && (
               <div className="cm-live-team-grid">

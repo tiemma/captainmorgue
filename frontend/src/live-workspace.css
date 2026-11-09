@@ -649,3 +649,18 @@
     padding: 16px;
   }
 }
+.cm-live-spark {
+  flex: 1;
+  min-width: 48px;
+  max-width: 120px;
+  height: 24px;
+}
+.cm-live-spark polyline {
+  fill: none;
+  stroke: var(--cm-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.cm-live-team-grid {
+  margin-top: 16px;
+}
