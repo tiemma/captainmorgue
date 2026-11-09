@@ -128,6 +128,52 @@ It sends a join prompt to the owners' agents with the team already set. Later, P
 - The voters are the team's members plus CaptainMorgue. A two-person team with one person gone still has a majority, two of three.
 - The new manager takes over the subtree log from CaptainMorgue's copy and continues `seq` from the last stored value.
 
+## 9a. Onboarding and the team graph
+
+### Onboarding
+
+- A person signs in (`cm login` or the web app) and picks the team they belong to.
+- They join a manager in one of two ways: as a member of that manager's team, or as the manager of a new sub-team under it. A manager names the parent team their team belongs to.
+- The result is the standing org tree. Incidents start from it: the onboarded managers lead their teams, first-to-join applies only when a team's manager is not in the incident, and elections cover drop-offs.
+
+### The graph model
+
+Same shape as the CostGraph context graph: entities, aliases and typed edges, with derived values computed at read time, never stored twice.
+
+- `cm-entities`: one document per thing. Kinds: `person`, `team`, `service`, `datastore`, `incident`. `parent_id` nests teams in teams and people in teams, so the tree comes from the entities themselves. `valid_from` and `valid_to`; nothing is deleted.
+- `cm-aliases`: the other names an entity is known by, so one service seen as a Kubernetes workload, a Dash0 service and a CODEOWNERS path is one entity. Namespaces: `k8s_workload`, `dash0_service`, `codeowners_path`, `github_login`, `email`.
+- `cm-edges`: `a_id`, `b_id`, `means`, `source`, `valid_from`, `valid_to`, `evidence[]`.
+
+| `means` | Between | `source` | Comes from |
+|---|---|---|---|
+| `member_of` | person to team | configured | Onboarding |
+| `manages` | person to team | configured | Onboarding, elections |
+| `part_of` | team to team | configured | Onboarding (also `parent_id`) |
+| `owns` | team to service or datastore | configured, observed | Kubernetes team labels, Dash0 catalog, CODEOWNERS |
+| `calls` | service to service | observed | Dash0 traces, Radar topology |
+| `uses` | service to datastore | observed | Radar topology, Dash0 database spans |
+| `depends_on` | team to team | inferred | A team's services call or use another team's services. Derived at read time from `owns` plus `calls` and `uses`. |
+| `messaged` | team to team | observed | Relays, @mentions and dispatches across teams in `cm-events`. Counted at read time. |
+| `shared_incident` | team to team | observed | Both teams pulled into the same incident. Counted at read time. |
+
+`messaged` and `shared_incident` are aggregations over `cm-events` for the requested window, so they never drift from the events. `depends_on` is resolved in the Go service from `owns` and `calls`/`uses`; Elasticsearch does not join.
+
+### API
+
+- `GET /api/graph?start=&end=&focus=&open=` returns `{window, nodes[], links[]}`. Each node: id, kind, name, parent_id, child_count, manager, status. Each link: a, b, means, source, count over the window, evidence (sample calls, message ids, incident ids).
+- Closed groups are collapsed in the service: a closed team's links are re-pointed to the team and their counts summed, so the response size is bounded by what is open.
+- `GET /api/graph/search?q=` ranks teams, people, services and links for the command palette, using the hybrid retriever from section 6.
+
+### The view
+
+- Canvas: `@xyflow/react` with `elkjs` layered layout and hierarchical compound nodes, as in the CostGraph context page. No new graph library.
+- The org tree is the backbone: CaptainMorgue at the top, teams as nested, collapsible groups, people inside them. Top-level teams start open, deeper ones closed.
+- Arcs between teams for `depends_on`, `calls`, `uses`, `messaged` and `shared_incident`, styled per `means`. Lines are hidden at rest. Hovering a team shows its arcs and labels and fades the rest; the selected team keeps its arcs.
+- Layer toggles per `means` filter the returned links on the client.
+- Inspector for the selected team or arc: members and manager, owned services, and the evidence behind each link.
+- URL state: `?start&end&focus=<id>&open=<ids>`, so a shared link reopens the same view.
+- The web app renders counts it is given and does no math.
+
 ## 10. Reading outside systems
 
 - CaptainMorgue holds the MCP connections to Dash0 and Radar. People use them through their own agent, and every read lands in the record.

@@ -55,8 +55,18 @@ Tagline: **Where incidents go to die.**
 | 34 | Is raw activity private? | No. Raw commands and output are visible to everyone in the incident, and anyone in the organisation can read the closed record. |
 | 35 | How are secrets kept out of the record? | Scrubbed twice: the plugin removes known secret patterns (tokens, keys, connection strings) before anything leaves the laptop, and CaptainMorgue scrubs again before storing. |
 | 36 | Can agents talk directly? | No. Every interaction between agents goes through CaptainMorgue as an event, so the record is complete. |
+| 37 | How do people get into the team tree? | At onboarding. After signing in, a person picks the team they belong to. They join a manager in one of two ways: as a member of that manager team, or as the manager of a new sub-team under it. A manager names the parent team their team belongs to. |
+| 38 | How does the onboarded tree relate to incidents? | Incidents use the onboarded tree and its managers by default. First-to-join becomes manager only when a team manager is not in the incident, and elections still cover a manager who drops off. |
+| 39 | How are relationships between teams shown? | A relationship view built from what CaptainMorgue collects: the team tree as the backbone, with arcs between teams for how they relate. Hovering a team highlights its arcs. |
+| 40 | What do the relationships mean? | A small fixed vocabulary: member of, manages, part of, owns, calls, uses, depends on, messaged, and shared an incident with. Each arc shows its relationship type and the evidence behind it. |
 
 ## 3. What people see
+
+### 3.0 Onboarding
+
+- A person signs in and picks the team they belong to.
+- They join a manager either as a member of that manager's team, or as the manager of a new sub-team under it. A manager names the parent team their team belongs to.
+- The result is the standing team tree that every incident starts from.
 
 ### 3.1 Joining an incident
 
@@ -71,6 +81,12 @@ Tagline: **Where incidents go to die.**
 - **Who was told, and why.** Every message CaptainMorgue relays shows who received it and the reason it chose them, so people can trust the routing and correct it when it is wrong.
 - **What is still open.** The incident split into parts, each with an owner, progress and, once closed, how it was resolved. A part can close while the incident stays open.
 - **Evidence.** Cluster detail from Radar, telemetry from Dash0, and Agent0's findings appear in the incident as they arrive, with links back to the source.
+
+### 3.2a How teams relate
+
+- One view shows how teams relate, built from what CaptainMorgue collects across incidents and from the services each team owns.
+- The team tree is the backbone. Arcs between teams show how they relate: one team's services call, use or depend on another's, the teams messaged each other, or they shared an incident.
+- Each arc names its relationship and shows the evidence behind it, such as the calls seen in traces or the incidents they shared. Hovering a team highlights its arcs.
 
 ### 3.3 When a manager drops off
 
