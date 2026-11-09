@@ -2225,7 +2225,7 @@ export function Foundations() {
   return (
     <div className="cm-foundations">
       <header>
-        <span className="cm-eyebrow">CAPTAINMORGUE / DESIGN FOUNDATIONS</span>
+        <span className="cm-eyebrow">CaptainMorgue / Design foundations</span>
         <div className="cm-foundations-brand">
           A little spirit.
           <br />A clear head.
@@ -2334,15 +2334,15 @@ export function Foundations() {
         </div>
         <div className="cm-type-specimen">
           <div>
-            <span>DISPLAY / FUNNEL DISPLAY</span>
+            <span>Display / Funnel Display</span>
             <strong className="cm-serif-sample">CaptainMorgue</strong>
           </div>
           <div>
-            <span>INTERFACE / GEIST</span>
+            <span>Interface / Geist</span>
             <strong>Every action has a person behind it.</strong>
           </div>
           <div>
-            <span>EVIDENCE / GEIST MONO</span>
+            <span>Evidence / Geist Mono</span>
             <code>14:44:20 / deployment/checkin / INC-2041</code>
           </div>
         </div>
