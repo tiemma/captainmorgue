@@ -1,9 +1,11 @@
 # Emmanuel (tiemma): service and plugin
 
 ## Now
-Elasticsearch, Claude relay and record writer, and the image build (crew agent on `feat/service-intel`).
+Reviewing `docs/dispatch.md` (messaging, raft-style elections, liveness) before building the inbox. Crew agents still on `feat/service-intel` and cluster `feat/infra`.
 
 ## Done
+- Project hooks: team context on every prompt, ledger reminder on stop (`.claude/settings.json`).
+- `docs/dispatch.md`: draft architecture for message delivery, team elections, non-responding members.
 - Plugin: hooks, `/captainmorgue:broadcast`, `scripts/replay.sh` (merged to `main`).
 - Fix: no conflict raised against an earlier conflict event.
 - Service: `/events`, `/broadcast`, `/stream`, `/record`, roster, conflict rule, serves `web/` (merged to `main`).
@@ -11,6 +13,7 @@ Elasticsearch, Claude relay and record writer, and the image build (crew agent o
 - Plan, contract and owners in `docs/hackathon-plan.md`.
 
 ## Next
+- Answer the open questions in `docs/dispatch.md` section 9, then build `/messages`, `/inbox`, heartbeats and the election.
 - Review and merge `feat/service-intel`, publish `ghcr.io/tiemma/captainmorgue`.
 - Review `feat/infra` in the cluster repo and hand it to Sammy.
 

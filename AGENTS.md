@@ -1,6 +1,6 @@
 # Working on CaptainMorgue
 
-Three people, each running Claude Code, building one product before the 5:30 demo. Read this, then [docs/hackathon-plan.md](docs/hackathon-plan.md) (the contract and who owns what), then the `ledger/` file of anyone whose work you depend on.
+Three people, each running Claude Code, building one product before the 5:30 demo. Read this, then [docs/hackathon-plan.md](docs/hackathon-plan.md) (the contract and who owns what), [docs/dispatch.md](docs/dispatch.md) (messaging, elections, liveness; draft), then the `ledger/` file of anyone whose work you depend on.
 
 ## Ledger: one file per person
 
@@ -20,6 +20,15 @@ Every session works the way Capy's captains do: one captain session plans and de
 - **The captain reviews the diff, then merges and pushes.** It updates the ledger with what landed.
 - Brief crew agents with the goal, the files to read, the contract section that applies, and what "done" means. Do not hand them credentials; run anything that needs a secret yourself.
 - CaptainMorgue does the same thing for an incident: it is the captain, each responder's agent is crew, every part of the incident has one owner, and the record is the review.
+
+## Staying in sync: hooks in `.claude/settings.json`
+
+This repo ships project hooks. Claude Code asks you to trust them the first time you open the repo; say yes.
+
+- **`scripts/hooks/team-context.sh`** runs on session start and on every prompt. It fetches `origin/main` in the background and, when there are commits you have not seen, hands Claude the new commit list, which docs and ledgers changed, and what others added to their ledgers. Your session always knows what the others just pushed. It never blocks: the fetch is backgrounded, so news shows up on the prompt after it lands.
+- **`scripts/hooks/ledger-reminder.sh`** runs when Claude finishes a turn. If you have committed since your `ledger/<name>.md` last changed, Claude is asked once to update and push it. Set `CM_LEDGER` to your ledger name (`emmanuel`, `jubril`, `sammy`) in your shell to turn it on.
+
+Docs live in the repo. Anything written about the design (plans, specs, diagrams) goes into `docs/` and is pushed as it is written, so the hook carries it to everyone. `docs/dispatch.md` is the current draft for messaging, elections and liveness.
 
 ## Branches and merging
 
