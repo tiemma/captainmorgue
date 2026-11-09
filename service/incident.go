@@ -40,7 +40,8 @@ type Event struct {
 	Service    string     `json:"service,omitempty"`
 	Signal     *Signal    `json:"signal,omitempty"`
 	ExitCode   *int       `json:"exit_code,omitempty"`
-	DurationMS int        `json:"duration_ms,omitempty"`
+	DurationMS int64      `json:"duration_ms,omitempty"`
+	Cwd        string     `json:"cwd,omitempty"`
 	Status     string     `json:"status,omitempty"`
 	Severity   string     `json:"severity,omitempty"`
 }

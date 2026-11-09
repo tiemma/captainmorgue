@@ -3,12 +3,15 @@
   flex: 0 0 auto;
   min-width: 0;
   max-width: 100%;
-  height: calc(100dvh - 64px);
+  height: calc(100dvh - 56px);
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--cm-line, #ddd2bf);
-  background: var(--cm-paper, #fffdf7);
+  border-left: 1px solid var(--cm-stroke-soft);
+  background: var(--cm-bg-card);
   box-sizing: border-box;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity var(--cm-duration-normal) var(--cm-ease-out);
 }
 
 .cm-side-panel-header {
@@ -16,8 +19,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--cm-line, #ddd2bf);
+  padding: 20px;
+  border-bottom: 1px solid var(--cm-stroke-soft);
 }
 
 .cm-side-panel-header h2 {
@@ -31,21 +34,23 @@
   flex: 0 0 36px;
   height: 36px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--cm-radius-control);
   background: transparent;
   color: inherit;
   cursor: pointer;
 }
 
-.cm-side-panel-header button:hover {
-  background: var(--cm-layer, #f6f1e7);
+@media (hover: hover) and (pointer: fine) {
+  .cm-side-panel-header button:hover {
+    background: var(--cm-bg-layer);
+  }
 }
 
 .cm-side-panel-body {
   min-height: 0;
   min-width: 0;
   flex: 1;
-  padding: 24px;
+  padding: 20px;
   overflow: auto;
   overscroll-behavior: contain;
   overflow-wrap: anywhere;
@@ -75,11 +80,16 @@
   width: 3px;
   height: 48px;
   border-radius: 999px;
-  background: #929292;
+  background: var(--cm-text-soft);
   opacity: 0;
 }
 
-.cm-side-panel-resize:hover::after,
+@media (hover: hover) and (pointer: fine) {
+  .cm-side-panel-resize:hover::after {
+    opacity: 1;
+  }
+}
+
 .cm-side-panel-resize:focus-visible::after,
 .cm-side-panel-resize:active::after {
   opacity: 1;
@@ -87,8 +97,8 @@
 
 .cm-side-panel-resize:focus-visible,
 .cm-side-panel-header button:focus-visible {
-  outline: 2px solid var(--cm-amber, #a65e20);
-  outline-offset: -2px;
+  outline: 2px solid var(--cm-accent);
+  outline-offset: 2px;
 }
 
 .cm-workspace:has(> .cm-side-panel[data-stacked="true"]) {
@@ -99,5 +109,11 @@
   height: auto;
   max-height: 75dvh;
   border-left: 0;
-  border-top: 1px solid var(--cm-line, #ddd2bf);
+  border-top: 1px solid var(--cm-stroke-soft);
+}
+
+@starting-style {
+  .cm-side-panel {
+    opacity: 0;
+  }
 }

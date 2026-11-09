@@ -4,6 +4,52 @@
 BIN="$(cd "$(dirname "$0")" && pwd)"
 [ "$1" = doctor ] && exec "$BIN/cm-doctor"
 
+shell_hook() {
+  local cm
+  cm=$(printf '%q' "$BIN/cm")
+  case "$1" in
+  zsh)
+    cat <<HOOK
+zmodload zsh/datetime
+autoload -Uz add-zsh-hook
+_cm_preexec() { _cm_cmd=\$1; _cm_start=\$EPOCHREALTIME; }
+_cm_precmd() {
+  local s=\$?
+  [ -n "\${_cm_cmd+x}" ] || return 0
+  ( $cm shell-event "\$s" "\$_cm_start" "\$EPOCHREALTIME" "\$_cm_cmd" >/dev/null 2>&1 & )
+  unset _cm_cmd
+}
+add-zsh-hook preexec _cm_preexec
+add-zsh-hook precmd _cm_precmd
+HOOK
+    ;;
+  bash)
+    cat <<HOOK
+HISTCONTROL=\${HISTCONTROL:+\$HISTCONTROL:}ignorespace
+_cm_debug() {
+  [ -n "\$_cm_armed" ] || return 0
+  _cm_armed=
+  _cm_start=\${EPOCHREALTIME:-\$SECONDS}
+}
+_cm_precmd() {
+  local h
+  h=\$(HISTTIMEFORMAT= builtin history 1)
+  if [ -n "\$_cm_start" ] && [ "\$h" != "\$_cm_last" ]; then
+    ( $cm shell-event "\$_cm_status" "\$_cm_start" "\${EPOCHREALTIME:-\$SECONDS}" "\${h#*[0-9]  }" >/dev/null 2>&1 & )
+  fi
+  _cm_last=\$h
+  _cm_start=
+  _cm_armed=1
+}
+trap _cm_debug DEBUG
+PROMPT_COMMAND="_cm_status=\\\$?;\${PROMPT_COMMAND:+\$PROMPT_COMMAND;}_cm_precmd"
+HOOK
+    ;;
+  *) echo "Usage: cm shell-hook zsh|bash" >&2 ;;
+  esac
+}
+[ "$1" = shell-hook ] && { shell_hook "$2"; exit 0; }
+
 if [ -z "$CM_URL" ]; then
   echo "CM_URL is not set, so CaptainMorgue is off."
   exit 0
@@ -238,8 +284,7 @@ fix)
   fi
   paths=$(jq -r --arg s "$first" '.state.repos[$s].paths // [] | join(", ")' <<<"$snap")
   branch="fix/$(tr '[:upper:]' '[:lower:]' <<<"$INCIDENT")-$first"
-  printf '%s
-' "$first" >"$CM_DIR/fixing"
+  printf '%s\n' "$first" >"$CM_DIR/fixing"
   echo "Open a pull request that fixes $first for $INCIDENT: $rest"
   echo "Repository: $repo. Change only under: $paths. Branch: $branch."
   echo "1. In a checkout of $repo, fetch and create $branch from the default branch."
@@ -266,10 +311,21 @@ pr)
   post_event "$(jq -nc --arg a "$ACTOR" --arg s "$svc" --arg u "$first" '{actor: $a, type: "pr", text: "opened a pull request for \($s): \($u)", resource: {kind: "Service", name: $s}, artifacts: [{label: "pull request", url: $u}]}')" "Recording the pull request"
   echo "Recorded the pull request for $svc: $first"
   ;;
+shell-event)
+  cmd=$5
+  case "$cmd" in "" | " "*) exit 0 ;; esac
+  grep -Eiq 'token|password|secret|authorization|api[_-]?key' <<<"$cmd" && exit 0
+  [ "$2" = 0 ] && result=ok || result=failed
+  CM_MAX_TIME=3 api POST /events "$(jq -nc --arg inc "$INCIDENT" --arg a "$ACTOR" --arg t "${CM_TEAM:-}" \
+    --arg text "Shell: ${cmd:0:300} ($result)" --argjson code "$2" --arg cwd "$PWD" \
+    --argjson ms "$(awk -v a="$3" -v b="$4" 'BEGIN { printf "%d", (b - a) * 1000 }')" '
+    {incident_id: $inc, actor: $a, type: "action", text: $text, exit_code: $code, duration_ms: $ms, cwd: $cwd}
+    + (if $t != "" then {team: $t} else {} end)')" >/dev/null 2>>"$LOG"
+  ;;
 console | pane)
   exec "$BIN/cm-pane" "$1"
   ;;
 *)
-  echo "Usage: cm join|leave|task|status|status-set|note|action|close|fix|pr|inbox|broadcast|ask|reply|console|pane|doctor"
+  echo "Usage: cm join|leave|task|status|status-set|note|action|close|fix|pr|inbox|broadcast|ask|reply|console|pane|shell-hook|doctor"
   ;;
 esac

@@ -15,19 +15,20 @@
 .cm-response-state {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  color: var(--cm-amber);
+  gap: 8px;
+  color: var(--cm-text-subtle);
   flex-shrink: 0;
 }
-.cm-response-state.is-closed {
-  color: var(--cm-success);
+.cm-response-state.is-closed > svg {
+  color: var(--cm-resolved);
 }
 .cm-response-active-dot {
   position: relative;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--cm-accent);
+  color: var(--cm-accent);
 }
 .cm-response-active-dot::after {
   content: "";
@@ -36,7 +37,6 @@
   border-radius: inherit;
   background: currentColor;
   opacity: 0.15;
-  box-shadow: 0 0 7px currentColor;
 }
 .cm-response-steps {
   list-style: none;
@@ -60,36 +60,37 @@
   top: 12px;
   bottom: -7px;
   width: 1px;
-  background: var(--cm-line);
+  background: var(--cm-stroke-soft);
 }
 .cm-response-time {
-  color: var(--cm-muted);
-  padding-top: 2px;
+  color: var(--cm-text-sub);
+  padding-top: 4px;
   font-variant-numeric: tabular-nums;
 }
 .cm-response-marker {
   z-index: 1;
   width: 8px;
   height: 8px;
-  margin: 6px 2px 0;
-  border: 2px solid var(--cm-secondary);
+  margin: 8px 0 0;
+  justify-self: center;
   border-radius: 50%;
-  background: var(--cm-paper);
+  background: var(--cm-text-soft);
 }
 .cm-response-description h4 {
-  margin: 0 0 5px;
-  color: var(--cm-ink);
+  margin: 0 0 4px;
+  color: var(--cm-text-strong);
 }
 .cm-response-description p {
   margin: 0;
   max-width: 65ch;
-  color: var(--cm-secondary);
+  color: var(--cm-text-subtle);
 }
 .cm-response-step.is-pending .cm-response-marker {
-  border-color: var(--cm-amber);
+  border: 1.5px solid var(--cm-warning);
+  background: transparent;
 }
 .cm-response-step.is-pending h4 {
-  color: var(--cm-amber);
+  color: var(--cm-text-strong);
 }
 @media (prefers-reduced-motion: no-preference) {
   .cm-response-active-dot::after {
@@ -99,4 +100,10 @@
 @keyframes cm-response-glow {
   0%, 100% { opacity: 0.12; }
   50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-response-active-dot::after {
+    animation: none;
+  }
 }

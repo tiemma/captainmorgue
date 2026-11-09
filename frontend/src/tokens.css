@@ -1,29 +1,83 @@
-@import url("https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Funnel+Display:wght@500;600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap");
 
 :root {
-  --cm-canvas: #f6f4ee;
-  --cm-paper: #fffefa;
-  --cm-layer: #efede6;
-  --cm-ink: #292621;
-  --cm-secondary: #625e55;
-  --cm-muted: #706b60;
-  --cm-line: #e4e0d6;
-  --cm-line-strong: #938879;
-  --cm-amber: #a65e20;
-  --cm-amber-soft: #f6ead9;
-  --cm-brass: #a3874b;
-  --cm-danger: #a33935;
-  --cm-danger-soft: #faeae7;
-  --cm-success: #397255;
-  --cm-success-soft: #e9f2eb;
-  --cm-info: #426a80;
-  --cm-info-soft: #eaf0f4;
-  --cm-nav: #25231f;
-  --cm-nav-surface: #39352e;
-  --cm-nav-line: #454039;
-  --cm-radius: 12px;
-  --cm-shadow-xs: 0 1px 2px #29262106;
+  color-scheme: light;
+  --cm-bg-page: #f5f5f5;
+  --cm-bg-card: #ffffff;
+  --cm-bg-layer: #eeeeee;
+  --cm-bg-subtle: #e3e3e3;
+  --cm-text-strong: #131313;
+  --cm-text-subtle: #373737;
+  --cm-text-sub: #696969;
+  --cm-text-soft: #adadad;
+  --cm-stroke-soft: rgba(0,0,0,.05);
+  --cm-stroke-mild: rgba(0,0,0,.10);
+  --cm-stroke-strong: rgba(0,0,0,.20);
+  --cm-accent: #2563eb;
+  --cm-critical: #dc2626;
+  --cm-warning: #d97706;
+  --cm-resolved: #16a34a;
+  --cm-conflict: #db2777;
+  --cm-shadow-xs: 0 1px 2px rgba(0,0,0,.04);
+
+  --cm-accent-soft: color-mix(in srgb, var(--cm-accent) 10%, transparent);
+  --cm-text-on-accent: #ffffff;
+  --cm-tag: #e7d3a3;
+  --cm-tag-ink: #3a2a0b;
+
+  --cm-radius-card: 12px;
+  --cm-radius-control: 8px;
+  --cm-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --cm-duration-fast: 150ms;
+  --cm-duration-normal: 200ms;
   --cm-font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --cm-display: "Funnel Display", "Geist", -apple-system, sans-serif;
-  --cm-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --cm-display: "Funnel Display", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --cm-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --cm-bg-page: #131313;
+    --cm-bg-card: #1b1b1b;
+    --cm-bg-layer: #232323;
+    --cm-bg-subtle: #373737;
+    --cm-text-strong: #ffffff;
+    --cm-text-subtle: #cfcfcf;
+    --cm-text-sub: #adadad;
+    --cm-text-soft: #696969;
+    --cm-stroke-soft: rgba(255,255,255,.05);
+    --cm-stroke-mild: rgba(255,255,255,.10);
+    --cm-stroke-strong: rgba(255,255,255,.20);
+    --cm-accent: #3b7dff;
+    --cm-accent-soft: color-mix(in srgb, var(--cm-accent) 10%, transparent);
+    --cm-critical: #f87171;
+    --cm-warning: #fbbf24;
+    --cm-resolved: #4ade80;
+    --cm-conflict: #f472b6;
+    --cm-shadow-xs: none;
+  }
+}
+
+:root[data-theme="dark"],
+.cm-wall {
+  color-scheme: dark;
+  --cm-bg-page: #131313;
+  --cm-bg-card: #1b1b1b;
+  --cm-bg-layer: #232323;
+  --cm-bg-subtle: #373737;
+  --cm-text-strong: #ffffff;
+  --cm-text-subtle: #cfcfcf;
+  --cm-text-sub: #adadad;
+  --cm-text-soft: #696969;
+  --cm-stroke-soft: rgba(255,255,255,.05);
+  --cm-stroke-mild: rgba(255,255,255,.10);
+  --cm-stroke-strong: rgba(255,255,255,.20);
+  --cm-accent: #3b7dff;
+  --cm-accent-soft: color-mix(in srgb, var(--cm-accent) 10%, transparent);
+  --cm-critical: #f87171;
+  --cm-warning: #fbbf24;
+  --cm-resolved: #4ade80;
+  --cm-conflict: #f472b6;
+  --cm-shadow-xs: none;
 }

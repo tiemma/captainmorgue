@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   ChevronRight,
+  CircleAlert,
   FileText,
   Search,
 } from "lucide-react";
@@ -285,6 +286,9 @@ export function Postmortems({
       </header>
       {error && (
         <div className="cm-postmortems-error" role="alert">
+          <span className="cm-empty-icon" aria-hidden="true">
+            <CircleAlert size={20} />
+          </span>
           <div>
             <h2 className="text-label-sm">Unavailable</h2>
             <p className="text-paragraph-sm">{error}</p>
@@ -305,17 +309,21 @@ export function Postmortems({
         <article className="cm-postmortem-document">
           <header className="cm-postmortem-title">
             <div className="cm-postmortem-meta text-paragraph-xs">
-              <span>{selected.id}</span>
-              <Badge tone={selected.resolved ? "success" : "neutral"}>
-                {selected.resolved ? "Closed" : "Record"}
-              </Badge>
+              <span className="cm-postmortem-id">{selected.id}</span>
+              <span className={selected.resolved ? "cm-toe-tag" : undefined}>
+                <Badge tone={selected.resolved ? "success" : "neutral"}>
+                  {selected.resolved ? "Closed" : "Record"}
+                </Badge>
+              </span>
             </div>
             <h1 ref={headingRef} tabIndex={-1} className="text-title-h5">
               {selected.title}
             </h1>
             <div className="cm-postmortem-meta text-paragraph-xs">
               {selected.resolved && (
-                <span>Closed {dateLabel(selected.resolved)}</span>
+                <span>
+                  Closed <time dateTime={selected.resolved}>{dateLabel(selected.resolved)}</time>
+                </span>
               )}
               {selected.fixed_by && (
                 <span>Resolved by {selected.fixed_by}</span>
@@ -409,9 +417,11 @@ export function Postmortems({
               <summary>Details</summary>
               <dl className="cm-postmortem-details text-paragraph-xs">
                 <dt>Opened</dt>
-                <dd>{dateLabel(selected.opened)}</dd>
+                <dd>
+                  <time dateTime={selected.opened}>{dateLabel(selected.opened)}</time>
+                </dd>
                 <dt>Incident</dt>
-                <dd>{selected.id}</dd>
+                <dd className="cm-postmortem-id">{selected.id}</dd>
               </dl>
             </details>
           )}
@@ -455,9 +465,17 @@ export function Postmortems({
                         {document.summary || "No summary has been recorded."}
                       </span>
                       <span className="cm-postmortem-meta text-paragraph-xs">
-                        <span>{document.id}</span>
+                        <span className="cm-postmortem-id">{document.id}</span>
                         {document.resolved && (
-                          <span>Closed {dateLabel(document.resolved)}</span>
+                          <span className="cm-postmortem-closed">
+                            <span
+                              className="cm-status-dot is-resolved"
+                              aria-hidden="true"
+                            />
+                            <span>
+                              Closed <time dateTime={document.resolved}>{dateLabel(document.resolved)}</time>
+                            </span>
+                          </span>
                         )}
                         {document.fixed_by && <span>{document.fixed_by}</span>}
                       </span>
@@ -469,7 +487,9 @@ export function Postmortems({
             </ul>
           ) : !loading && !error ? (
             <div className="cm-postmortems-empty">
-              <FileText size={24} aria-hidden="true" />
+              <span className="cm-empty-icon" aria-hidden="true">
+                <FileText size={20} />
+              </span>
               <h2 className="text-label-lg">
                 {query.trim() ? "No matches" : "No postmortems yet"}
               </h2>

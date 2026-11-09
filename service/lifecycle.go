@@ -34,7 +34,7 @@ type Step struct {
 	Status     string    `json:"status"`
 	Resource   string    `json:"resource,omitempty"`
 	ExitCode   *int      `json:"exit_code,omitempty"`
-	DurationMS int       `json:"duration_ms,omitempty"`
+	DurationMS int64     `json:"duration_ms,omitempty"`
 	Failed     bool      `json:"failed"`
 	Change     bool      `json:"change"`
 }
