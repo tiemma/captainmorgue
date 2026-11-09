@@ -19,7 +19,7 @@ log() {
 }
 
 api() {
-  local args=(-sSfN --max-time "${CM_MAX_TIME:-2}" -X "$1" -H 'Content-Type: application/json')
+  local args=(-sSN --fail-with-body --max-time "${CM_MAX_TIME:-2}" -X "$1" -H 'Content-Type: application/json')
   [ -n "${3:-}" ] && args+=(-d "$3")
   { [ -n "${CM_TOKEN:-}" ] && printf 'header = "Authorization: Bearer %s"\n' "$CM_TOKEN"; } | curl --config - "${args[@]}" "${CM_URL%/}$2"
 }
@@ -174,6 +174,7 @@ def guidance: {
   page: "For each page: you are paged to start triage on a service your team owns. Stop what you are doing. Show the alert to the person verbatim (seq, sender, why, text), then ask them with the AskUserQuestion tool, one question per page, with the options \"I will take it\", \"Hand off to someone\" and \"Let my agent investigate\". Take it: run /captainmorgue:task Triage <service> alert, then /captainmorgue:broadcast root I have the <service> alert. Hand off: ask who, run /captainmorgue:ask @them Can you take the <service> alert? plus the alert text, then /captainmorgue:task Handed <service> alert to @them. Let my agent investigate: run /captainmorgue:task Agent investigating <service>, then in a subagent (Agent tool) read the service with the Radar MCP (pods, events, recent changes, logs) and the Dash0 MCP (error rate, latency, failing traces), report the likely cause and a proposed fix to the person, and broadcast a one-line finding with /captainmorgue:broadcast root. Never change the cluster without the person approving it.",
   alert: "For an alert: tell the person in one line which service is alerting, which team owns it and who is paged.",
   recovered: "For a recovery: tell the person the service recovered. If they are the commander and the fix is confirmed, suggest closing the incident.",
-  digest: "For a digest: give the person this catch-up in a few lines before going on."
+  digest: "For a digest: give the person this catch-up in a few lines before going on.",
+  action: "For action items: tell the person which follow-ups from the incident record they own."
 };
 '

@@ -5,3 +5,10 @@ teams:
   - id: platform
     name: Platform
     owns: [confdb, otel-collector, captainmorgue]
+services:
+  checkin: {repo: tiemma/captainmorgue-cluster, paths: [app/, deploy/]}
+  kiosk: {repo: tiemma/captainmorgue-cluster, paths: [app/, deploy/]}
+  payments: {repo: tiemma/captainmorgue-cluster, paths: [app/, deploy/]}
+  confdb: {repo: tiemma/captainmorgue-cluster, paths: [deploy/]}
+  otel-collector: {repo: tiemma/captainmorgue-cluster, paths: [deploy/]}
+  captainmorgue: {repo: tiemma/captainmorgue, paths: [service/]}

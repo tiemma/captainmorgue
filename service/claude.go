@@ -116,22 +116,30 @@ func (b *brain) judgeConflict(ctx context.Context, prev, ev Event) (conflictVerd
 }
 
 type writtenRecord struct {
-	Summary      string        `json:"summary"`
-	FixedBy      string        `json:"fixed_by"`
-	Parts        []RecordPart  `json:"parts"`
-	Improvements []Improvement `json:"improvements"`
+	Summary             string        `json:"summary"`
+	FixedBy             string        `json:"fixed_by"`
+	RootCause           string        `json:"root_cause"`
+	ContributingFactors []string      `json:"contributing_factors"`
+	WentWell            []string      `json:"went_well"`
+	WentBadly           []string      `json:"went_badly"`
+	Parts               []RecordPart  `json:"parts"`
+	Improvements        []Improvement `json:"improvements"`
 }
 
 func (b *brain) writeRecord(ctx context.Context, title string, roster Roster, events []Event) (writtenRecord, error) {
 	prompt := fmt.Sprintf("Incident: %s\nRoster:\n%s\nEvents:\n%s", title, rosterText(roster), eventLog(events))
 	return ask[writtenRecord](ctx, b, anthropic.OutputConfigEffortMedium,
-		"Write the record of a resolved incident from its events. summary: two or three sentences on what broke, why, and who fixed it. fixed_by: who fixed it, as Name (Team). parts: each distinct problem as a short name and how it was resolved. improvements: concrete follow-ups, each with the roster login that should own it and a link from the events when one fits, else an empty string. Use only facts from the events.",
+		"Write the Reason For Outage of a resolved incident from its events. summary: two or three sentences on what broke, why, and who fixed it. fixed_by: who fixed it, as Name (Team). root_cause: one or two sentences, from investigation, note and decision events. contributing_factors: what made it worse or slower. went_well and went_badly: short lines on coordination, citing conflicts caught, claims that blocked a write, unanswered asks and escalations, auto-replies and elections. parts: each distinct problem as a short name and how it was resolved. improvements: concrete follow-ups NOT already listed as action_item events (those are kept as written), each with the roster login that should own it, a due hint such as within 1 week, and a link from the events (a pull request when one fits), else an empty string. Use only facts from the events.",
 		prompt, object(map[string]any{
-			"summary":  str,
-			"fixed_by": str,
-			"parts":    map[string]any{"type": "array", "items": object(map[string]any{"name": str, "how": str})},
+			"summary":              str,
+			"fixed_by":             str,
+			"root_cause":           str,
+			"contributing_factors": strList,
+			"went_well":            strList,
+			"went_badly":           strList,
+			"parts":                map[string]any{"type": "array", "items": object(map[string]any{"name": str, "how": str})},
 			"improvements": map[string]any{"type": "array", "items": object(map[string]any{
-				"text": str, "owner": str, "link": str,
+				"text": str, "owner": str, "link": str, "due": str,
 			})},
 		}))
 }

@@ -14,17 +14,21 @@ import {
 import { Avatar, Badge, Button, Dialog, Panel, ProgressStatus } from "./ui";
 import type { Tone } from "./ui";
 import { SidePanel } from "./side-panel";
-import { Postmortems } from "./postmortems";
+import { Postmortems, RfoSections, recordToDocument } from "./postmortems";
+import type { PostmortemDocument } from "./postmortems";
+import { SAMPLE_POSTMORTEMS } from "./postmortems-fixtures";
 import { useIncident } from "./use-incident";
 import {
   ackInbox,
   broadcast,
   fetchInbox,
   fetchRecord,
+  fetchRecords,
   heartbeat,
   join,
   leave,
   sendMessage,
+  setIncidentStatus,
   updateTask,
 } from "./service-client";
 import type { Envelope, IncidentEvent, IncidentRecord, Person } from "./service-client";
@@ -205,6 +209,9 @@ export function LiveWorkspace() {
   const [recordError, setRecordError] = useState("");
   const [recordLoading, setRecordLoading] = useState(false);
   const [recordAttempt, setRecordAttempt] = useState(0);
+  const [archive, setArchive] = useState<PostmortemDocument[]>();
+  const [archiveError, setArchiveError] = useState("");
+  const [archiveAttempt, setArchiveAttempt] = useState(0);
   const teams = state?.teams || [];
   const people = state?.people || {};
   const claims = state?.claims || [];
@@ -336,6 +343,51 @@ export function LiveWorkspace() {
       });
     return () => controller.abort();
   }, [tab, incidentId, state?.incident.closed, recordAttempt]);
+
+  useEffect(() => {
+    if (tab !== "Postmortems") return;
+    const controller = new AbortController();
+    setArchiveError("");
+    fetchRecords(controller.signal)
+      .then((list) =>
+        Promise.all(
+          (list || []).map((item) => fetchRecord(item.id, controller.signal)),
+        ),
+      )
+      .then((records) =>
+        setArchive(
+          records.length ? records.map(recordToDocument) : SAMPLE_POSTMORTEMS,
+        ),
+      )
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted)
+          setArchiveError(
+            reason instanceof Error
+              ? reason.message
+              : "The postmortem archive could not be loaded.",
+          );
+      });
+    return () => controller.abort();
+  }, [tab, state?.incident.closed, archiveAttempt]);
+
+  async function moveIncident(status: "resolved" | "closed") {
+    if (!incidentId || !identity || busy) return;
+    setBusy(true);
+    setActionError("");
+    try {
+      const result = await setIncidentStatus(incidentId, {
+        actor: identity,
+        status,
+      });
+      setNotice(`${incidentId} is ${result.status}.`);
+    } catch (reason) {
+      setActionError(
+        reason instanceof Error ? reason.message : "The status did not change.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function joinWorkspace(event: FormEvent) {
     event.preventDefault();
@@ -473,6 +525,24 @@ export function LiveWorkspace() {
                   ? "Connecting"
                   : "Reconnecting"}
             </span>
+            {identity &&
+              state &&
+              !["resolved", "closed"].includes(state.incident.status) && (
+                <Button
+                  onClick={() => moveIncident("resolved")}
+                  disabled={busy || !connected}
+                >
+                  Resolve
+                </Button>
+              )}
+            {identity && state && state.incident.status !== "closed" && (
+              <Button
+                onClick={() => moveIncident("closed")}
+                disabled={busy || !connected}
+              >
+                Close
+              </Button>
+            )}
             {!identity && (
               <Button
                 onClick={() => {
@@ -918,6 +988,13 @@ export function LiveWorkspace() {
                         Refresh
                       </Button>
                     </div>
+                    {record.summary && (
+                      <section>
+                        <h2 className="text-label-md">Summary</h2>
+                        <p className="text-paragraph-sm">{record.summary}</p>
+                      </section>
+                    )}
+                    <RfoSections record={record} />
                     <section>
                       <h2 className="text-label-md">Resolution</h2>
                       {record.parts?.length ? (
@@ -937,14 +1014,14 @@ export function LiveWorkspace() {
                       )}
                     </section>
                     <section>
-                      <h2 className="text-label-md">Timeline</h2>
+                      <h2 className="text-label-md">All events</h2>
                       <EventList
                         events={record.events || []}
                         onSelect={inspect}
                       />
                     </section>
                     <section>
-                      <h2 className="text-label-md">Prevention</h2>
+                      <h2 className="text-label-md">Action items</h2>
                       {record.improvements?.length ? (
                         <ul className="cm-live-improvements">
                           {record.improvements.map((item, index) => (
@@ -952,6 +1029,7 @@ export function LiveWorkspace() {
                               <p className="text-paragraph-sm">{item.text}</p>
                               <span className="text-paragraph-xs">
                                 {item.owner || "Owner not assigned"}
+                                {item.due && `, due ${item.due}`}
                               </span>
                               {safeUrl(item.link) && (
                                 <a
@@ -981,7 +1059,12 @@ export function LiveWorkspace() {
               </>
             )}
             {tab === "Postmortems" && (
-              <Postmortems error="The postmortem archive is not available from the service yet. Open Record for the current incident." />
+              <Postmortems
+                documents={archive}
+                loading={!archive && !archiveError}
+                error={archiveError || undefined}
+                onRetry={() => setArchiveAttempt((value) => value + 1)}
+              />
             )}
           </main>
           {inspector && (

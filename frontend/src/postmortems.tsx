@@ -8,6 +8,7 @@ import {
   Search,
 } from "lucide-react";
 import { Badge, Button, ProgressStatus } from "./ui";
+import type { IncidentRecord, Moment, Step } from "./service-client";
 import "./postmortems.css";
 
 export type PostmortemDocument = {
@@ -20,7 +21,194 @@ export type PostmortemDocument = {
   parts: { name: string; resolution: string }[];
   improvements: { text: string; owner?: string; link?: string }[];
   events?: { time: string; title: string; detail?: string }[];
+  rfo?: IncidentRecord;
 };
+
+export function recordToDocument(record: IncidentRecord): PostmortemDocument {
+  return {
+    id: record.id,
+    title: record.title,
+    summary: record.summary || "",
+    opened: record.opened || undefined,
+    resolved: record.window?.closed || record.resolved || undefined,
+    fixed_by: record.fixed_by || undefined,
+    parts: (record.parts || []).map((part) => ({
+      name: part.name,
+      resolution: part.how,
+    })),
+    improvements: (record.action_items || record.improvements || []).map(
+      (item) => ({
+        text: item.due ? `${item.text} (due ${item.due})` : item.text,
+        owner: item.owner,
+        link: item.link,
+      }),
+    ),
+    rfo: record,
+  };
+}
+
+function utcTime(value?: string | null) {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? value : date.toISOString().slice(11, 19) + " UTC";
+}
+
+function MomentList({ moments }: { moments: Moment[] }) {
+  return (
+    <ol className="cm-postmortem-timeline">
+      {moments.map((moment, index) => (
+        <li key={`${moment.ts}-${index}`}>
+          <span className="cm-postmortem-event-time text-paragraph-xs">
+            {utcTime(moment.ts)} {moment.actor}
+          </span>
+          <h3 className="text-label-sm">{moment.type}</h3>
+          <p className="text-paragraph-sm">{moment.text}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function stepTags(step: Step) {
+  return [
+    step.failed ? "failed" : step.status,
+    step.exit_code !== undefined && `exit ${step.exit_code}`,
+    step.duration_ms && `${step.duration_ms} ms`,
+    step.resource && `on ${step.resource}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function StepList({ steps }: { steps: Step[] }) {
+  return (
+    <ul className="cm-postmortem-prevention">
+      {steps.map((step, index) => (
+        <li key={`${step.ts}-${index}`}>
+          <p className="text-paragraph-sm">{step.text}</p>
+          <div className="cm-postmortem-meta text-paragraph-xs">
+            <span>{step.ts}</span>
+            {step.failed ? (
+              <Badge tone="danger">{stepTags(step)}</Badge>
+            ) : (
+              <span>{stepTags(step)}</span>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TextList({ items }: { items?: string[] | null }) {
+  return items?.length ? (
+    <ul className="cm-postmortem-parts">
+      {items.map((item, index) => (
+        <li key={`${item}-${index}`}>
+          <p className="text-paragraph-sm">{item}</p>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p className="text-paragraph-sm">None recorded.</p>
+  );
+}
+
+export function RfoSections({ record }: { record: IncidentRecord }) {
+  const window = record.window;
+  const prs = record.remediation || [];
+  const changes = record.changes || [];
+  return (
+    <>
+      {window && (
+        <section className="cm-postmortem-section">
+          <h2 className="text-label-md">Impact window</h2>
+          <dl className="cm-postmortem-details text-paragraph-xs">
+            <dt>Severity</dt>
+            <dd>{record.severity || "Not set"}</dd>
+            <dt>Detected</dt>
+            <dd>{utcTime(window.detected)}</dd>
+            <dt>Mitigated</dt>
+            <dd>{utcTime(window.mitigated)}</dd>
+            <dt>Resolved</dt>
+            <dd>{utcTime(window.resolved)}</dd>
+            <dt>Closed</dt>
+            <dd>{utcTime(window.closed)}</dd>
+            <dt>To mitigate</dt>
+            <dd>{window.to_mitigate || "Not recorded"}</dd>
+            <dt>Duration</dt>
+            <dd>{window.duration || "Not recorded"}</dd>
+          </dl>
+        </section>
+      )}
+      {record.root_cause && (
+        <section className="cm-postmortem-section">
+          <h2 className="text-label-md">Root cause</h2>
+          <p className="text-paragraph-sm">{record.root_cause}</p>
+          <TextList items={record.contributing_factors} />
+        </section>
+      )}
+      {!!record.timeline?.length && (
+        <section className="cm-postmortem-section">
+          <h2 className="text-label-md">Timeline</h2>
+          <MomentList moments={record.timeline} />
+        </section>
+      )}
+      <section className="cm-postmortem-section">
+        <h2 className="text-label-md">What went well</h2>
+        <TextList items={record.went_well} />
+      </section>
+      <section className="cm-postmortem-section">
+        <h2 className="text-label-md">What went badly</h2>
+        <TextList items={record.went_badly} />
+      </section>
+      {!!record.errors?.length && (
+        <section className="cm-postmortem-section">
+          <h2 className="text-label-md">Errors during the incident</h2>
+          <MomentList moments={record.errors} />
+        </section>
+      )}
+      {!!prs.length && (
+        <section className="cm-postmortem-section">
+          <h2 className="text-label-md">Fix pull requests</h2>
+          <ul className="cm-postmortem-prevention">
+            {prs.map((pr) => (
+              <li key={pr.url}>
+                <p className="text-paragraph-sm">{pr.service}</p>
+                <div className="cm-postmortem-meta text-paragraph-xs">
+                  <span>{pr.author}</span>
+                  {externalLink(pr.url) && (
+                    <a href={externalLink(pr.url)} target="_blank" rel="noopener noreferrer">
+                      {pr.url}
+                      <ArrowUpRight size={12} aria-hidden="true" />
+                    </a>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {!!record.steps?.length && (
+        <details className="cm-disclosure">
+          <summary>Steps taken</summary>
+          {!!changes.length && (
+            <section className="cm-postmortem-section">
+              <h2 className="text-label-md">Changes made</h2>
+              <StepList steps={changes} />
+            </section>
+          )}
+          {record.steps.map((group, index) => (
+            <section className="cm-postmortem-section" key={`${group.actor}-${index}`}>
+              <h2 className="text-label-md">{group.actor}</h2>
+              <StepList steps={group.steps} />
+            </section>
+          ))}
+        </details>
+      )}
+    </>
+  );
+}
 
 export type PostmortemsProps = {
   documents?: PostmortemDocument[];
@@ -167,6 +355,7 @@ export function Postmortems({
               </p>
             )}
           </section>
+          {selected.rfo && <RfoSections record={selected.rfo} />}
           {!!selected.events?.length && (
             <section className="cm-postmortem-section">
               <h2 className="text-label-md">Timeline</h2>
@@ -186,7 +375,9 @@ export function Postmortems({
             </section>
           )}
           <section className="cm-postmortem-section">
-            <h2 className="text-label-md">Prevention</h2>
+            <h2 className="text-label-md">
+              {selected.rfo ? "Action items" : "Prevention"}
+            </h2>
             {selected.improvements.length ? (
               <ul className="cm-postmortem-prevention">
                 {selected.improvements.map((item, index) => {
