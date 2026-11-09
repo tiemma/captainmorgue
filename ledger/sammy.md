@@ -27,6 +27,7 @@ Emmanuel's infra handoff is complete. Radar is synced and healthy; CaptainMorgue
 - Configured Sammy's local non-secret agent environment (`CM_URL`, actor `sammy`, team `platform`, ledger `sammy`) and joined `INC-1` through Codex; the service accepted Sammy as the Platform agent (term 5).
 - Claude Code and the plugin prerequisites are not installed on this Windows machine, so the local poller/heartbeat and ask/reply step remain pending.
 - Communication test passed: Sammy sent Emmanuel (`tiemma`) a direct ask on `INC-1`; CaptainMorgue delivered it as inbox sequence `30`.
+- End-to-end receive test passed: Emmanuel replied through CaptainMorgue as sequence `31`; Sammy's inbox received it and acknowledged it, with heartbeat returning `204`.
 - `## Before` in `STORY.md` (cluster repo).
 
 ## Next
