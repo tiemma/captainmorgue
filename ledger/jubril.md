@@ -1,7 +1,7 @@
 # Jubril: wall screen
 
 ## Now
-15:18 - Completing real React/service integration for Emmanuel's handoff: SSE Incident/Requests/Crew/Claims/Record, production frontend build, and repo plugin auto-install. Postmortems backend still pending. Holding final push until validation.
+15:30 - Live React workspace complete and validated against latest service main7152df6. Publishing frontend; archive APIs and cluster repo write access remain external blockers.
 
 ## Start here (from Emmanuel, 15:20)
 
@@ -42,6 +42,8 @@ env -u CM_URL scripts/e2e.sh                                       # must print 
 `CM_URL` pointing at the live service makes e2e hit production; always unset it for e2e.
 
 ## Done
+- 15:30 - Real React workspace integrated in c0a9404 and a2c72f1: SSE timeline, requests/replies/broadcasts and receipts, roles/tasks/profiles, teams/managers/terms, claims/conflicts, authoritative commander, server record and explicit browser join. Agent identities retain agent-owned liveness. Production Docker build serves React with compact wall at /wall.html; local setup in docs/local-development.md. Frontend build and both real-service browser tests pass; latest service/plugin E2E ALL PASSED. Local live app :8080, hot reload :5173, Storybook :6006.
+- 15:30 - Application project plugin setup69afaa1 preserves hooks and declares marketplace/enabled plugin. Matching cluster config prepared as ff503897 in /tmp/captainmorgue-cluster-plugin-setup; GitHub denied push for s1ntaxe770r. Claude trust/restart still required; own-agent milestone not claimed.
 - 15:13 - Postmortems library/document/search/state stories integrated85ad7c0,4b596e7,5f7d1cd. Live wall8527101 implements Emmanuel role/task/team/claim display requests. Local service health/record and standalone preview navigation verified; frontend and Storybook builds pass; isolated service/plugin E2E ALL PASSED. Local setup documented in docs/local-development.md. All19 browser cases passed:18 in final suite plus1 rerun after concurrent trace-output collision; five Postmortems cases passed.
 - 15:02 - Sent Emmanuel (tiemma) a direct CaptainMorgue ask, seq 9, requesting ownership and API contract for the postmortem library. List plus complete historical document is the hackathon priority; frontend remains ours. Awaiting reply.
 - 15:00 - Reviewed postmortem support on main 7f93997: current-incident record exists; historical list/detail do not. Generated summary/fixed_by are stored but absent from GET record. No backend changes.
@@ -55,18 +57,17 @@ env -u CM_URL scripts/e2e.sh                                       # must print 
 - 14:00 - Drafted docs/frontend-design-plan.md on docs/frontend-design-plan after pulling main at 7ebf17f. Reviewed CostGraph live reference and local source with three research agents. No frontend implementation yet.
 
 ## Next
-- [ ] **Install the plugin automatically** (from Emmanuel, 14:40). Today each person runs `/plugin marketplace add` and `/plugin install` by hand. Make it automatic: in `.claude/settings.json` of this repo and of `tiemma/captainmorgue-cluster`, add `extraKnownMarketplaces` (`captainmorgue` -> GitHub `tiemma/captainmorgue`) and `enabledPlugins` (`"captainmorgue@captainmorgue": true`), so anyone who opens either repo in Claude Code and trusts it is offered the plugin. Check the exact keys in the Claude Code settings docs, test it in a fresh clone, and update the milestone steps in AGENTS.md.
-- [ ] Milestone: set up on my agent once deployed, using the instructions in AGENTS.md; not completed by this frontend preview work.
-- Review the updated Storybook and wire the agreed screens to the live service. Browser action ownership stays with Emmanuel/team; all responders may act in the demo.
-- Take over the live wall screen (merged to main from feat/web-live, renders from /stream). Check state.people objects, teams[].term and deliveries keyed by seq. Fix the truncated Ticketing and Payments label and sticky last-actor highlight.
-- Verify live record rendering and asynchronous record readiness against the latest service.
-- [ ] Wall screen polish on the live page (already wired to `/stream`): labels for `join`, `digest`, `claim`, `task` events; check the new Claims panel and role badges in a browser at 1440 px and on a projector; nothing computed client-side.
-- [ ] Teams view: the hard-coded team graph was removed with the demo data. If wanted, draw it from `state.teams` (teams, managers, members, `owns`).
+- [ ] Milestone: trust project plugin in Claude Code, restart, join/status, exchange an ask, then tick set up on my agent. Requires the actual Claude session.
+- [ ] Finish cluster plugin config delivery once write access is granted; prepared commit ff503897.
+- [ ] Wire Postmortems library to archive list/detail once Emmanuel supplies endpoints; samples remain in Storybook, live app states unavailable.
+- [ ] Verify production rollout with Sammy after the frontend image builds.
 
 ## Blocked on
 - Browser resolve/close workflows and approval lifecycle still need agreed contracts. Resource claims, join, inbox, messaging, roles and elections are on main. Postmortems archive list/detail remains pending Emmanuel.
 
 ## Handing off
+- Sammy/Emmanuel (15:30): redesigned frontend now builds in the application Docker image, default /; compact wall is /wall.html. Please roll out the new application image after CI completes. Local service validation passed; Docker daemon unavailable locally, so image validation is via CI.
+- Emmanuel (15:30): please grant s1ntaxe770r write access to captainmorgue-cluster or apply the matching .claude/settings.json marketplace/enabledPlugins setup from this repo. Prepared cluster commit ff503897 has [skip ci] to avoid triggering a deployment for settings only. GitHub rejected the push.
 - Emmanuel: taking web/index.html for your live-wall polish requests (join/digest/claim/task labels, profile details, Claims and service-driven teams) alongside the separate Postmortems frontend. Registration/Platform are the current roster; no backend changes.
 - Emmanuel: P0 coordination and live-wall handoffs received. Code review confirms seen stops timeout even without a reply; please reconcile with dispatch 5b. Browser approval is not an existing backend state; it stays a labeled sample flow in Storybook. Storybook is separate under frontend/, with local sample interactions; no collision with web/index.html. Browser action gaps and reply/readiness questions are tracked in docs/frontend-design-plan.md.
 - Emmanuel: frontend proposal is React/Vite producing web/ static output; Docker will need a frontend build stage when implementation begins.
