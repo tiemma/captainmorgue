@@ -1,9 +1,13 @@
 # Sammy: cluster, Radar and the story
 
 ## Now
-The corrected Radar Secrets and Elastic URL are present; the latest infra merge is ready locally at cluster commit `5346806`, but GitHub write access is still blocking the public push.
+Latest infra is live in Radar; CaptainMorgue, checkin, kiosk, OTEL and confdb are healthy, while payments remains Running but Not Ready due to Postgres connection refusals.
 
 ## Done
+- Pulled latest private repo (`51f6bf7`) and cluster repo (`a063365`, infra merge now on public `main`).
+- Added Emmanuel's Elastic API key as `elastic-api-key` on the Radar `captainmorgue` Secret.
+- Verified Radar rollout: CaptainMorgue 1/1, checkin 2/2, kiosk 1/1, OTEL 1/1, and confdb Healthy.
+- Diagnosed payments as `database not ready, retrying connect ECONNREFUSED` against `confdb` while its pod remains Running (0/1 Ready).
 - Pulled latest repos; Emmanuel's latest `feat/infra` is `5fe5602` and adds optional `cm-token` wiring.
 - Added Emmanuel's Elastic Cloud URL as `elastic-url` on the Radar `captainmorgue` Secret.
 - Merged the latest infra changes locally as `5346806`.
@@ -22,15 +26,15 @@ The corrected Radar Secrets and Elastic URL are present; the latest infra merge 
 
 ## Next
 - [ ] **Milestone: set up on my agent** (AGENTS.md, "Milestone: set it up on your own agent") once the service is deployed: install the plugin, set the env, `/captainmorgue:join`, send and answer one ask. Tick and push when done.
-- Review and push the latest merged `feat/infra` after GitHub write access is granted.
-- Add `elastic-api-key` and `cm-token` to the Radar `captainmorgue` Secret when Emmanuel supplies them directly; never put values in git or chat.
+- Resolve or restart the payments workload after confirming the Postgres endpoint is accepting connections.
+- Add `cm-token` to the Radar `captainmorgue` Secret when Emmanuel supplies it directly; never put values in git or chat.
 - Push the cluster repo, then sync and confirm workloads healthy through Radar.
 - Verify the public GHCR image once the service image is published.
 - Real canary release of check-in, Radar AI investigation, post the summary to `/events`.
 - `## The story` in `STORY.md` by 4:00.
 
 ## Blocked on
-- GitHub write permission for `SammyOina` on `tiemma/captainmorgue-cluster`; push of local merge `c457141` was rejected with HTTP 403.
 - Elastic API key and team `cm-token` are still missing from the Radar `captainmorgue` Secret.
+- Payments is still Not Ready after the confdb Cluster became Healthy; its logs show repeated connection refusals.
 
 ## Handing off
