@@ -1,0 +1,79 @@
+[data-category="alert"] { --cm-event-color: var(--cm-critical); }
+[data-category="conflict"] { --cm-event-color: var(--cm-conflict); }
+[data-category="investigation"] { --cm-event-color: var(--cm-investigate); }
+[data-category="decision"] { --cm-event-color: var(--cm-warning); }
+[data-category="work"] { --cm-event-color: var(--cm-work); }
+[data-category="message"] { --cm-event-color: var(--cm-accent); }
+[data-category="resolution"] { --cm-event-color: var(--cm-resolved); }
+[data-category="system"] { --cm-event-color: var(--cm-text-soft); }
+
+.cm-event-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--cm-stroke-soft);
+  list-style: none;
+  color: var(--cm-text-sub);
+  font: 500 0.75rem/1rem var(--cm-font);
+}
+
+.cm-event-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cm-event-swatch {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--cm-event-color);
+}
+
+.cm-event-legend-count {
+  color: var(--cm-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.cm-live-events > li[data-category],
+.cm-feed > .cm-event[data-category] {
+  position: relative;
+}
+
+.cm-live-events > li[data-category]::before,
+.cm-feed > .cm-event[data-category]::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: -20px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--cm-event-color);
+}
+
+.cm-feed > .cm-event[data-category]::before {
+  left: 0;
+}
+
+.cm-live-events > li[data-category] > .cm-live-event-marker {
+  border-color: var(--cm-event-color);
+  background: var(--cm-event-color);
+}
+
+.cm-live-events > li[data-category="conflict"] > .cm-live-event-marker,
+.cm-live-events > li[data-category="decision"] > .cm-live-event-marker {
+  border-radius: 1px;
+  transform: rotate(45deg) scale(0.9);
+}
+
+.cm-live-events > li[data-category="system"] > .cm-live-event-marker {
+  background: transparent;
+}
+
+.cm-feed > .cm-event[data-category] .cm-event-symbol {
+  color: var(--cm-event-color);
+}
