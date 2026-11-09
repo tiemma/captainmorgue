@@ -7,7 +7,6 @@ import {
   ChevronRight,
   FileText,
   MessageSquare,
-  Radio,
   Send,
   Ship,
   Users,
@@ -109,7 +108,7 @@ function EventList({
   return (
     <ol className="cm-live-events">
       {events.map((event) => (
-        <li key={event.seq}>
+        <li key={event.seq} data-status={event.type}>
           <div className="cm-live-event-marker" aria-hidden="true" />
           <div className="cm-live-event-content">
             <div className="cm-live-event-meta text-paragraph-xs">
@@ -345,7 +344,10 @@ export function LiveWorkspace() {
           </span>
           <div>
             <span className="cm-live-connection text-paragraph-xs">
-              <Radio size={13} aria-hidden="true" />
+              <span
+                className={`cm-status-dot ${connected ? "is-info" : "is-warning"}`}
+                aria-hidden="true"
+              />
               {connected
                 ? "Live"
                 : connection === "connecting"
@@ -410,16 +412,44 @@ export function LiveWorkspace() {
                   </p>
                 </div>
                 {state && (
-                  <Badge tone={statusTone(state.incident.status)}>
-                    {active ? state.incident.status : "Waiting"}
-                  </Badge>
+                  <span
+                    className={
+                      active && ["resolved", "closed"].includes(state.incident.status)
+                        ? "cm-toe-tag"
+                        : undefined
+                    }
+                  >
+                    <Badge tone={statusTone(state.incident.status)}>
+                      {active ? state.incident.status : "Waiting"}
+                    </Badge>
+                  </span>
                 )}
               </div>
             )}
             {tab === "Incident" && (
               <>
+                {state && (
+                  <div className="cm-kpi-row">
+                    <div className="cm-stat-card">
+                      <span>Parts</span>
+                      <strong>{state.parts?.length || 0}</strong>
+                    </div>
+                    <div className="cm-stat-card">
+                      <span>Claims</span>
+                      <strong>{claims.length}</strong>
+                    </div>
+                    <div className="cm-stat-card">
+                      <span>Crew</span>
+                      <strong>{Object.keys(people).length}</strong>
+                    </div>
+                    <div className="cm-stat-card">
+                      <span>Events</span>
+                      <strong>{events.length}</strong>
+                    </div>
+                  </div>
+                )}
                 {state?.conflict && (
-                  <section className="cm-live-attention">
+                  <section className="cm-live-attention is-conflict">
                     <Badge tone="danger">Conflict recorded</Badge>
                     <p className="text-paragraph-sm">{state.conflict.text}</p>
                     <Button onClick={() => inspect(state.conflict!)}>
@@ -631,6 +661,7 @@ export function LiveWorkspace() {
                         .map(([name, person]) => (
                           <button
                             className="cm-live-person"
+                            data-status={person.status}
                             key={name}
                             onClick={() =>
                               setInspector({ kind: "person", actor: name })
@@ -767,7 +798,10 @@ export function LiveWorkspace() {
             >
               {inspector.kind === "person" ? (
                 selectedPerson ? (
-                  <div className="cm-live-profile">
+                  <div
+                    className="cm-live-profile"
+                    data-status={selectedPerson.status}
+                  >
                     <Avatar name={inspector.actor} />
                     <Badge tone={statusTone(selectedPerson.status)}>
                       {selectedPerson.status}
@@ -804,7 +838,10 @@ export function LiveWorkspace() {
                   </Empty>
                 )
               ) : (
-                <div className="cm-live-event-detail">
+                <div
+                  className="cm-live-event-detail"
+                  data-status={inspector.event.type}
+                >
                   <Badge tone={statusTone(inspector.event.type)}>
                     {inspector.event.type}
                   </Badge>

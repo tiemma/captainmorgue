@@ -41,7 +41,7 @@ Browser tests expect Chromium: install with `npx playwright install chromium`. `
 - `src/*.stories.tsx`: screen, state and foundations stories.
 - `.storybook/`: local review configuration; telemetry disabled.
 
-Current decisions: ivory workspace, ink navigation, amber actions, separate operational statuses; full responder workspace; every responder may perform incident actions for the demo. Emmanuel/team supplies the real action APIs. See [the frontend plan](../docs/frontend-design-plan.md) for screen behavior and integration handoffs.
+Current decisions: monochrome neutrals, one blue accent for focus, selection and links, status as a dot or glyph plus text, Funnel Display / Geist / Geist Mono typography, and light and dark themes. Emmanuel/team supplies the real action APIs. See [the frontend plan](../docs/frontend-design-plan.md) for screen behavior and integration handoffs.
 
 ## Postmortems
 

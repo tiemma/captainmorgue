@@ -2,6 +2,12 @@ import { useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Check, Circle, LoaderCircle, Clock3, X } from "lucide-react";
 
+const pluralRules = new Intl.PluralRules("en-US");
+
+export function plural(count: number, one: string, other: string) {
+  return pluralRules.select(count) === "one" ? one : other;
+}
+
 export type Tone = "neutral" | "amber" | "danger" | "success" | "info";
 export function Button({
   children,
@@ -25,7 +31,7 @@ export function Button({
 export function Badge({
   children,
   tone = "neutral",
-  dot = false,
+  dot = true,
 }: {
   children: ReactNode;
   tone?: Tone;
@@ -33,7 +39,7 @@ export function Badge({
 }) {
   return (
     <span className={`cm-badge text-label-xs cm-tone-${tone}`}>
-      {dot && <span className="cm-status-dot" />}
+      {dot && <span className="cm-status-dot" aria-hidden="true" />}
       {children}
     </span>
   );
