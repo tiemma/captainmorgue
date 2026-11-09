@@ -2048,8 +2048,11 @@ body {
   .cm-sidebar nav {
     display: flex;
     justify-content: space-between;
+    max-width: 100%;
+    overflow-x: auto;
   }
   .cm-nav-item {
+    flex-shrink: 0;
     padding: 12px 6px;
     width: auto;
     gap: 4px;
