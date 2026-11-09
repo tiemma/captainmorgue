@@ -1,0 +1,300 @@
+.cm-record-timeline {
+  display: grid;
+  gap: 16px;
+}
+
+.cm-record-timeline-legend {
+  padding: 0;
+  border: 0;
+}
+
+.cm-record-axis {
+  position: relative;
+  height: 84px;
+  margin: 0 12px;
+}
+
+.cm-record-axis-line {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--cm-stroke-mild);
+}
+
+.cm-record-mark {
+  position: absolute;
+  top: calc(26px + (var(--cm-mark-row) - 1) * 12px);
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cm-record-mark.is-active {
+  z-index: 2;
+}
+
+.cm-record-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--cm-bg-card);
+  border-radius: 50%;
+  background: var(--cm-event-color);
+  transition: transform 160ms var(--cm-ease-out);
+}
+
+.cm-record-mark.is-read .cm-record-dot {
+  background: var(--cm-bg-card);
+  box-shadow: inset 0 0 0 2px var(--cm-event-color);
+}
+
+.cm-record-mark[data-category="conflict"] .cm-record-dot,
+.cm-record-mark[data-category="decision"] .cm-record-dot {
+  border-radius: 2px;
+  transform: rotate(45deg) scale(0.85);
+}
+
+.cm-record-mark.is-resolving .cm-record-dot {
+  box-shadow: 0 0 0 2px var(--cm-resolved);
+}
+
+.cm-record-mark.is-active .cm-record-dot {
+  transform: scale(1.3);
+}
+
+.cm-record-mark[data-category="conflict"].is-active .cm-record-dot,
+.cm-record-mark[data-category="decision"].is-active .cm-record-dot {
+  transform: rotate(45deg) scale(1.15);
+}
+
+.cm-record-mark:focus-visible {
+  outline: 2px solid var(--cm-accent);
+  outline-offset: 2px;
+}
+
+.cm-record-axis-label {
+  position: absolute;
+  bottom: 0;
+  color: var(--cm-text-sub);
+  font: 400 0.75rem/1rem var(--cm-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cm-record-axis-label.is-start {
+  left: -12px;
+}
+
+.cm-record-axis-label.is-end {
+  right: -12px;
+}
+
+.cm-record-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  gap: 6px;
+  width: max-content;
+  max-width: min(420px, 80vw);
+  padding: 10px 12px;
+  border: 1px solid var(--cm-stroke-mild);
+  border-radius: var(--cm-radius-control);
+  background: var(--cm-bg-card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  color: var(--cm-text-strong);
+  text-align: left;
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+  pointer-events: none;
+  transition:
+    opacity 150ms var(--cm-ease-out) 250ms,
+    transform 150ms var(--cm-ease-out) 250ms;
+  @starting-style {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scale(0.97);
+  }
+}
+
+.cm-record-tip.is-start {
+  left: -4px;
+  transform: none;
+  transform-origin: bottom left;
+  @starting-style {
+    transform: translateY(4px) scale(0.97);
+  }
+}
+
+.cm-record-tip.is-end {
+  right: -4px;
+  left: auto;
+  transform: none;
+  transform-origin: bottom right;
+  @starting-style {
+    transform: translateY(4px) scale(0.97);
+  }
+}
+
+.is-warm .cm-record-tip {
+  transition: none;
+}
+
+.cm-record-tip-meta,
+.cm-record-tip-outcome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--cm-text-sub);
+  font: 400 0.75rem/1rem var(--cm-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.cm-record-tip-kind {
+  color: var(--cm-event-color);
+  font-weight: 600;
+}
+
+.cm-record-tip code {
+  display: block;
+  padding: 6px 8px;
+  border-left: 3px solid var(--cm-event-color);
+  border-radius: 0 6px 6px 0;
+  background: var(--cm-bg-layer);
+  font: 400 0.8125rem/1.25rem var(--cm-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cm-record-tip-text {
+  font: 400 0.8125rem/1.25rem var(--cm-font);
+}
+
+.cm-record-steps {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cm-record-steps li {
+  display: grid;
+  grid-template-columns: 72px 14px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: var(--cm-radius-control);
+}
+
+.cm-record-steps li.is-active {
+  background: color-mix(in srgb, var(--cm-event-color) 8%, transparent);
+}
+
+.cm-record-step-time {
+  color: var(--cm-text-sub);
+  font: 400 0.75rem/1.25rem var(--cm-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cm-record-step-marker {
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--cm-event-color);
+}
+
+.cm-record-steps li.is-read .cm-record-step-marker {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--cm-event-color);
+}
+
+.cm-record-step-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cm-record-step-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--cm-text-sub);
+  font: 400 0.75rem/1.25rem var(--cm-font);
+}
+
+.cm-record-step-kind {
+  color: var(--cm-text-strong);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.cm-record-step-flag {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-resolved) 12%, transparent);
+  color: var(--cm-text-strong);
+}
+
+.cm-record-step-body p {
+  max-width: 65ch;
+  margin: 0;
+  color: var(--cm-text-subtle);
+  font: 400 0.875rem/1.25rem var(--cm-font);
+}
+
+.cm-record-step-command {
+  padding: 6px 8px;
+  border-left: 3px solid var(--cm-event-color);
+  border-radius: 0 6px 6px 0;
+  background: var(--cm-bg-layer);
+  color: var(--cm-text-strong);
+  font: 400 0.8125rem/1.25rem var(--cm-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cm-record-timeline-empty {
+  margin: 0;
+  color: var(--cm-text-sub);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cm-record-steps li:hover {
+    background: color-mix(in srgb, var(--cm-event-color) 8%, transparent);
+  }
+}
+
+@media (max-width: 700px) {
+  .cm-record-steps li {
+    grid-template-columns: 14px minmax(0, 1fr);
+  }
+  .cm-record-step-time {
+    grid-column: 2;
+  }
+  .cm-record-step-marker {
+    grid-row: 1 / span 2;
+    grid-column: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-record-dot {
+    transition: none;
+  }
+  .cm-record-tip {
+    transition: opacity 150ms ease 250ms;
+  }
+  .cm-record-mark.is-active .cm-record-dot {
+    transform: none;
+  }
+}

@@ -300,3 +300,52 @@
     display: none;
   }
 }
+
+.cm-postmortem-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.cm-postmortems .cm-postmortem-section-heading h2 {
+  margin: 0;
+}
+.cm-postmortem-commands,
+.cm-postmortem-all-commands {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cm-postmortem-command {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--cm-work);
+  border-radius: 0 var(--cm-radius-control) var(--cm-radius-control) 0;
+  background: var(--cm-bg-layer);
+  color: var(--cm-text-strong);
+  font: 400 0.8125rem/1.25rem var(--cm-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cm-postmortem-all-commands {
+  gap: 8px;
+  padding-top: 12px;
+}
+.cm-postmortem-all-commands li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.cm-postmortem-all-commands code {
+  color: var(--cm-text-strong);
+  font: 400 0.8125rem/1.25rem var(--cm-mono);
+  overflow-wrap: anywhere;
+}
+.cm-postmortem-all-commands .cm-postmortem-meta {
+  grid-column: 2;
+}

@@ -17,9 +17,11 @@ import type { Tone } from "./ui";
 import { SidePanel } from "./side-panel";
 import { Postmortems } from "./postmortems";
 import { useIncident } from "./use-incident";
-import { fetchGraph, fetchRecord, heartbeat, join, sendMessage } from "./service-client";
-import type { IncidentEvent, IncidentRecord, Person, TeamGraph } from "./service-client";
+import { fetchGraph, fetchPostmortems, fetchRecord, heartbeat, join, sendMessage } from "./service-client";
+import type { IncidentEvent, IncidentRecord, Person, Postmortem, TeamGraph } from "./service-client";
 import { TeamGraphView } from "./team-graph";
+import { EventLegend, eventCategory } from "./event-categories";
+import { RecordTimeline } from "./record-timeline";
 import "./live-workspace.css";
 
 type Tab = "Incident" | "Requests" | "Crew" | "Teams" | "Record" | "Postmortems";
@@ -111,7 +113,7 @@ function EventList({
   return (
     <ol className="cm-live-events">
       {events.map((event) => (
-        <li key={event.seq} data-status={event.type}>
+        <li key={event.seq} data-status={event.type} data-category={eventCategory(event.type)}>
           <div className="cm-live-event-marker" aria-hidden="true" />
           <div className="cm-live-event-content">
             <div className="cm-live-event-meta text-paragraph-xs">
@@ -201,6 +203,9 @@ export function LiveWorkspace() {
   const [graph, setGraph] = useState<TeamGraph>();
   const [graphError, setGraphError] = useState("");
   const [graphAttempt, setGraphAttempt] = useState(0);
+  const [postmortems, setPostmortems] = useState<Postmortem[]>();
+  const [postmortemError, setPostmortemError] = useState("");
+  const [postmortemAttempt, setPostmortemAttempt] = useState(0);
   const teams = state?.teams || [];
   const people = state?.people || {};
   const claims = state?.claims || [];
@@ -261,6 +266,23 @@ export function LiveWorkspace() {
       });
     return () => controller.abort();
   }, [tab, events.length, graphAttempt]);
+
+  useEffect(() => {
+    if (tab !== "Postmortems") return;
+    const controller = new AbortController();
+    setPostmortemError("");
+    fetchPostmortems(controller.signal)
+      .then(setPostmortems)
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted)
+          setPostmortemError(
+            reason instanceof Error
+              ? reason.message
+              : "Postmortems could not be loaded.",
+          );
+      });
+    return () => controller.abort();
+  }, [tab, events.length, postmortemAttempt]);
 
   async function joinWorkspace(event: FormEvent) {
     event.preventDefault();
@@ -512,6 +534,7 @@ export function LiveWorkspace() {
                 )}
                 <div className="cm-live-incident-grid">
                   <Panel title="Activity">
+                    <EventLegend types={events.map((event) => event.type)} />
                     <EventList events={events} onSelect={inspect} />
                   </Panel>
                   <div className="cm-live-context">
@@ -798,9 +821,11 @@ export function LiveWorkspace() {
                     </section>
                     <section>
                       <h2 className="text-label-md">Timeline</h2>
-                      <EventList
-                        events={record.events || []}
-                        onSelect={inspect}
+                      <RecordTimeline
+                        steps={record.steps || []}
+                        commands={record.commands || []}
+                        opened={record.opened}
+                        resolved={record.resolved}
                       />
                     </section>
                     <section>
@@ -849,7 +874,12 @@ export function LiveWorkspace() {
               />
             )}
             {tab === "Postmortems" && (
-              <Postmortems error="The postmortem archive is not available from the service yet. Open Record for the current incident." />
+              <Postmortems
+                documents={postmortems}
+                loading={!postmortems && !postmortemError}
+                error={postmortemError}
+                onRetry={() => setPostmortemAttempt((attempt) => attempt + 1)}
+              />
             )}
           </main>
           {inspector && (

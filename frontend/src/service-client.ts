@@ -92,9 +92,58 @@ export interface IncidentRecord {
   improvements: { text: string; owner: string; link: string }[] | null;
   past_match: PastMatch | null;
   events: IncidentEvent[] | null;
+  steps: RecordStep[] | null;
+  commands: CommandRun[] | null;
 }
 
 export type Record = IncidentRecord;
+
+export interface CommandRun {
+  seq: number;
+  ts: string;
+  actor: string;
+  team?: string;
+  tool: string;
+  command: string;
+  outcome: string;
+  exit_code?: number;
+  duration_ms?: number;
+  cwd?: string;
+  resource?: Resource;
+  changed: boolean;
+  led_to_resolution: boolean;
+}
+
+export interface RecordStep {
+  seq: number;
+  ts: string;
+  actor: string;
+  team?: string;
+  kind: string;
+  text: string;
+  command?: string;
+  outcome?: string;
+  resource?: Resource;
+}
+
+export interface Postmortem {
+  id: string;
+  title: string;
+  status: string;
+  summary: string;
+  opened?: string;
+  resolved?: string;
+  fixed_by?: string;
+  parts: { name: string; resolution: string }[];
+  improvements: { text: string; owner?: string; link?: string }[] | null;
+  events: { time: string; title: string; detail?: string }[];
+  steps: RecordStep[];
+  commands: CommandRun[];
+}
+
+export function fetchPostmortems(signal?: AbortSignal) {
+  return request<Postmortem[]>('/postmortems', undefined, signal);
+}
 
 export interface MessageRequest {
   from: string;

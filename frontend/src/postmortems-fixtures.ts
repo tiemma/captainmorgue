@@ -9,6 +9,26 @@ export const SAMPLE_POSTMORTEMS: PostmortemDocument[] = [
     opened: "2026-11-09T14:41:00Z",
     resolved: "2026-11-09T14:58:00Z",
     fixed_by: "Emmanuel and Sammy",
+    status: "resolved",
+    commands: [
+      { seq: 3, ts: "2026-11-09T14:42:10Z", actor: "emmanuel", team: "registration", tool: "Bash", command: "kubectl get pods -n conference -l app=checkin", outcome: "ok", changed: false, led_to_resolution: false },
+      { seq: 4, ts: "2026-11-09T14:42:40Z", actor: "sammy", team: "platform", tool: "Bash", command: "kubectl exec confdb-0 -n conference -- psql -c 'select count(*) from pg_stat_activity'", outcome: "ok", changed: true, led_to_resolution: false },
+      { seq: 6, ts: "2026-11-09T14:44:05Z", actor: "sammy", team: "platform", tool: "Bash", command: "kubectl rollout restart statefulset/confdb -n conference", outcome: "failed", changed: true, led_to_resolution: false, resource: { kind: "StatefulSet", namespace: "conference", name: "confdb" }, exit_code: 1 },
+      { seq: 8, ts: "2026-11-09T14:45:30Z", actor: "emmanuel", team: "registration", tool: "Bash", command: "kubectl rollout undo deployment/checkin -n conference", outcome: "ok", changed: true, led_to_resolution: true, resource: { kind: "Deployment", namespace: "conference", name: "checkin" }, exit_code: 0 },
+      { seq: 10, ts: "2026-11-09T14:49:12Z", actor: "emmanuel", team: "registration", tool: "Bash", command: "kubectl rollout status deployment/checkin -n conference", outcome: "ok", changed: false, led_to_resolution: false },
+      { seq: 11, ts: "2026-11-09T14:53:40Z", actor: "emmanuel", team: "registration", tool: "Bash", command: "psql -c 'create index concurrently attendees_badge_email on attendees (badge_email)'", outcome: "ok", changed: true, led_to_resolution: true, exit_code: 0 },
+    ],
+    steps: [
+      { seq: 1, ts: "2026-11-09T14:41:00Z", actor: "dash0", team: "registration", kind: "detected", text: "Check-in p95 above 4 s at Hall B kiosks" },
+      { seq: 4, ts: "2026-11-09T14:42:40Z", actor: "sammy", team: "platform", kind: "changed", text: "Bash: psql connection count (ok)", command: "kubectl exec confdb-0 -n conference -- psql -c 'select count(*) from pg_stat_activity'", outcome: "ok" },
+      { seq: 5, ts: "2026-11-09T14:43:20Z", actor: "emmanuel", team: "registration", kind: "investigated", text: "Badge-email lookup in v1.8 scans every attendee row" },
+      { seq: 6, ts: "2026-11-09T14:44:05Z", actor: "sammy", team: "platform", kind: "changed", text: "Bash: restart confdb (failed)", command: "kubectl rollout restart statefulset/confdb -n conference", outcome: "failed" },
+      { seq: 7, ts: "2026-11-09T14:44:30Z", actor: "captainmorgue", team: "platform", kind: "conflict", text: "Restart could interrupt the canary rollback on confdb" },
+      { seq: 8, ts: "2026-11-09T14:45:30Z", actor: "emmanuel", team: "registration", kind: "changed", text: "Bash: rollback checkin (ok)", command: "kubectl rollout undo deployment/checkin -n conference", outcome: "ok" },
+      { seq: 9, ts: "2026-11-09T14:46:10Z", actor: "sammy", team: "platform", kind: "decided", text: "Hold the confdb restart while connections drain" },
+      { seq: 11, ts: "2026-11-09T14:53:40Z", actor: "emmanuel", team: "registration", kind: "changed", text: "Bash: add index (ok)", command: "psql -c 'create index concurrently attendees_badge_email on attendees (badge_email)'", outcome: "ok" },
+      { seq: 12, ts: "2026-11-09T14:58:00Z", actor: "emmanuel", team: "registration", kind: "resolved", text: "Recovery verified and incident closed" },
+    ],
     parts: [
       {
         name: "Restore check-in responses",
