@@ -3,6 +3,7 @@ frontend/node_modules
 frontend/dist
 frontend/storybook-static
 frontend/test-results
+frontend/test-results-live
 .claude/worktrees
 .git
 **/.git
