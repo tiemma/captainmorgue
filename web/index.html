@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>CaptainMorgue Live Demo</title>
+<title>CaptainMorgue</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -87,7 +87,6 @@ button { font: inherit; color: inherit; }
 .btn:hover { background: var(--surface-3); }
 .btn:active { transform: scale(var(--press-scale)); }
 .btn[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.btn.primary { background: var(--brass); color: var(--bg); border-color: var(--brass); font-weight: 600; }
 .btn:disabled { opacity: 0.45; cursor: default; transform: none; }
 
 .tabs { display: flex; gap: 4px; }
@@ -125,12 +124,15 @@ button { font: inherit; color: inherit; }
 .arts { display: flex; flex-wrap: wrap; gap: 6px; }
 .art { font-family: var(--font-mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--surface-3); color: var(--fg-2); border: 1px solid var(--line); }
 .k-alert { border-left-color: var(--critical); } .k-alert .kind { color: var(--critical); }
-.k-recall, .k-investigation { border-left-color: var(--brass); } .k-recall .kind, .k-investigation .kind { color: var(--brass); }
-.k-join, .k-relay, .k-decision, .k-dispatch { border-left-color: var(--info); } .k-join .kind, .k-relay .kind, .k-decision .kind, .k-dispatch .kind { color: var(--info); }
+.k-investigation { border-left-color: var(--brass); } .k-investigation .kind { color: var(--brass); }
+.k-join, .k-relay, .k-ask, .k-broadcast, .k-decision { border-left-color: var(--info); } .k-join .kind, .k-relay .kind, .k-ask .kind, .k-broadcast .kind, .k-decision .kind { color: var(--info); }
 .k-action .kind { color: var(--fg-2); }
 .k-conflict { border-left-color: var(--conflict); background: var(--conflict-bg); } .k-conflict .kind { color: var(--conflict); }
 .k-signal, .k-close, .k-ship { border-left-color: var(--resolved); } .k-signal .kind, .k-close .kind, .k-ship .kind { color: var(--resolved); }
-.k-election { border-left-color: var(--investigating); } .k-election .kind { color: var(--investigating); }
+.k-election, .k-escalation, .k-autoreply { border-left-color: var(--investigating); } .k-election .kind, .k-escalation .kind, .k-autoreply .kind { color: var(--investigating); }
+.banner { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 10px 14px; border: 1px solid var(--investigating-line); border-left: 3px solid var(--investigating); border-radius: 10px; background: var(--investigating-bg); }
+.banner .label { color: var(--investigating); }
+.banner[hidden] { display: none; }
 @media (max-width: 640px) { .ev { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
 
 .relay { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--info-line); border-radius: 8px; background: var(--info-bg); }
@@ -160,6 +162,7 @@ button { font: inherit; color: inherit; }
 .sig { border: 1px solid var(--line); border-radius: 6px; padding: 8px; display: grid; gap: 2px; background: var(--surface-2); }
 .sig b { font-family: var(--font-mono); font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .sig.bad b { color: var(--critical); } .sig.good b { color: var(--resolved); }
+.signals .empty { grid-column: 1 / -1; }
 .inv { display: grid; gap: 6px; font-size: 13px; }
 
 .view[hidden] { display: none !important; }
@@ -206,13 +209,12 @@ svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacit
   <header class="top">
     <div class="inc">
       <span class="brand"><i aria-hidden="true"></i>CaptainMorgue</span>
-      <h1 id="incTitle">Check-in kiosks failing at Hall B</h1>
-      <span id="incStatus" class="pill p-critical p-live">SEV-1 open</span>
+      <h1 id="incTitle">Waiting for an incident</h1>
+      <span id="incStatus" class="pill p-quiet">waiting</span>
       <div class="facts">
-        <div class="fact"><span class="label">Clock</span><b id="clock" class="clock">09:41:00</b></div>
-        <div class="fact"><span class="label">Elapsed</span><b id="elapsed">00:00</b></div>
-        <div class="fact"><span class="label">Teams</span><b id="teamCount">0</b></div>
-        <div class="fact"><span class="label">Open parts</span><b id="openParts">0</b></div>
+        <div class="fact"><span class="label">Clock</span><b id="clock" class="clock">--:--:--</b></div>
+        <div class="fact"><span class="label">Opened</span><b id="opened">-</b></div>
+        <div class="fact"><span class="label">Closed</span><b id="closed">-</b></div>
       </div>
     </div>
     <div class="controls">
@@ -221,16 +223,15 @@ svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacit
         <button class="btn" role="tab" id="tabRecord" aria-pressed="false" disabled>Record</button>
         <button class="btn" role="tab" id="tabTeams" aria-pressed="false">Teams</button>
       </div>
-      <button class="btn primary" id="play">Pause</button>
-      <button class="btn" id="step">Step</button>
-      <button class="btn" id="speed">1x</button>
-      <button class="btn" id="restart">Restart</button>
+      <span id="conn" class="pill p-quiet" role="status">connecting</span>
     </div>
   </header>
 
+  <div class="banner" id="banner" hidden role="status"><span class="label">Election</span><span id="bannerText"></span></div>
+
   <div class="grid">
     <aside class="panel" aria-label="Who is on it">
-      <h2>Who is on it <span class="label">Example</span></h2>
+      <h2>Who is on it</h2>
       <ul class="tree" id="tree"></ul>
     </aside>
 
@@ -290,19 +291,14 @@ svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacit
     <div class="side">
       <section class="panel" aria-label="Signals">
         <h2>Signals <span class="label">Dash0</span></h2>
-        <div class="signals">
-          <div class="sig" id="sigCheckin"><span class="label">Check-in p95</span><b>-</b></div>
-          <div class="sig" id="sigPay"><span class="label">Payment errors</span><b>-</b></div>
-          <div class="sig" id="sigDb"><span class="label">confdb connections</span><b>-</b></div>
-          <div class="sig" id="sigQueue"><span class="label">Kiosk queue</span><b>-</b></div>
-        </div>
+        <div class="signals" id="signals"><p class="empty">No signals yet.</p></div>
       </section>
       <section class="panel" aria-label="Open parts">
         <h2>Parts of the incident</h2>
         <div class="parts" id="parts"><p class="empty">No parts yet.</p></div>
       </section>
       <section class="panel" aria-label="Relay">
-        <h2>Latest relay <span class="label">Why them</span></h2>
+        <h2>Latest message <span class="label">Why them</span></h2>
         <div id="relay"><p class="empty">No messages relayed yet.</p></div>
       </section>
       <section class="panel" aria-label="Conflict">
@@ -318,210 +314,216 @@ svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacit
 </div>
 
 <script>
-const PEOPLE = {
-  dana: { name: "Dana", team: "Registration" }, ana: { name: "Ana", team: "Registration" }, cal: { name: "Cal", team: "Registration" },
-  eli: { name: "Eli", team: "Ticketing" }, gus: { name: "Gus", team: "Ticketing" }, fay: { name: "Fay", team: "Ticketing" },
-  ben: { name: "Ben", team: "Platform" }, dev: { name: "Dev", team: "Platform" },
-  cm: { name: "CaptainMorgue", team: "root" }, dash0: { name: "Dash0", team: "alert" }, radar: { name: "Radar", team: "cluster" },
-  gitar: { name: "Gitar", team: "pull request" }, argo: { name: "Argo CD", team: "via Radar" }
+const NAMES = { captainmorgue: "CaptainMorgue", dash0: "Dash0", radar: "Radar", gitar: "Gitar", argo: "Argo CD" };
+const ROLES = { captainmorgue: "root", dash0: "alert", radar: "cluster", gitar: "pull request", argo: "via Radar" };
+const KIND = { alert: "Alert", join: "Joined", leave: "Left", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", ship: "Shipped", election: "Election", investigation: "Investigation", signal: "Signal", close: "Closed" };
+const STATUS = {
+  online: ["on", "online", "p-resolved"],
+  in_incident: ["on", "in incident", "p-resolved"],
+  working: ["busy", "working", "p-investigating"],
+  suspect: ["busy", "suspect", "p-investigating"],
+  offline: ["gone", "offline", "p-critical"]
 };
+const MESSAGE_TYPES = ["relay", "ask", "broadcast"];
 
-function initialState() {
-  return {
-    status: ["SEV-1 open", "p-critical p-live"], clock: "09:41:00", elapsed: "00:00", closed: false,
-    teams: {
-      reg: { name: "Registration", mgr: "dana", members: ["ana", "cal"], on: false },
-      tix: { name: "Ticketing and Payments", mgr: "eli", members: ["gus", "fay"], on: false },
-      plat: { name: "Platform", mgr: "ben", members: ["dev"], on: false }
-    },
-    people: {}, flash: null,
-    parts: [], relay: null, conflict: null, inv: null,
-    sig: { checkin: null, pay: null, db: null, queue: null }
-  };
+let state = {}, lastEvent = null, lastMessage = null, lastInvestigation = null;
+const landed = new Set();
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const timeOf = ts => ts ? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : "";
+const nameOf = actor => NAMES[actor] || actor;
+const teamName = id => ((state.teams || []).find(t => t.id === id) || {}).name || id;
+
+function safeUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.href : null;
+  } catch {
+    return null;
+  }
 }
 
-const EVENTS = [
-  { t: "09:41:02", el: "00:02", a: "dash0", k: "alert", text: "Check-in p95 latency 4.2 s and 18% errors on checkin. Kiosk queue at Hall B growing.", arts: ["Dash0: checkin latency"],
-    fx: s => { s.sig.checkin = ["4.2 s", "bad"]; s.sig.queue = ["140 people", "bad"]; s.sig.db = ["71 / 100", ""]; s.sig.pay = ["0.2%", ""]; } },
-  { t: "09:41:04", el: "00:04", a: "cm", k: "dispatch", text: "Opened INC-2041. Affected: checkin, which uses confdb.",
-    fx: s => { s.parts.push({ id: "checkin", name: "Check-in slow at the kiosks", owner: "Registration", p: 5, done: false, note: "Waiting for owners" }); } },
-  { t: "09:41:05", el: "00:05", a: "cm", k: "recall", text: "This looks like INC-1877 from last year's event: slow check-in query after a release. Fixed by an index, by Priya on Registration.", arts: ["INC-1877 record"] },
-  { t: "09:41:07", el: "00:07", a: "cm", k: "join", text: "Pulled in Registration (team label on checkin) and Platform (owns confdb in CODEOWNERS).",
-    fx: s => { s.teams.reg.on = true; s.teams.plat.on = true; s.flash = "reg"; } },
-  { t: "09:41:31", el: "00:31", a: "dana", k: "join", text: "Joined as manager of Registration.", fx: s => { s.people.dana = "on"; s.flash = "dana"; } },
-  { t: "09:41:40", el: "00:40", a: "ben", k: "join", text: "Joined as manager of Platform.", fx: s => { s.people.ben = "on"; s.people.dev = "on"; s.flash = "ben"; } },
-  { t: "09:42:05", el: "01:05", a: "ana", k: "action", text: "Checked the checkin rollout through Radar: canary of v1.8 at 20% since 09:38.", arts: ["Radar: rollout checkin"],
-    fx: s => { s.people.ana = "busy"; s.parts[0].p = 15; s.parts[0].note = "Canary v1.8 started 09:38"; } },
-  { t: "09:42:40", el: "01:40", a: "dev", k: "action", text: "confdb has 96 of 100 connections busy, most of them held by checkin for about 3 s each.", arts: ["Dash0: confdb connections"],
-    fx: s => { s.people.dev = "busy"; s.sig.db = ["96 / 100", "bad"]; s.parts.push({ id: "db", name: "confdb connections exhausted", owner: "Platform", p: 10, done: false, note: "Held by checkin" }); } },
-  { t: "09:43:10", el: "02:10", a: "dash0", k: "alert", text: "Payment errors at 9% on payments. Card payments failing at the merch stand.", arts: ["Dash0: payments errors"],
-    fx: s => { s.sig.pay = ["9.1%", "bad"]; s.parts.push({ id: "pay", name: "Payments failing", owner: "Ticketing and Payments", p: 0, done: false, note: "Shares confdb with checkin" }); } },
-  { t: "09:43:12", el: "02:12", a: "cm", k: "join", text: "Pulled in Ticketing and Payments: payments shares confdb with checkin.", fx: s => { s.teams.tix.on = true; s.flash = "tix"; } },
-  { t: "09:43:25", el: "02:25", a: "eli", k: "join", text: "Joined as manager of Ticketing and Payments.", fx: s => { s.people.eli = "on"; s.people.gus = "on"; s.flash = "eli"; } },
-  { t: "09:43:40", el: "02:40", a: "gus", k: "relay", text: "Is confdb failing over? Card payments are timing out at the merch stand.",
-    fx: s => { s.people.gus = "busy"; s.relay = { from: "Gus", to: ["Dev", "Dana"], text: "Is confdb failing over? Card payments are timing out at the merch stand.", why: "Dev is reading confdb connections right now. Dana manages checkin, which holds most of them." }; } },
-  { t: "09:44:05", el: "03:05", a: "dana", k: "decision", text: "Abort the checkin canary and go back to v1.7.", arts: ["Radar: abort rollout"],
-    fx: s => { s.people.dana = "busy"; s.parts[0].p = 35; s.parts[0].note = "Aborting canary v1.8"; } },
-  { t: "09:44:20", el: "03:20", a: "cm", k: "conflict", text: "Dev is about to restart the confdb primary while Dana's canary abort is draining checkin. The restart would drop in-flight check-ins. Hold it until the abort finishes.",
-    fx: s => { s.conflict = { a: ["Dana", "Abort canary v1.8 (draining checkin)"], b: ["Dev", "Restart confdb primary"], res: "confdb + deployment/checkin", why: "Same resources within 2 minutes, one is a restart. The model agrees: the restart drops sessions the abort is draining." }; } },
-  { t: "09:44:31", el: "03:31", a: "dev", k: "action", text: "Holding the confdb restart.", fx: s => { s.conflict.held = true; } },
-  { t: "09:44:52", el: "03:52", a: "argo", k: "ship", text: "Rollout checkin aborted. v1.7 serving 100%.", arts: ["Radar: rollout checkin"],
-    fx: s => { s.parts[0].p = 60; s.parts[0].note = "v1.7 serving"; s.sig.checkin = ["1.1 s", ""]; s.sig.db = ["58 / 100", ""]; s.parts[1].p = 55; s.parts[1].note = "Connections draining"; } },
-  { t: "09:45:10", el: "04:10", a: "cm", k: "election", text: "Ben's agent stopped responding. Platform voted: Dev 2 of 3 (Dev, CaptainMorgue). Dev now manages Platform.",
-    fx: s => { s.people.ben = "gone"; s.teams.plat.mgr = "dev"; s.teams.plat.members = ["ben"]; s.flash = "dev"; } },
-  { t: "09:45:40", el: "04:40", a: "cm", k: "investigation", text: "Started a Radar AI investigation on deployment/checkin.", arts: ["Radar investigation"],
-    fx: s => { s.inv = { state: "running" }; } },
-  { t: "09:46:30", el: "05:30", a: "radar", k: "investigation", text: "Finding: v1.8 looks attendees up by badge email with no index. Every check-in scans 48k rows and holds a confdb connection for about 3 s.", arts: ["Radar investigation", "query plan"],
-    fx: s => { s.inv = { state: "done", text: "v1.8 looks attendees up by badge email with no index. Every check-in scans 48k rows and holds a confdb connection for about 3 s." }; } },
-  { t: "09:46:52", el: "05:52", a: "dash0", k: "signal", text: "Payment errors at 0.3%. confdb at 41 of 100 connections.",
-    fx: s => { s.sig.pay = ["0.3%", "good"]; s.sig.db = ["41 / 100", "good"]; s.parts[2].p = 100; s.parts[2].done = "09:46"; s.parts[2].note = "Recovered after the abort"; s.parts[1].p = 100; s.parts[1].done = "09:46"; s.parts[1].note = "Drained after the abort"; } },
-  { t: "09:47:30", el: "06:30", a: "cal", k: "action", text: "Opened PR #212: add an index on attendees(badge_email) and ship it as v1.8.1.", arts: ["PR #212"],
-    fx: s => { s.people.cal = "busy"; s.parts[0].p = 75; s.parts[0].note = "Fix in PR #212"; } },
-  { t: "09:48:40", el: "07:40", a: "gitar", k: "ship", text: "PR #212: no critical findings. One flaky test retried, CI green.", arts: ["PR #212 checks"] },
-  { t: "09:49:10", el: "08:10", a: "argo", k: "ship", text: "Synced checkin v1.8.1 as a canary through Radar. Canary healthy, promoted.", arts: ["Radar: rollout checkin"],
-    fx: s => { s.parts[0].p = 90; s.parts[0].note = "v1.8.1 promoted"; } },
-  { t: "09:50:30", el: "09:30", a: "dash0", k: "signal", text: "Check-in p95 180 ms, 0% errors. Kiosk queue at Hall B down to 12.",
-    fx: s => { s.sig.checkin = ["180 ms", "good"]; s.sig.queue = ["12 people", "good"]; s.parts[0].p = 100; s.parts[0].done = "09:50"; s.parts[0].note = "Index shipped in v1.8.1"; } },
-  { t: "09:51:00", el: "10:00", a: "cm", k: "dispatch", text: "All parts resolved and signals normal. Proposed closing INC-2041." },
-  { t: "09:51:12", el: "10:12", a: "dana", k: "close", text: "Confirmed close. Record written from 26 events.",
-    fx: s => { s.closed = true; s.status = ["Resolved 09:51", "p-resolved"]; for (const k in s.people) if (s.people[k] === "busy") s.people[k] = "on"; } }
-];
+function artifacts(list) {
+  if (!list || !list.length) return "";
+  return '<div class="arts">' + list.map(a => {
+    const url = a.url && safeUrl(a.url);
+    return url ? '<a class="art" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(a.label) + '</a>' : '<span class="art">' + esc(a.label) + '</span>';
+  }).join("") + '</div>';
+}
 
-const KIND = { alert: "Alert", dispatch: "CaptainMorgue", recall: "Happened before", join: "Joined", action: "Action", relay: "Broadcast, relayed", decision: "Decision", conflict: "Conflict", ship: "Shipped", election: "Election", investigation: "Investigation", signal: "Signal", close: "Closed" };
-
-let S, idx, timer = null, playing = true, speed = 1;
-const $ = id => document.getElementById(id);
-const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function statusOf(actor) {
+  const p = (state.people || {})[actor];
+  const s = typeof p === "string" ? p : p && p.status;
+  if (STATUS[s]) return STATUS[s];
+  return s ? ["", s.replace(/_/g, " "), "p-quiet"] : ["", "not joined", "p-quiet"];
+}
 
 function reset() {
-  S = initialState(); idx = 0; $("log").innerHTML = ""; $("tabRecord").disabled = true;
-  showView("Live"); renderAll();
+  state = {}; lastEvent = null; lastMessage = null; lastInvestigation = null; landed.clear();
+  $("log").innerHTML = ""; $("evCount").textContent = "0 events";
+  $("banner").hidden = true;
+  $("tabRecord").disabled = true;
+  if ($("tabRecord").getAttribute("aria-pressed") === "true") showView("Live");
+  renderAll();
 }
 
-function apply(ev, animate) {
-  if (ev.fx) ev.fx(S);
-  S.clock = ev.t; S.elapsed = ev.el;
+function onEvent(ev) {
+  lastEvent = ev;
+  if (MESSAGE_TYPES.includes(ev.type)) lastMessage = ev;
+  if (ev.type === "investigation") lastInvestigation = ev;
+  if (ev.type === "election") { $("bannerText").textContent = ev.text; $("banner").hidden = false; }
+  appendRow(ev);
+  if (ev.type === "close") loadRecord(ev.incident_id || "INC-1");
+  renderAll();
+}
+
+function appendRow(ev) {
   const li = document.createElement("li");
-  li.className = "ev k-" + ev.k + (animate ? " enter" : "");
-  const who = PEOPLE[ev.a];
-  li.innerHTML = '<time>' + ev.t.slice(0, 5) + '</time><div class="actor"><b>' + esc(who.name) + '</b><span>' + esc(who.team) + '</span></div>' +
-    '<div class="body"><span class="kind">' + KIND[ev.k] + '</span><span class="text">' + esc(ev.text) + '</span>' +
-    (ev.arts ? '<div class="arts">' + ev.arts.map(x => '<span class="art">' + esc(x) + '</span>').join("") + '</div>' : "") + '</div>';
+  li.className = "ev enter k-" + (KIND[ev.type] ? ev.type : "other");
+  const sub = ev.team ? '<span data-team="' + esc(ev.team) + '">' + esc(teamName(ev.team)) + '</span>' : '<span>' + esc(ROLES[ev.actor] || "") + '</span>';
+  li.innerHTML = '<time>' + timeOf(ev.ts) + '</time><div class="actor"><b>' + esc(nameOf(ev.actor)) + '</b>' + sub + '</div>' +
+    '<div class="body"><span class="kind">' + esc(KIND[ev.type] || ev.type) + '</span><span class="text">' + esc(ev.text) + '</span>' +
+    (ev.to && ev.to.length ? '<span class="why">To ' + esc(ev.to.map(nameOf).join(", ")) + '</span>' : "") +
+    artifacts(ev.artifacts) + '</div>';
   $("log").prepend(li);
-  $("evCount").textContent = (idx + 1) + " events";
-  if (S.closed) { $("tabRecord").disabled = false; renderRecord(); }
+  if (ev.seq) $("evCount").textContent = ev.seq + " events";
 }
 
 function renderAll() {
-  $("clock").textContent = S.clock; $("elapsed").textContent = S.elapsed;
-  $("incStatus").textContent = S.status[0]; $("incStatus").className = "pill " + S.status[1];
-  const onTeams = Object.values(S.teams).filter(t => t.on);
-  $("teamCount").textContent = onTeams.length;
-  $("openParts").textContent = S.parts.filter(p => !p.done).length;
-  renderTree(); renderParts(); renderRelay(); renderConflict(); renderInv(); renderSignals();
+  renderHeader(); renderTree(); renderParts(); renderMessage(); renderConflict(); renderInvestigation(); renderSignals();
+  document.querySelectorAll("[data-team]").forEach(el => { el.textContent = teamName(el.dataset.team); });
 }
 
-function personRow(id, depth, isMgr, teamOn) {
-  const st = S.people[id];
-  const dot = st === "gone" ? "gone" : st === "busy" ? "busy" : st === "on" ? "on" : "";
-  const label = st === "gone" ? ["offline", "p-critical"] : st === "busy" ? ["working", "p-investigating"] : st === "on" ? ["in incident", "p-resolved"] : ["not paged", "p-quiet"];
-  return '<li class="d' + depth + (teamOn ? "" : " off") + (S.flash === id ? " flash" : "") + '"><span class="who"><i class="dot ' + dot + '"></i>' + PEOPLE[id].name + (isMgr ? '<span class="mgr">MGR</span>' : "") + '</span><span class="pill ' + label[1] + '">' + label[0] + '</span></li>';
+function renderHeader() {
+  const inc = state.incident || {};
+  if (inc.title) $("incTitle").textContent = (inc.id ? inc.id + ": " : "") + inc.title;
+  const pill = $("incStatus");
+  if (inc.status === "resolved") { pill.textContent = "Resolved " + timeOf(inc.closed); pill.className = "pill p-resolved"; }
+  else if (inc.status === "open") { pill.textContent = "open"; pill.className = "pill p-critical p-live"; }
+  else { pill.textContent = inc.status || "waiting"; pill.className = "pill p-quiet"; }
+  $("opened").textContent = timeOf(inc.opened) || "-";
+  $("closed").textContent = timeOf(inc.closed) || "-";
+}
+
+function personRow(id, isMgr, teamOn) {
+  if (!id) return "";
+  const [dot, label, pill] = statusOf(id);
+  const flash = lastEvent && lastEvent.actor === id ? " flash" : "";
+  return '<li class="d2' + (teamOn ? "" : " off") + flash + '"><span class="who"><i class="dot ' + dot + '"></i>' + esc(nameOf(id)) + (isMgr ? '<span class="mgr">MGR</span>' : "") + '</span><span class="pill ' + pill + '">' + esc(label) + '</span></li>';
 }
 
 function renderTree() {
-  let h = '<li class="team-row"><span class="who">CaptainMorgue</span><span class="pill ' + S.status[1] + '">' + (S.closed ? "closed" : "running") + '</span></li>';
-  for (const [id, t] of Object.entries(S.teams)) {
-    h += '<li class="team-row d1' + (t.on ? "" : " off") + (S.flash === id ? " flash" : "") + '"><span class="who">' + t.name + '</span><span class="pill ' + (t.on ? "p-info" : "p-quiet") + '">' + (t.on ? "pulled in" : "standing by") + '</span></li>';
-    h += personRow(t.mgr, 2, true, t.on);
-    for (const m of t.members) h += personRow(m, 2, false, t.on);
+  const resolved = (state.incident || {}).status === "resolved";
+  let h = '<li class="team-row"><span class="who">CaptainMorgue</span><span class="pill ' + (resolved ? "p-resolved" : "p-critical p-live") + '">' + (resolved ? "closed" : "running") + '</span></li>';
+  for (const t of state.teams || []) {
+    const term = t.term != null ? '<span class="label">term ' + esc(t.term) + '</span>' : "";
+    h += '<li class="team-row d1' + (t.pulled_in ? "" : " off") + '"><span class="who">' + esc(t.name) + term + '</span><span class="pill ' + (t.pulled_in ? "p-info" : "p-quiet") + '">' + (t.pulled_in ? "pulled in" : "standing by") + '</span></li>';
+    h += personRow(t.manager, true, t.pulled_in);
+    for (const m of t.members || []) h += personRow(m, false, t.pulled_in);
   }
   $("tree").innerHTML = h;
 }
 
 function renderParts() {
-  if (!S.parts.length) { $("parts").innerHTML = '<p class="empty">No parts yet.</p>'; return; }
-  $("parts").innerHTML = S.parts.map(p => '<div class="part"><div class="part-top"><b>' + esc(p.name) + '</b>' +
-    (p.done ? '<span class="toe' + (p.landed ? "" : " land") + '">resolved ' + p.done + '</span>' : '<span class="pill p-investigating">open</span>') +
-    '</div><div class="bar"><i class="' + (p.done ? "done" : "") + '" style="width:' + p.p + '%"></i></div><small>' + esc(p.owner) + '. ' + esc(p.note) + '</small></div>').join("");
-  S.parts.forEach(p => { if (p.done) p.landed = true; });
+  const parts = state.parts || [];
+  if (!parts.length) { $("parts").innerHTML = '<p class="empty">No parts yet.</p>'; return; }
+  $("parts").innerHTML = parts.map(p => {
+    const done = p.status === "resolved";
+    const tag = done ? '<span class="toe' + (landed.has(p.id) ? "" : " land") + '">resolved ' + timeOf(p.resolved_at) + '</span>' : '<span class="pill p-investigating">' + esc(p.status || "open") + '</span>';
+    const detail = [p.owner && teamName(p.owner), p.note].filter(Boolean).join(". ");
+    return '<div class="part"><div class="part-top"><b>' + esc(p.name) + '</b>' + tag + '</div><div class="bar"><i class="' + (done ? "done" : "") + '" style="width:' + (Number(p.progress) || 0) + '%"></i></div>' + (detail ? '<small>' + esc(detail) + '</small>' : "") + '</div>';
+  }).join("");
+  parts.forEach(p => { if (p.status === "resolved") landed.add(p.id); });
 }
 
-function renderRelay() {
-  const r = S.relay;
-  $("relay").innerHTML = r ? '<div class="relay"><div class="route"><span class="hop">' + r.from + '</span>to<span class="hop cm">CaptainMorgue</span>to' + r.to.map(x => '<span class="hop">' + x + '</span>').join("") + '</div><div>' + esc(r.text) + '</div><div class="why">' + esc(r.why) + '</div></div>' : '<p class="empty">No messages relayed yet.</p>';
+function deliveryPill(status) {
+  return status ? '<span class="pill ' + (status === "seen" ? "p-resolved" : "p-investigating") + '">' + esc(status) + '</span>' : "";
+}
+
+function renderMessage() {
+  const m = lastMessage || state.relay;
+  if (!m) { $("relay").innerHTML = '<p class="empty">No messages relayed yet.</p>'; return; }
+  const delivered = (state.deliveries || {})[m.seq] || {};
+  const to = (m.to || []).map(r => '<span class="hop">' + esc(nameOf(r)) + '</span>' + deliveryPill(delivered[r])).join("");
+  $("relay").innerHTML = '<div class="relay"><span class="label">' + esc(KIND[m.type] || "Relay") + '</span><div class="route"><span class="hop">' + esc(nameOf(m.actor || m.from)) + '</span>to<span class="hop cm">CaptainMorgue</span>to' + to + '</div><div>' + esc(m.text) + '</div>' + (m.why ? '<div class="why">' + esc(m.why) + '</div>' : "") + '</div>';
 }
 
 function renderConflict() {
-  const c = S.conflict;
-  $("conflict").innerHTML = c ? '<div class="conflict"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span class="mono" style="font-size:12px">' + esc(c.res) + '</span><span class="pill ' + (c.held ? "p-resolved" : "p-conflict") + '">' + (c.held ? "held" : "flagged") + '</span></div><div class="pair"><div><b>' + c.a[0] + '</b><br>' + esc(c.a[1]) + '</div><span class="x">vs</span><div><b>' + c.b[0] + '</b><br>' + esc(c.b[1]) + '</div></div><div class="why">' + esc(c.why) + '</div></div>' : '<p class="empty">None so far.</p>';
+  const c = state.conflict;
+  if (!c) { $("conflict").innerHTML = '<p class="empty">None so far.</p>'; return; }
+  const res = typeof c.resource === "string" ? c.resource : c.resource ? c.resource.kind + "/" + c.resource.name : "";
+  const pair = c.a && c.b ? [c.a, c.b] : (c.to || []).map(actor => ({ actor }));
+  const side = p => '<div><b>' + esc(nameOf(p.actor)) + '</b>' + (p.action ? '<br>' + esc(p.action) : "") + '</div>';
+  $("conflict").innerHTML = '<div class="conflict"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span class="mono" style="font-size:12px">' + esc(res) + '</span><span class="pill ' + (c.held ? "p-resolved" : "p-conflict") + '">' + (c.held ? "held" : "flagged") + '</span></div>' +
+    (pair.length === 2 ? '<div class="pair">' + side(pair[0]) + '<span class="x">vs</span>' + side(pair[1]) + '</div>' : "") +
+    (c.text ? '<div>' + esc(c.text) + '</div>' : "") + (c.why ? '<div class="why">' + esc(c.why) + '</div>' : "") + '</div>';
 }
 
-function renderInv() {
-  const v = S.inv;
-  $("inv").innerHTML = !v ? '<p class="empty">Not started.</p>' : v.state === "running" ? '<div class="inv"><span class="pill p-investigating p-live">running on deployment/checkin</span></div>' : '<div class="inv"><span class="pill p-resolved">finding</span><span>' + esc(v.text) + '</span><span class="note">Summary copied into the record, with a link to the full investigation.</span></div>';
+function renderInvestigation() {
+  const v = lastInvestigation;
+  $("inv").innerHTML = v ? '<div class="inv"><span class="pill p-investigating">' + esc(nameOf(v.actor)) + ' at ' + timeOf(v.ts) + '</span><span>' + esc(v.text) + '</span>' + artifacts(v.artifacts) + '</div>' : '<p class="empty">Not started.</p>';
 }
 
 function renderSignals() {
-  const m = { checkin: "sigCheckin", pay: "sigPay", db: "sigDb", queue: "sigQueue" };
-  for (const [k, id] of Object.entries(m)) {
-    const v = S.sig[k]; const el = $(id);
-    el.className = "sig" + (v && v[1] ? " " + v[1] : ""); el.querySelector("b").textContent = v ? v[0] : "-";
+  const entries = Object.entries(state.signals || {});
+  $("signals").innerHTML = entries.length ? entries.map(([key, s]) =>
+    '<div class="sig' + (s.status === "bad" || s.status === "good" ? " " + s.status : "") + '"><span class="label">' + esc(s.label || key.replace(/_/g, " ")) + '</span><b>' + esc(s.value) + '</b></div>'
+  ).join("") : '<p class="empty">No signals yet.</p>';
+}
+
+async function loadRecord(id) {
+  try {
+    const res = await fetch("/record/" + encodeURIComponent(id));
+    if (!res.ok) throw new Error("record " + id + " returned " + res.status);
+    renderRecord(await res.json());
+    $("tabRecord").disabled = false;
+  } catch (err) {
+    console.warn(err);
   }
 }
 
-function renderRecord() {
-  $("viewRecord").innerHTML = `
-    <div class="rec-head"><div style="display:grid;gap:4px"><span class="label">The record</span><h2>INC-2041: Check-in kiosks failing at Hall B</h2></div><span class="toe">closed 09:51 by Dana</span></div>
-    <dl class="rec-facts">
-      <div><dt class="label">Opened</dt><dd>09:41</dd></div>
-      <div><dt class="label">Resolved</dt><dd>09:51</dd></div>
-      <div><dt class="label">Duration</dt><dd>10 min</dd></div>
-      <div><dt class="label">People</dt><dd>7</dd></div>
-      <div><dt class="label">Teams</dt><dd>3</dd></div>
-      <div><dt class="label">Conflicts caught</dt><dd>1</dd></div>
-    </dl>
-    <div class="rec-cols">
-      <section><span class="label">How each part was resolved</span><ul>
-        <li><b>Payments failing</b> and <b>confdb connections exhausted</b>: recovered at 09:46 once Dana aborted the checkin canary and its connections drained.</li>
-        <li><b>Check-in slow at the kiosks</b>: v1.8 looked attendees up by badge email with no index. Cal shipped the index in PR #212 as v1.8.1 at 09:49.</li>
-        <li><b>Conflict at 09:44</b>: Dev held a confdb restart that would have dropped in-flight check-ins during the abort.</li>
-        <li><b>Platform manager</b>: Ben went offline at 09:45 and the team elected Dev.</li>
-      </ul></section>
-      <section><span class="label">Improvements</span><ul>
-        <li>Check query plans for new lookups in CI. PR #214, reviewed by Gitar. Owner: Cal.</li>
-        <li>Give checkin and payments separate confdb connection pools. Issue #57. Owner: Dev.</li>
-        <li>Alert when confdb connections pass 80%. Issue #58. Owner: Dev.</li>
-      </ul>
-      <span class="label" style="margin-top:6px">Happened before</span>
-      <div class="match"><b>INC-1877, last year's event</b><span class="note">Slow check-in query after a release, fixed with an index by Priya on Registration. Same cause, second time: the CI check above is how it stops coming back.</span></div>
-      </section>
-    </div>
-    <p class="note">Every line links back to the events it came from. Evidence: Radar investigation on deployment/checkin, Dash0 signals, PR #212.</p>`;
+function listSection(label, items) {
+  return items.length ? '<span class="label">' + label + '</span><ul>' + items.map(i => '<li>' + i + '</li>').join("") + '</ul>' : "";
 }
 
-function next(animate = true) {
-  if (idx >= EVENTS.length) return false;
-  S.flash = null;
-  apply(EVENTS[idx], animate); idx++; renderAll();
-  if (idx >= EVENTS.length) setPlaying(false);
-  return true;
+function renderRecord(r) {
+  const facts = [["Opened", timeOf(r.opened)], ["Resolved", timeOf(r.resolved)], ["Duration", r.duration], ["People", r.people], ["Teams", r.teams], ["Conflicts caught", r.conflicts]]
+    .filter(([, v]) => v !== undefined && v !== null && v !== "");
+  const parts = (r.parts || []).map(p => '<b>' + esc(p.name) + '</b>' + (p.how ? ": " + esc(p.how) : ""));
+  const improvements = (r.improvements || []).map(i => {
+    const url = i.link && safeUrl(i.link);
+    return esc(i.text) + (i.owner ? " Owner: " + esc(nameOf(i.owner)) + "." : "") + (url ? ' <a href="' + esc(url) + '" target="_blank" rel="noopener">link</a>' : "");
+  });
+  const m = r.past_match;
+  const match = m ? '<span class="label" style="margin-top:6px">Happened before</span><div class="match"><b>' + esc(m.id) + '</b><span class="note">' + esc(m.summary) + (m.fixed_by ? " Fixed by " + esc(m.fixed_by) + "." : "") + '</span></div>' : "";
+  const left = listSection("How each part was resolved", parts);
+  const right = listSection("Improvements", improvements) + match;
+  $("viewRecord").innerHTML =
+    '<div class="rec-head"><div style="display:grid;gap:4px"><span class="label">The record</span><h2>' + esc([r.id, r.title].filter(Boolean).join(": ")) + '</h2></div>' + (r.resolved ? '<span class="toe">closed ' + timeOf(r.resolved) + '</span>' : "") + '</div>' +
+    (facts.length ? '<dl class="rec-facts">' + facts.map(([k, v]) => '<div><dt class="label">' + k + '</dt><dd>' + esc(v) + '</dd></div>').join("") + '</dl>' : "") +
+    (left || right ? '<div class="rec-cols"><section>' + left + '</section><section>' + right + '</section></div>' : "");
 }
-
-function schedule() {
-  clearTimeout(timer);
-  if (!playing) return;
-  timer = setTimeout(() => { if (next()) schedule(); }, 1700 / speed);
-}
-function setPlaying(p) { playing = p; $("play").textContent = p ? "Pause" : (idx >= EVENTS.length ? "Replay" : "Play"); schedule(); }
 
 function showView(name) {
   for (const v of ["Live", "Record", "Teams"]) { $("view" + v).hidden = v !== name; $("tab" + v).setAttribute("aria-pressed", String(v === name)); }
 }
 
-$("play").onclick = () => { if (idx >= EVENTS.length) { reset(); setPlaying(true); } else setPlaying(!playing); };
-$("step").onclick = () => { setPlaying(false); next(); };
-$("speed").onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $("speed").textContent = speed + "x"; schedule(); };
-$("restart").onclick = () => { reset(); setPlaying(true); };
+function setConnection(live) {
+  $("conn").textContent = live ? "live" : "reconnecting";
+  $("conn").className = "pill " + (live ? "p-resolved p-live" : "p-investigating");
+}
+
+function connect() {
+  const source = new EventSource("/stream");
+  source.onopen = () => { reset(); setConnection(true); };
+  source.addEventListener("event", e => onEvent(JSON.parse(e.data)));
+  source.addEventListener("state", e => { state = JSON.parse(e.data); renderAll(); });
+  source.onerror = () => {
+    setConnection(false);
+    if (source.readyState === EventSource.CLOSED) setTimeout(connect, 3000);
+  };
+}
+
 $("tabLive").onclick = () => showView("Live");
 $("tabRecord").onclick = () => showView("Record");
 $("tabTeams").onclick = () => showView("Teams");
@@ -542,7 +544,9 @@ svg.querySelectorAll(".g-team, .g-svc").forEach(g => {
 });
 $("showAll").onclick = e => { const on = svg.classList.toggle("show-all"); e.currentTarget.setAttribute("aria-pressed", String(on)); };
 
-reset();
-for (let i = 0; i < 4; i++) next(false);
-setPlaying(true);
+function tick() { $("clock").textContent = new Date().toLocaleTimeString([], { hourCycle: "h23" }); }
+tick();
+setInterval(tick, 1000);
+renderAll();
+connect();
 </script>

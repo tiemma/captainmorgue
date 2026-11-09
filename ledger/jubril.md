@@ -7,13 +7,13 @@
 - 14:00 - Drafted docs/frontend-design-plan.md on docs/frontend-design-plan after pulling main at 7ebf17f. Reviewed CostGraph live reference and local source with three research agents. No frontend implementation yet.
 
 ## Next
-- Agree browser action ownership and permission rules; then build a small shared component library and incident workspace from the design plan.
-- Wire `web/index.html` to `new EventSource("/stream")`: `event` messages append log rows, `state` messages re-render tree, parts, relay, conflict, investigation and signals. Remove the playback controls.
-- Record tab reads `/record/INC-1`; "happened before" card shows `past_match`.
+- Review Storybook against CostGraph patterns and integrate the approved design. Browser action ownership stays with Emmanuel/team; all responders may act in the demo.
+- Take over the live wall screen (merged to main from feat/web-live, renders from /stream). Check state.people objects, teams[].term and deliveries keyed by seq. Fix the truncated Ticketing and Payments label and sticky last-actor highlight.
+- Verify live record rendering and asynchronous record readiness against the latest service.
 
 ## Blocked on
-- Full browser collaboration needs session identity, messaging and claim/resolve/close contracts beyond the current observation API.
+- Full browser actions still need claim/resolve/close contracts; join, inbox, messaging and elections have now landed on main.
 
 ## Handing off
-- Emmanuel: please confirm who owns plan section 5a; its unassigned ownership and election scope conflict with your Next and plan section 7. Browser actions and needed service fields are listed in docs/frontend-design-plan.md; this is a draft, not an agreed API change.
+- Emmanuel: P0 coordination and live-wall handoffs received. Storybook is separate under frontend/, with local sample interactions; no collision with web/index.html. Browser action gaps and reply/readiness questions are tracked in docs/frontend-design-plan.md.
 - Emmanuel: frontend proposal is React/Vite producing web/ static output; Docker will need a frontend build stage when implementation begins.

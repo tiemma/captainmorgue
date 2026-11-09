@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+. "$(dirname "$0")/../lib.sh"
+[ -n "$CM_URL" ] || exit 0
+
+PID="$CM_DIR/poll.pid"
+CURSOR="$CM_DIR/cursor"
+OUT="$CM_DIR/poll.out"
+
+old=$(cat "$PID" 2>/dev/null)
+if [ -n "$old" ] && ps -p "$old" -o command= 2>/dev/null | grep -q cm-poll; then
+  exit 0
+fi
+echo $$ >"$PID"
+
+(
+  while :; do
+    api POST /heartbeat "$(jq -nc --arg a "$ACTOR" '{actor: $a}')" >/dev/null 2>>"$LOG"
+    [ $? -eq 22 ] && kill -USR1 $$
+    sleep 5
+  done
+) &
+hb=$!
+req=""
+rejoin=""
+
+cleanup() {
+  kill "$hb" $req 2>/dev/null
+  [ "$(cat "$PID" 2>/dev/null)" = $$ ] && rm -f "$PID"
+  exit 0
+}
+trap cleanup TERM INT HUP
+trap 'rejoin=1; kill $req 2>/dev/null' USR1
+
+pause() {
+  sleep "$1" &
+  wait $!
+}
+
+notify() {
+  command -v osascript >/dev/null 2>&1 || return 0
+  osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title (item 1 of argv)' -e 'end run' \
+    "CaptainMorgue: $1 from $2" "$3" >/dev/null 2>>"$LOG"
+}
+
+vote() {
+  local body
+  body=$(jq -c --arg a "$ACTOR" --argjson ours "$(read_seq "$SEEN")" '
+    (.candidate // .from) as $who
+    | (.candidate_cursor // .cursor // [.text | capture("cursor (?<c>[0-9]+)")? | .c | tonumber][0]) as $c
+    | {actor: $a, term, candidate: $who, granted: ($who == $a or $c == null or $c >= $ours)}' <<<"$1" 2>>"$LOG") || return
+  api POST "/incidents/$INCIDENT/vote" "$body" >/dev/null 2>>"$LOG" && log "voted $body"
+}
+
+delay=1
+while :; do
+  if [ -n "$rejoin" ]; then
+    rejoin=""
+    team=$(jq -r '.team // empty' "$SESSION" 2>/dev/null)
+    join_incident "${team:-${CM_TEAM:-}}" >/dev/null && log "rejoined $INCIDENT after the service forgot $ACTOR"
+  fi
+  cursor=$(read_seq "$CURSOR")
+  started=$SECONDS
+  CM_MAX_TIME=35 api GET "/inbox/$ACTOR?after=$cursor&wait=25" >"$OUT" 2>>"$LOG" &
+  req=$!
+  if ! wait "$req"; then
+    req=""
+    pause "$delay"
+    delay=$((delay * 2 > 30 ? 30 : delay * 2))
+    continue
+  fi
+  req=""
+  delay=1
+
+  new=$(jq -c --argjson c "$cursor" '[.messages[]? | select(.seq > $c)] | sort_by(.seq) | .[]' "$OUT" 2>>"$LOG")
+  while IFS= read -r m; do
+    [ -n "$m" ] || continue
+    printf '%s\n' "$m" >>"$INBOX"
+    IFS=$'\t' read -r kind from priority text < <(jq -r '[.kind, .from, .priority, .text] | @tsv' <<<"$m")
+    if [ "$kind" = vote_request ]; then
+      vote "$m"
+    elif [ "$priority" = interrupt ]; then
+      notify "$kind" "$from" "$text"
+    fi
+  done <<<"$new"
+
+  next=$(jq -r --argjson c "$cursor" '[.cursor // 0, (.messages[]?.seq), $c] | max' "$OUT" 2>/dev/null)
+  [ -n "$next" ] && [ "$next" != "$cursor" ] && write_file "$CURSOR" "$next"
+  [ -n "$new" ] || [ $((SECONDS - started)) -ge 1 ] || pause 1
+done

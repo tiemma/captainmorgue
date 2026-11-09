@@ -1,0 +1,13 @@
+---
+description: Join the incident, start the heartbeat and inbox poller
+argument-hint: [team]
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/bin/cm:*)
+---
+
+```!
+"${CLAUDE_PLUGIN_ROOT}/bin/cm" join <<'CM_ARGS_END'
+$ARGUMENTS
+CM_ARGS_END
+```
+
+Show the user the output above as is. Do nothing else.

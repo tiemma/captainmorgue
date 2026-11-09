@@ -1,44 +1,12 @@
 #!/usr/bin/env bash
 
-LOG="$HOME/.captainmorgue/hook.log"
+. "$(dirname "$0")/../lib.sh"
 
-log() {
-  mkdir -p "${LOG%/*}" && printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >>"$LOG"
-}
-
-post() {
-  local out
-  if ! out=$(curl -sS -f --max-time 2 -H 'Content-Type: application/json' -d "$2" "${CM_URL%/}$1" 2>&1); then
-    log "POST $1 failed: $out"
-    return 1
-  fi
-}
-
-if [ -z "$CM_URL" ]; then
-  [ "$1" = broadcast ] && echo "CM_URL is not set, nothing was broadcast."
-  exit 0
-fi
+[ -n "$CM_URL" ] || exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 command -v curl >/dev/null 2>&1 || exit 0
 
-ACTOR="${CM_ACTOR:-$USER}"
-
-if [ "$1" = broadcast ]; then
-  text=$(cat)
-  if [ -z "${text//[[:space:]]/}" ]; then
-    echo "Nothing to broadcast: add the message after the command."
-    exit 0
-  fi
-  body=$(jq -nc --arg from "$ACTOR" --arg text "$text" '{incident_id: "INC-1", from: $from, text: $text}')
-  if post /broadcast "$body"; then
-    echo "Broadcast sent to $CM_URL as $ACTOR."
-  else
-    echo "Broadcast failed, see $LOG."
-  fi
-  exit 0
-fi
-
-event=$(jq -c --arg actor "$ACTOR" --arg team "$CM_TEAM" '
+event=$(jq -c --arg actor "$ACTOR" --arg team "${CM_TEAM:-}" --arg inc "$INCIDENT" '
   def trunc($n): if length > $n then .[:$n] + "..." else . end;
   def kinds: {
     deploy: "Deployment", deployment: "Deployment", deployments: "Deployment",
@@ -118,8 +86,10 @@ event=$(jq -c --arg actor "$ACTOR" --arg team "$CM_TEAM" '
      (.prompt // "" | gsub("^\\s+|\\s+$"; "")) | select(length > 0 and (startswith("/") | not)) | {text: trunc(300)}
    elif .hook_event_name == "PostToolUse" or .hook_event_name == "PostToolUseFailure" then tool_event
    else empty end)
-  | {incident_id: "INC-1", actor: $actor, type: "action"} + (if $team != "" then {team: $team} else {} end) + .
+  | {incident_id: $inc, actor: $actor, type: "action"} + (if $team != "" then {team: $team} else {} end) + .
 ' 2>&1) || { log "map failed: $event"; exit 0; }
 
-[ -n "$event" ] && post /events "$event"
+if [ -n "$event" ] && ! out=$(api POST /events "$event" 2>&1); then
+  log "POST /events failed: $out"
+fi
 exit 0

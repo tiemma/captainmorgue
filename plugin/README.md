@@ -1,13 +1,25 @@
 # CaptainMorgue plugin for Claude Code
 
-Sends what you do in Claude Code to the CaptainMorgue incident timeline, and adds `/captainmorgue:broadcast`.
+Sends what you do in Claude Code to the CaptainMorgue incident timeline, and brings messages from the incident into your session.
 
 - Every prompt you submit becomes an `action` event (first 300 characters; slash commands are skipped).
 - Every Bash, Edit, Write and MCP tool call becomes an `action` event with the tool name, the command or file path, and whether it succeeded. Tool output is never sent.
 - When a command names a Kubernetes object (`kubectl rollout restart deploy/checkin -n team-captainmorgue`, `kubectl get cluster confdb`, `kubectl argo rollouts abort checkin`) or a Radar MCP call carries `kind` and `name`, the event carries a `resource`, which is what CaptainMorgue uses to spot two people acting on the same thing.
-- `/captainmorgue:broadcast <message>` posts to `/broadcast`; CaptainMorgue relays it to the people who need it.
+- After `/captainmorgue:join`, a background poller (`bin/cm-poll`) sends a heartbeat every 5 s, holds `/inbox` open, keeps a local copy in `~/.captainmorgue/inbox.jsonl`, raises a desktop notification for asks, conflicts and escalations, and answers election votes on its own.
+- Unread messages reach Claude from that local copy on session start, on every prompt and after every tool call, and are then marked seen. Session start also briefs Claude on your team and what each teammate did last. Claude does not finish a turn while an ask, conflict or escalation is unread.
+- An ask is shown to you as it arrived; Claude asks how you want to answer, investigates in a subagent if needed, and sends the reply only after you approve it. If you do not answer within 60 s, CaptainMorgue replies with your current status.
 
-The hooks run in the background with a 2 second timeout and never fail your turn. Failures are logged to `~/.captainmorgue/hook.log`. Needs `bash`, `jq` and `curl`.
+| Command | What it does |
+|---|---|
+| `/captainmorgue:join [team]` | Join the incident and start the poller |
+| `/captainmorgue:leave` | Leave and stop the poller |
+| `/captainmorgue:status [@person or team]` | Your team, manager, term, teammates and unread count; or someone's status and latest events |
+| `/captainmorgue:inbox` | Show unread messages and mark them seen |
+| `/captainmorgue:broadcast [@team or root] <message>` | Message your team (default), another team, or everyone |
+| `/captainmorgue:ask @person-or-team <question>` | Direct question |
+| `/captainmorgue:reply <seq> <text>` | Answer an ask |
+
+The hooks never fail your turn: with `CM_URL` unset or the service down they do nothing. Failures are logged to `~/.captainmorgue/hook.log`, the poller's output to `~/.captainmorgue/poll.log`. Needs `bash`, `jq` and `curl`.
 
 ## Install
 
@@ -28,9 +40,12 @@ Set these in the shell you start Claude Code from:
 export CM_URL=https://captainmorgue.cnh.radarhq.io
 export CM_ACTOR=<your GitHub login, as in roster.yaml>
 export CM_TEAM=<your team id from roster.yaml>
+export CM_TOKEN=<the team token>
 ```
 
-With `CM_URL` unset the plugin does nothing. `CM_TEAM` is optional; the service looks it up from the roster.
+With `CM_URL` unset the plugin does nothing. `CM_TEAM` is optional; the service looks it up from the roster. `CM_TOKEN` is sent as `Authorization: Bearer` on every call. `CM_INCIDENT` defaults to `INC-1`.
+
+Then run `/captainmorgue:join` once in Claude Code. Outside Claude Code the same commands are `plugin/bin/cm join`, `plugin/bin/cm status`, and so on, with arguments on stdin.
 
 ## Test without an incident
 
