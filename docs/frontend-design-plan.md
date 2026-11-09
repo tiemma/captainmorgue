@@ -1,16 +1,17 @@
 # CaptainMorgue frontend design plan
 
-Status: draft for discussion, 2026-11-09. Owner: Jubril. Baseline: main at 7ebf17f.
+Status: draft for discussion, 2026-11-09. Owner: Jubril. Baseline: main at bfcb853, including coordination, replies, receive plugin, live wall screen and E2E checks.
 
 ## Confirmed direction
 
-- A full responder workspace: people message and act on incidents from the browser as well as Claude Code.
+- A full responder workspace centered on agent-driven collaboration. Agents conduct most investigation and conversation; people step in for questions, reply approval, decisions and exceptions. Browser actions supplement Claude Code.
 - Warm ivory workspace with dark ink navigation, inspired by the Captain Morgan bottle references.
 - A small local component library, sized for the hackathon deadline.
 - One incident for the demo. Wall-screen mode is a presentation of the same incident.
 - Every responder may perform every incident action for the demo; backend still records actor and validates current state.
 - Emmanuel/team owns action APIs. Our implementation stays frontend.
 - User requested local Storybook for reviewing screens and interactions.
+- Use CostGraph actual layout/component patterns more directly, with CaptainMorgue colors. The initial preview was too independent and too close to human chat.
 
 These choices expand the wall-screen-only assignment in the build plan. This document proposes the frontend and the service handoffs; it does not change an API contract or claim the missing actions exist.
 
@@ -31,7 +32,7 @@ Adopt those principles with one token sheet and one component specimen page. Inc
 
 ## Visual system
 
-Bottle cues: ivory paper, near-black lettering, amber liquid, brass trim, muted red label. Use flat surfaces, fine rules, generous text contrast and restrained accents. No parchment texture or decorative script in operational content. A serif wordmark can be explored after the workspace works; keep the existing sans and mono fonts for the first pass.
+Bottle cues: ivory paper, near-black lettering, amber liquid, brass trim, muted red label. Use flat surfaces, fine rules, generous text contrast and restrained accents. No parchment texture or decorative script in operational content. Use CostGraph typography roles and families (Geist interface, Funnel Display headings, mono evidence), compact app headers and consistent controls. The bottle supplies color and character; it does not call for an editorial or decorative type system.
 
 | Role | Proposed color | Use |
 | --- | --- | --- |
@@ -50,19 +51,19 @@ Calculated solid-color contrast: ink on canvas 14.76:1; secondary text on paper 
 
 Map colors to --surface, --surface-raised, --text, --text-secondary, --border, --action, --on-action, --danger, --warning, --success, --info. Give status families foreground/background/border roles. Warning is identified by icon and explicit text as well as color; do not make every amber element look urgent.
 
-Use a 4px spacing scale, 16px panel padding, 6px control corners, 8px panel corners, 40px primary controls, 14-16px operational body text and tabular mono timestamps. Focus must remain visible. Reduced motion removes movement. Brand red is not a permanent navigation accent competing with real danger.
+Use CostGraph-derived dimensions: 4px spacing scale, 16px panel padding, compact 36px controls, 12px card corners, a 240px navigation rail and 64px top bar, with 14px interface copy and tabular mono timestamps. Keep major incident context readable on the projector. Focus must remain visible. Reduced motion removes movement. Brand red is not a permanent navigation accent competing with real danger.
 
 ## Screen and navigation model
 
-One persistent shell: dark navigation, ivory content, incident header, selected-detail inspector. Main destinations are Incident, Messages, Crew and Record. Do not add separate dashboards for the same facts. URL query state holds view and the selected event/person/part; links reopen the same context.
+One persistent shell: dark navigation, ivory content, incident header, selected-detail inspector. Main destinations are Incident, agent coordination, Crew and Record. Do not add separate dashboards for the same facts. URL query state holds view and the selected event/person/part; links reopen the same context.
 
 | Screen or state | What the person sees | Main interactions |
 | --- | --- | --- |
 | Entry / join | Active incident, impact, roster identity and team, browser/agent connection status | Join as self; observe without joining; clear pending/error state |
 | No incident | Quiet empty state and service connection | Declare incident when supported; no fake active incident |
 | Incident | Impact/status header, attention items, ordered activity, open parts and crew summary | Inspect evidence, filter activity, claim a part, open a contextual message |
-| Messages | Direct asks, team broadcasts and replies; route and reason | Explicit recipient/scope, send, reply, acknowledge; inspect per-recipient delivery |
-| Crew | Teams, manager, responsibility, agent connection and last update | Inspect person/team, see assigned parts, message a person/team |
+| Agent coordination | Agent-owned conversations, requests, research/evidence, proposed replies and escalations | Review/edit/approve a proposed reply, ask through your agent, inspect route and delivery; human input is a focused exception |
+| Crew | Human owners paired with their agents, current task, team, manager and connection state | Inspect agent work and assigned parts, route an ask through CaptainMorgue |
 | Record | Facts, resolution summary, investigation/evidence, improvements, past match | Follow source events, open artifacts, copy record link |
 | Wall mode | Large incident/attention/crew/activity presentation | Presentation toggle; no composer; same server facts |
 
@@ -79,9 +80,11 @@ Desktop layout: narrow dark navigation, flexible main workspace, persistent atte
 
 Personal attention is filtered by authenticated identity. Global incident attention remains visible to everyone. Do not infer urgency or liveness thresholds in the frontend. Until the server provides a lifecycle, a conflict is 'Flagged', not a fabricated count of unresolved conflicts.
 
-- Reading, acknowledging, taking responsibility and resolving are different actions.
-- Current relays only prove routing. Show 'Routed to', not 'Delivered'.
-- Draft delivery states map to Queued -> Agent received -> Agent briefed. The draft's 'seen' means injected into agent context, not read by a human.
+- Reading, acknowledging, approving a reply, answering, taking responsibility and resolving are different actions.
+- Conversation cards show both the acting agent and accountable human. Tool reads and agent progress stay quiet; pending human approval and unanswered requests get priority.
+- A proposed answer is editable and requires explicit approval before send in the P0 flow. Returning it to the agent means further research, not a sent reply. These approval transitions are sample-only until a backend contract supports them.
+- Routing alone does not prove delivery. Show delivery only when the corresponding service receipt exists.
+- Service delivery states sent/delivered/seen map to Sent -> Agent received -> Agent briefed. The draft's 'seen' means injected into agent context, not read by a human.
 - Explicit human acknowledgement records person and time. It does not resolve a conflict or prove a command was stopped.
 - A 'Hold' decision records an instruction; never imply the system cancelled a running command unless the service actually supports that.
 - New events never steal focus or move someone reading history. Offer 'New activity' and preserve the selected item and draft message.
@@ -98,7 +101,7 @@ Demo authority is confirmed: every responder may perform every incident action. 
 | Action | Flow | Authority and concurrent updates |
 | --- | --- | --- |
 | Join | Choose roster identity/team -> join -> incident briefing | Server binds identity; failure keeps entry visible |
-| Message | Pick person/team/automatic routing -> compose -> send -> routed receipt | Every responder may ask or broadcast to all; show routing reason |
+| Message | Pick person/team/all responders -> compose -> send -> routed receipt | Every responder may ask or broadcast to all; show routing reason |
 | Acknowledge | Explicit acknowledgement from a request/conflict detail | Any addressed person; records receipt only |
 | Claim | Take unowned part -> pending -> owner confirmed | Server atomically accepts one owner; loser sees who claimed it |
 | Reassign | Pick person and reason -> confirm | Any responder for the demo; preserve audit event |
@@ -106,7 +109,7 @@ Demo authority is confirmed: every responder may perform every incident action. 
 | Conflict decision | Review both actions/evidence -> record decision and reason | Any responder for the demo; lifecycle is a backend contract dependency |
 | Close incident | Review open parts/signals -> propose -> confirm | Any responder confirms for the demo; server rechecks current state |
 
-Version/term checks and accepted event IDs should accompany actions so stale managers and simultaneous updates do not silently overwrite newer decisions. Exact endpoint names and request fields need agreement with the backend owner.
+Accepted event IDs and atomic ownership checks are requested for browser actions. Stale-term rejection is explicitly P1 in the latest team cut, not a promised P0 capability. Exact action endpoints and request fields need agreement with Emmanuel/team.
 
 ## Minimal implementation structure
 
@@ -134,24 +137,28 @@ One transport/normalization boundary adapts actual payloads. Components do not p
 
 ## Backend handoff and current truth
 
-Implemented: POST /events, POST /broadcast, GET /stream, GET /record/{id}, GET /healthz. Current broadcast routes to other active teams' managers, not arbitrary recipients, and provides no agent delivery. State parts/signals are empty. Conflict is an Event, not the richer example object. Record has facts and events, not yet improvements or past_match. Investigation can be shown from real events and links.
+Implemented: POST /events, POST /broadcast, GET /stream, GET /record/{id}, GET /healthz, join/leave/vote, heartbeat, inbox/ack and POST /messages with ask/broadcast/reply. Coordination delivers messages to actor inboxes and publishes per-recipient delivery states. The receive plugin injects asks and replies into Claude Code; people approve replies there. State parts/signals are empty. Conflict is an Event, not the richer example object. Record now includes parts, improvements and past_match; live state also carries past_match. Record generation is asynchronous after close with no readiness field, so one immediate fetch may still show empty sections. Request readiness/version or agree refresh behavior. Investigation can be shown from real events and links.
 
 Required for a complete responder workspace:
 
-- Session identity and server permissions; roster/session bootstrap.
-- Join/leave and separate browser/agent connection state.
-- Messages with explicit recipients/scope, reply_to, routing explanation and delivery updates.
+- Per-person browser session identity and actor attribution beyond the shared team token; roster/session bootstrap.
+- Join/leave now exists; separate browser/agent connection state still needs agreement.
+- Explicit messages, numeric reply_to, routing explanation and delivery updates now exist; human approval lifecycle remains a design-to-API handoff.
 - Explicit human acknowledgement distinct from agent inbox acknowledgement.
 - Parts with ownership, claim/reassign/resolve mutations and atomic conflict handling.
 - Conflict decision/lifecycle and actor-attributed close, available to every responder for the demo.
 - Stable mutation IDs/idempotency and returned event/version identifiers.
 - State fields for truthful attention, presence, counts, signals and record sections.
 
-Scope conflict: plan section 5a adds joining/inbox/elections and says owner unassigned/not Emmanuel; Emmanuel's ledger says he plans that work; plan section 7 still cuts elections. Confirm ownership and committed demo features. Do not turn this frontend plan into an unassigned backend commitment.
+The P0 coordination, receive plugin and live wall screen have landed and the wall-screen handoff to Jubril is recorded. Elections are P0. Older unassigned section 5a and elections-cut text are superseded. Our separate frontend/ preview leaves the working web/index.html available during design review.
+
+The new contract commits join/leave, heartbeat, inbox/ack, explicit messages and elections. It adds people[actor] = {status, team, last_seen}, teams[].term and deliveries[seq][actor] = sent|delivered|seen. Normalize legacy string people values and these objects at integration. These endpoints are implemented on baseline bfcb853, with the receive plugin and live-wall consumer merged. Shared bearer access does not by itself prove per-person browser identity, and actor-level presence does not distinguish browser from agent.
+
+Human-loop asks must show awaiting answer, answered, automated status response and escalation separately from delivery. An automated status response does not answer the human request. Dispatch says no reply in 60 seconds; the P0 table says not acknowledged in 60 seconds. Implementation now accepts kind reply with numeric reply_to and emits a reply event, although the P0 table still omits reply. Derive answered from that linked reply event, not from seen; approval state is not a service field. Current expireAsks skips recipients marked seen: a briefed but unanswered ask does not time out. The first linked reply also removes the whole ask from pending, even for multiple recipients. Emmanuel/team should reconcile these behaviors with the human-loop spec. Preview escalation demonstrates an unbriefed timeout; it must not promise a backend timeout after briefing. Model-picked recipients are P1; the P0 composer uses explicit person/team/root targets.
 
 ## Build order and completion checks
 
-1. Agree action authority and backend owner. Freeze the smallest working action contract.
+1. Freeze the smallest working action contract with Emmanuel/team; authority and ownership are already confirmed.
 2. Build tokens, shell and specimen states; review the Incident composition in ivory/ink.
 3. Connect actual stream, roster, activity, evidence and record. Verify reconnect and preserve focus/drafts.
 4. Land session/join, messaging and ownership/resolution actions as service support becomes available. Test with two browsers plus a real agent.
@@ -165,5 +172,5 @@ Acceptance: simultaneous claim has one winner; message scope and recipient statu
 ## Decisions still needed
 
 1. Emmanuel/team owns browser-action APIs; which actions will land before rehearsal?
-2. Confirm elections are a committed demo feature or a state we design for but activate later.
-3. Review the proposed screens in local Storybook before production integration. Storybook interactions use explicit sample state and make no backend mutations.
+2. Reconcile unanswered versus unacknowledged timeout and reply/answered schema with Emmanuel/team; elections are committed P0.
+3. Review the CostGraph-aligned, agent-first screens in local Storybook before production integration. Storybook interactions use explicit sample state and make no backend mutations.
