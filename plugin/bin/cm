@@ -130,10 +130,13 @@ reply)
   read_args
   case "$first" in
   *[!0-9]* | "") echo "Usage: /captainmorgue:reply <seq> <text>" ;;
-  *) send "" reply "$rest" "$first" ;;
+  *) send "" reply "$rest" "$first" && printf '%s\n' "$first" >>"$ANSWERED" ;;
   esac
   ;;
+console | pane)
+  exec "$BIN/cm-pane" "$1"
+  ;;
 *)
-  echo "Usage: cm join|leave|status|inbox|broadcast|ask|reply"
+  echo "Usage: cm join|leave|status|inbox|broadcast|ask|reply|console|pane"
   ;;
 esac

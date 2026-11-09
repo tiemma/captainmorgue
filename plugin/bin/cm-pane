@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+
+. "$(dirname "$0")/../lib.sh"
+BIN="$(cd "$(dirname "$0")" && pwd)"
+SESSION_NAME=captainmorgue
+
+if [ -z "$CM_URL" ]; then
+  echo "CM_URL is not set, so CaptainMorgue is off."
+  exit 0
+fi
+
+with_env() {
+  printf '%q ' bash -c '. "$0" && exec "$@"' "$CM_DIR/console.env" "$@"
+}
+
+console() {
+  local v
+  (
+    umask 077
+    for v in CM_URL CM_ACTOR CM_TEAM CM_TOKEN CM_INCIDENT CM_LEDGER; do
+      [ -n "${!v:-}" ] && printf 'export %s=%q\n' "$v" "${!v}"
+    done >"$CM_DIR/console.env"
+  )
+  if ! command -v tmux >/dev/null 2>&1; then
+    echo "tmux is not installed. Run the CaptainMorgue pane in a second terminal next to this one:"
+    echo "  $BIN/cm pane"
+    return
+  fi
+  if [ -n "${TMUX:-}" ]; then
+    tmux split-window -h -l 40% "$(with_env "$BIN/cm" pane)" && echo "Opened the CaptainMorgue pane on the right."
+    return
+  fi
+  if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+    tmux new-session -d -s "$SESSION_NAME" "$(with_env ${CM_CONSOLE_CMD:-${SHELL:-bash}})" \; \
+      split-window -h -l 40% "$(with_env "$BIN/cm" pane)" \; select-pane -L || return
+  fi
+  [ -t 0 ] && [ -t 1 ] && exec tmux attach -t "$SESSION_NAME"
+  echo "The console runs in tmux session $SESSION_NAME. Open it in a terminal with: tmux attach -t $SESSION_NAME"
+}
+
+FEED="$CM_DIR/pane.$$.jsonl"
+
+follow() {
+  local c=0 out
+  while :; do
+    if ! out=$(CM_MAX_TIME=35 api GET "/inbox/$ACTOR?after=$c&wait=25" 2>>"$LOG"); then
+      sleep 2
+      continue
+    fi
+    jq -c --argjson c "$c" '[.messages[]? | select(.seq > $c and .kind != "vote_request")] | sort_by(.seq) | .[]' <<<"$out" >>"$FEED"
+    c=$(jq -r --argjson c "$c" '[.cursor // 0, (.messages[]?.seq), $c] | max' <<<"$out")
+  done
+}
+
+show() {
+  [ "$2" -gt "$1" ] || return 0
+  sed -n "$(($1 + 1)),$2p" "$FEED" | jq -r --arg me "$ACTOR" --slurpfile done <(cat "$ANSWERED" 2>/dev/null) "$JQ_DEFS"'
+    (.kind == "ask" and .from != $me and (.seq as $q | any($done[]; . == $q) | not)) as $open
+    | if $open then "\u001b[1;33m\(msgline)\n    answer: \(.seq) <text> | \(.seq) on | \(.seq) @someone\u001b[0m" else msgline end'
+}
+
+redraw() {
+  printf '\033[2J\033[H'
+  printf 'CaptainMorgue %s as %s\n' "$INCIDENT" "$ACTOR"
+  printf '  <seq> <text> reply   <seq> on  "On it"   <seq> @who  route to someone\n'
+  printf '  b [@team|root] <text> broadcast   a @who <text> ask   l redraw   q quit\n\n'
+  shown=$(wc -l <"$FEED" | tr -d ' ')
+  show 0 "$shown"
+}
+
+reply() {
+  "$BIN/cm" reply <<<"$1 $2"
+}
+
+route() {
+  local question
+  question=$(jq -r --argjson s "$1" 'select(.seq == $s) | "\(.text) (asked by \(.from))"' "$FEED" | head -1)
+  if [ -z "$question" ]; then
+    echo "No message with seq $1."
+    return
+  fi
+  "$BIN/cm" ask <<<"$2 $question" && reply "$1" "Not me, asked $2"
+}
+
+answer() {
+  local seq=${1%%[!0-9]*} rest
+  rest=${1#"$seq"}
+  rest=${rest#"${rest%%[![:space:]]*}"}
+  case "$rest" in
+  "") echo "Add the answer after the seq: $seq <text>, $seq on, or $seq @who." ;;
+  on) reply "$seq" "On it" ;;
+  @?*) route "$seq" "${rest%%[[:space:]]*}" ;;
+  *) reply "$seq" "$rest" ;;
+  esac
+}
+
+pane() {
+  : >"$FEED"
+  follow &
+  POLL=$!
+  local shown=0 n line status
+  trap 'kill $POLL 2>/dev/null; rm -f "$FEED"' EXIT
+  trap 'exit 0' INT TERM HUP
+  redraw
+  while :; do
+    n=$(wc -l <"$FEED" | tr -d ' ')
+    if [ "$n" -gt "$shown" ]; then
+      [ "$shown" -gt 0 ] && echo
+      show "$shown" "$n"
+      sed -n "$((shown + 1)),${n}p" "$FEED" | grep -q '"kind":"ask"' && printf '\a'
+      shown=$n
+      printf '> '
+    fi
+    IFS= read -r -t 1 line
+    status=$?
+    if [ "$status" -gt 128 ]; then
+      continue
+    elif [ "$status" -ne 0 ]; then
+      break
+    fi
+    case "$line" in
+    q | quit) break ;;
+    "" | l) redraw ;;
+    b | b[[:space:]]*) "$BIN/cm" broadcast <<<"${line#b}" ;;
+    a[[:space:]]*) "$BIN/cm" ask <<<"${line#a}" ;;
+    [0-9]*) answer "$line" ;;
+    *) echo "Unknown command. l shows the help." ;;
+    esac
+    printf '> '
+  done
+}
+
+case "$1" in
+console) console ;;
+pane) pane ;;
+esac

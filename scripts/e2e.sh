@@ -5,6 +5,7 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 port=${PORT:-18190}
 token=e2e-$$
+export CM_ALERT_SECONDS=${CM_ALERT_SECONDS:-1}
 fails=0
 
 cleanup() {
@@ -33,8 +34,11 @@ as() {
   mkdir -p "$work/home-$actor"
   HOME=$work/home-$actor CM_ACTOR=$actor CM_TEAM=$team "$root/plugin/bin/cm" "$@"
 }
+hook() {
+  echo "{\"hook_event_name\":\"$3\"}" | HOME=$work/home-$1 CM_ACTOR=$1 CM_TEAM=$2 "$root/plugin/hooks/receive.sh"
+}
 inject() {
-  echo '{"hook_event_name":"UserPromptSubmit"}' | HOME=$work/home-$1 CM_ACTOR=$1 CM_TEAM=$2 "$root/plugin/hooks/receive.sh" | jq -r '.hookSpecificOutput.additionalContext // ""'
+  hook "$1" "$2" UserPromptSubmit | jq -r '.hookSpecificOutput.additionalContext // ""'
 }
 state() { curl -s -N --max-time 2 "$CM_URL/stream" | grep '^data' | tail -1 | sed 's/^data: //'; }
 
@@ -48,7 +52,11 @@ check "first to join manages the team" 'grep -q "manager dana" "$work/join-dana"
 
 echo '@dana Is confdb failing over?' | as gus registration ask >/dev/null
 sleep 3
-check "ask reaches the recipient's session" 'inject dana registration | grep -q "Is confdb failing over"'
+out=$(hook dana registration UserPromptSubmit)
+check "ask reaches the recipient's session" 'jq -r .hookSpecificOutput.additionalContext <<<"$out" | grep -q "Is confdb failing over"'
+check "ask is shown to the person in chat" 'jq -r .systemMessage <<<"$out" | grep -q "Is confdb failing over"'
+check "ask tells Claude to ask the person with AskUserQuestion" 'jq -r .hookSpecificOutput.additionalContext <<<"$out" | grep -q "AskUserQuestion"'
+check "unanswered ask holds the turn once" 'hook dana registration Stop | jq -e ".decision == \"block\"" >/dev/null && [ -z "$(hook dana registration Stop)" ]'
 
 echo 'root Check-in is slow at Hall B' | as dana registration broadcast >/dev/null
 sleep 3

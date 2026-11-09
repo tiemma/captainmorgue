@@ -22,30 +22,41 @@ fi
 
 result='{}'
 if [ -s "$INBOX" ]; then
-  result=$(jq -sc --argjson seen "$seen" --argjson max 5 "$JQ_DEFS"'
+  result=$(jq -sc --argjson seen "$seen" --argjson max 5 --arg me "$ACTOR" --slurpfile done <(cat "$ANSWERED" "$HELD" 2>/dev/null) "$JQ_DEFS"'
+    def handled: .seq as $q | any($done[]; . == $q);
     (map(select(.seq > $seen)) | sort_by(.seq)) as $unread
-    | ($unread | map(select(.kind != "vote_request"))) as $show
+    | ($unread | map(select(.kind != "vote_request" and (.kind != "ask" or (handled | not))))) as $show
     | $show[:$max] as $shown
     | ($shown | map(.kind) | unique) as $kinds
+    | map(select(.kind == "ask" and .from != $me and .seq <= $seen and (handled | not))) as $pending
     | {upto: (if ($show | length) > $max then $shown[-1].seq else ($unread[-1].seq // $seen) end),
        interrupt: any($kinds[]; IN("conflict", "ask", "escalation")),
        text: (if $shown == [] then "" else
          (["CaptainMorgue messages for you:"] + ($shown | map(msgline))
           + [$kinds[] | guidance[.] // empty]
           + (if ($show | length) > $max then ["\(($show | length) - $max) more unread: run /captainmorgue:inbox."] else [] end))
-         | join("\n") end)}
+         | join("\n") end),
+       pending: (if $pending == [] then "" else (["Unanswered CaptainMorgue asks for you:"] + ($pending | map(msgline)) + [guidance.ask]) | join("\n") end),
+       note: ($shown | map(msgline) | join("\n")),
+       stopnote: ($shown + $pending | map(msgline) | join("\n")),
+       hold: [($shown + $pending)[] | select(.kind == "ask") | .seq]}
   ' "$INBOX" 2>>"$LOG") || result='{}'
 fi
 
 upto=$(jq -r ".upto // $seen" <<<"$result")
 text=$(jq -r '.text // ""' <<<"$result")
+note=$(jq -r '.note // ""' <<<"$result")
 
 if [ "$event" = Stop ]; then
-  [ "$(jq -r '.interrupt // false' <<<"$result")" = true ] || exit 0
-  jq -n --arg r "$text" '{decision: "block", reason: $r}'
+  pending=$(jq -r '.pending // ""' <<<"$result")
+  [ "$(jq -r '.interrupt // false' <<<"$result")" = true ] || [ -n "$pending" ] || exit 0
+  jq -r '.hold[]?' <<<"$result" >>"$HELD"
+  jq -n --arg r "$(printf '%s\n\n%s' "$text" "$pending" | sed '/./,$!d')" --arg m "$(jq -r '.stopnote // ""' <<<"$result")" \
+    '{decision: "block", reason: $r, systemMessage: "CaptainMorgue:\n\($m)"}'
 else
   context=$(printf '%s\n\n%s' "$brief" "$text" | sed '/./,$!d')
-  [ -n "${context//[[:space:]]/}" ] && jq -n --arg e "$event" --arg c "$context" '{hookSpecificOutput: {hookEventName: $e, additionalContext: $c}}'
+  [ -n "${context//[[:space:]]/}" ] && jq -n --arg e "$event" --arg c "$context" --arg m "$note" \
+    '{hookSpecificOutput: {hookEventName: $e, additionalContext: $c}} + (if $m != "" then {systemMessage: "CaptainMorgue:\n\($m)"} else {} end)'
 fi
 [ "$upto" -gt "$seen" ] && ack "$upto"
 exit 0

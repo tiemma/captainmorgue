@@ -51,6 +51,17 @@ notify() {
   fi
 }
 
+alert() {
+  if ! command -v osascript >/dev/null 2>&1; then
+    notify ask "$1" "$3"
+    return
+  fi
+  osascript -e 'on run argv' \
+    -e 'set r to display dialog (item 2 of argv) with title (item 1 of argv) buttons {"Later", "Open"} default button "Open" giving up after ((item 4 of argv) as integer)' \
+    -e 'if button returned of r is "Open" and item 3 of argv is not "" then tell application id (item 3 of argv) to activate' \
+    -e 'end run' "CaptainMorgue: ask from $1 (seq $2)" "${3:-(no text)}" "${__CFBundleIdentifier:-}" "${CM_ALERT_SECONDS:-120}" >/dev/null 2>>"$LOG" &
+}
+
 vote() {
   local body
   body=$(jq -c --arg a "$ACTOR" --argjson ours "$(read_seq "$SEEN")" '
@@ -84,9 +95,11 @@ while :; do
   while IFS= read -r m; do
     [ -n "$m" ] || continue
     printf '%s\n' "$m" >>"$INBOX"
-    IFS=$'\t' read -r kind from priority text < <(jq -r '[.kind, .from, .priority, .text] | @tsv' <<<"$m")
+    IFS=$'\t' read -r kind from priority seq text < <(jq -r '[.kind, .from, .priority, .seq, .text] | @tsv' <<<"$m")
     if [ "$kind" = vote_request ]; then
       vote "$m"
+    elif [ "$kind" = ask ]; then
+      alert "$from" "$seq" "$text"
     elif [ "$priority" = interrupt ]; then
       notify "$kind" "$from" "$text"
     fi
