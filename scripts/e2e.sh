@@ -139,6 +139,15 @@ if [ -n "${short:-}" ]; then
   check "anyone moves the incident to investigating and mitigated, and sets severity" '[ "$(jq -r ".incident.status + \" \" + .incident.severity" <<<"$s")" = "mitigated sev2" ]'
   check "only the commander may resolve" 'grep -q "only the commander" <<<"$refused"'
   echo 'Radar investigation: checkin OOMKilled after the 2.3 release' | as dana registration note >/dev/null
+  echo '--part checkin-oom checkin pods OOMKilled at 512Mi' | as dana registration note >/dev/null
+  echo 'mitigated --part checkin-oom raised the limit' | as ben platform status-set >/dev/null
+  check "a part named in a note is resolved by a status naming it" 'jq -e "[.parts[] | select(.name == \"checkin-oom\" and .owner == \"dana\" and .status == \"mitigated\" and .resolved_at != null and .note == \"checkin pods OOMKilled at 512Mi\")] | length == 1" <<<"$(state)" >/dev/null && [ "$(jq -r .incident.status <<<"$(state)")" = mitigated ]'
+  auth=(-H "Authorization: Bearer $CM_TOKEN" -H 'Content-Type: application/json')
+  curl -s -o /dev/null "${auth[@]}" -X POST "$CM_URL/messages" -d '{"from":"dana","to":["dev"],"kind":"ask","text":"unread check"}'
+  inbox=$(curl -s "${auth[@]}" "$CM_URL/inbox/dev?wait=0")
+  check "inbox reports unread messages after the acked cursor" 'jq -e ".unread >= 1 and .unread == (.messages | length)" <<<"$inbox" >/dev/null'
+  curl -s -o /dev/null "${auth[@]}" -X POST "$CM_URL/inbox/dev/ack" -d "{\"seq\":$(jq .cursor <<<"$inbox")}"
+  check "ack clears unread" '[ "$(curl -s "${auth[@]}" "$CM_URL/inbox/dev?wait=0" | jq .unread)" = 0 ]'
   echo '@ben Add a memory alert on checkin' | as dana registration action >/dev/null
   pr=https://github.com/tiemma/captainmorgue-cluster/pull/99
   echo "$pr checkin" | as dana registration pr >/dev/null
@@ -147,10 +156,19 @@ if [ -n "${short:-}" ]; then
   post() { curl -s -o /dev/null -X POST "$CM_URL/events" -H "Authorization: Bearer $CM_TOKEN" -d "$1"; }
   post '{"actor":"dana","type":"action","text":"Bash: kubectl -n team-captainmorgue rollout undo deploy/checkin (ok)","resource":{"kind":"Deployment","namespace":"team-captainmorgue","name":"checkin"},"duration_ms":840}'
   post '{"actor":"dana","type":"action","text":"Bash: curl -fs http://checkin/healthz (failed)","exit_code":7}'
+  s=$(state)
+  check "state counts come from the service" 'jq -e ".counts.events > 0 and .counts.parts == (.parts | length) and .counts.claims == (.claims | length) and .counts.crew_total == (.people | length) and .counts.crew_online == ([.people[] | select(.status == \"online\")] | length) and .counts.open_prs == (.prs | length) and .counts.open_asks >= 1 and .counts.action_items == 1" <<<"$s" >/dev/null'
+  check "close via events is refused for anyone but the commander" '[ "$(curl -s -o /dev/null -w %{http_code} "${auth[@]}" -X POST "$CM_URL/events" -d "{\"actor\":\"dev\",\"type\":\"close\",\"text\":\"done\"}")" = 403 ]'
   echo 'resolved' | as dana registration status-set >/dev/null
-  echo 'Rolled back checkin and raised its memory limit' | as dana registration close >/dev/null
+  echo 'Rolled back checkin and raised its memory limit' | as dana registration close >/dev/null &
+  close_a=$!
+  curl -s -o /dev/null "${auth[@]}" -X POST "$CM_URL/events" -d '{"actor":"dana","type":"close","text":"Rolled back checkin and raised its memory limit"}' &
+  wait "$close_a" $!
   sleep 3
   rec=$(curl -s "$CM_URL/record/INC-1")
+  check "two closes write one close and one RFO" 'jq -e "([.events[] | select(.type == \"close\")] | length == 1) and ([.events[] | select(.actor == \"captainmorgue\" and .type == \"action\" and .to == [\"ben\"])] | length == 1)" <<<"$rec" >/dev/null'
+  check "close after close is a conflict" '[ "$(curl -s -o /dev/null -w %{http_code} "${auth[@]}" -X POST "$CM_URL/events" -d "{\"actor\":\"dana\",\"type\":\"close\"}")" = 409 ]'
+
   check "close writes the RFO from events" 'jq -e ".status == \"closed\" and .written_by == \"captainmorgue\" and (.root_cause | test(\"OOMKilled\")) and .window.mitigated != null and .window.resolved != null and (.timeline | length) > 0 and (.went_well | length) > 0 and (.errors | length) > 0" <<<"$rec" >/dev/null'
   check "RFO lists the pull request and the action item with an owner and due hint" 'jq -e --arg u "$pr" "(.remediation[0].url == \$u) and (.action_items[] | select(.owner == \"ben\" and .due == \"within 1 week\"))" <<<"$rec" >/dev/null'
   check "action item owner gets it in their inbox" 'as ben platform inbox | grep -A3 "\[action\]" | grep -q "Add a memory alert on checkin"'

@@ -46,6 +46,7 @@ type Event struct {
 	Cwd        string     `json:"cwd,omitempty"`
 	Status     string     `json:"status,omitempty"`
 	Severity   string     `json:"severity,omitempty"`
+	Part       string     `json:"part,omitempty"`
 }
 
 var eventTypes = map[string]bool{
@@ -147,12 +148,30 @@ func (inc *Incident) handleEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "event needs an actor and a known type", http.StatusBadRequest)
 		return
 	}
-	inc.append(ev)
+	if ev.Type == "close" {
+		inc.mu.Lock()
+		allowed := inc.mayResolve(ev.Actor)
+		inc.mu.Unlock()
+		if !allowed {
+			http.Error(w, "only the commander, or a team manager when there is no commander, can close "+inc.id, http.StatusForbidden)
+			return
+		}
+	}
+	if inc.append(ev).Seq == 0 {
+		http.Error(w, inc.id+" is closed", http.StatusConflict)
+		return
+	}
 	w.WriteHeader(http.StatusAccepted)
 }
 
 func (inc *Incident) append(ev Event) Event {
 	inc.mu.Lock()
+	if ev.Type == "close" {
+		if status, _ := inc.lifecycleStatus(); status == "closed" {
+			inc.mu.Unlock()
+			return Event{}
+		}
+	}
 	ev.Seq = len(inc.events) + 1
 	ev.ID = fmt.Sprintf("%s-%d", inc.id, ev.Seq)
 	ev.IncidentID = inc.id

@@ -69,6 +69,19 @@ split_args() {
   rest="${rest#"${rest%%[![:space:]]*}"}"
 }
 
+take_part() {
+  part= text=$1
+  case "$text" in
+  --part[[:space:]]*)
+    text=${text#--part}
+    text="${text#"${text%%[![:space:]]*}"}"
+    part=${text%%[[:space:]]*}
+    text=${text#"$part"}
+    text="${text#"${text%%[![:space:]]*}"}"
+    ;;
+  esac
+}
+
 read_args() {
   args=$(cat)
   args="${args#"${args%%[![:space:]]*}"}"
@@ -144,8 +157,8 @@ join)
   stop_poller
   resp=$(join_incident "$team" "$role" "$task") || fail "Joining $INCIDENT"
   nohup "$BIN/cm-poll" </dev/null >>"$CM_DIR/poll.log" 2>&1 &
-  jq -r --arg a "$ACTOR" --arg inc "$INCIDENT" --arg want "$role" "$JQ_DEFS"'
-    "Joined \(.incident // $inc) as \($a) on team \(.team), role \(.role), manager \(.manager | name_or_none), term \(.term // "?").",
+  jq -r --arg a "$ACTOR" --arg inc "$INCIDENT" --arg want "$role" --arg url "${CM_URL%/}/" "$JQ_DEFS"'
+    "Joined \(.incident // $inc) as \($a) on team \(.team), role \(.role), manager \(.manager | name_or_none), term \(.term // "?"). Live view: \($url)",
     (if $want == "commander" and .role != "commander" then "Commander is already \(.commander); you joined as \(.role)." else "Commander: \(.commander | name_or_none)." end),
     "Online: " + ([.members[]? | "\(.actor) (\(.status))"] | join(", "))' <<<"$resp"
   ;;
@@ -235,9 +248,12 @@ status-set | state)
   read_args
   case "$first" in
   sev[123]) body=$(jq -nc --arg a "$ACTOR" --arg s "$first" --arg w "$rest" '{actor: $a, severity: $s, why: $w}') ;;
-  open | investigating | mitigated | resolved | closed) body=$(jq -nc --arg a "$ACTOR" --arg s "$first" --arg w "$rest" '{actor: $a, status: $s, why: $w}') ;;
+  open | investigating | mitigated | resolved | closed)
+    take_part "$rest"
+    body=$(jq -nc --arg a "$ACTOR" --arg s "$first" --arg w "$text" --arg p "$part" '{actor: $a, status: $s, why: $w, part: $p}')
+    ;;
   *)
-    echo "Usage: /captainmorgue:status-set <investigating|mitigated|resolved|closed|sev1|sev2|sev3> [why]"
+    echo "Usage: /captainmorgue:status-set <investigating|mitigated|resolved|closed|sev1|sev2|sev3> [--part <name>] [why]"
     exit 0
     ;;
   esac
@@ -250,9 +266,10 @@ close)
   ;;
 note)
   read_args
-  [ -n "$args" ] || { echo "Usage: /captainmorgue:note <finding, decision or evidence>"; exit 0; }
-  post_event "$(jq -nc --arg a "$ACTOR" --arg t "$args" '{actor: $a, type: "note", text: $t}')" "Recording the note"
-  echo "Noted: $args"
+  take_part "$args"
+  [ -n "$text" ] || { echo "Usage: /captainmorgue:note [--part <name>] <finding, decision or evidence>"; exit 0; }
+  post_event "$(jq -nc --arg a "$ACTOR" --arg t "$text" --arg p "$part" '{actor: $a, type: "note", text: $t, part: $p}')" "Recording the note"
+  echo "Noted${part:+ on $part}: $text"
   ;;
 action)
   read_args
