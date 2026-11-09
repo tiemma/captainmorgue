@@ -228,7 +228,7 @@ pane() {
   snapshot 3 >"$STATE" 2>>"$LOG"
   refresh 2>>"$LOG" &
   REFRESH=$!
-  local shown=0 n k esc buf="" hist=() hi=0 tty=""
+  local shown=0 n k esc buf="" hist=() hi=0 tty="" eof_at=""
   [ -t 0 ] && tty=$(stty -g) && stty -echo
   trap 'kill $POLL $REFRESH 2>/dev/null; rm -f "$FEED" "$STATE" "$STATE.tmp"; [ -n "$tty" ] && stty "$tty"' EXIT
   trap 'exit 0' INT TERM HUP
@@ -246,7 +246,11 @@ pane() {
     IFS= read -rsn1 -d '' -t 1 k
     case $? in
     0) ;;
-    1) [ -n "$tty" ] && continue || break ;;
+    1)
+      [ -n "$tty" ] && [ "$SECONDS" != "$eof_at" ] || break
+      eof_at=$SECONDS
+      continue
+      ;;
     *) continue ;;
     esac
     case "$k" in
