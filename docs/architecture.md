@@ -13,9 +13,9 @@ The PRD says what CaptainMorgue does. This doc says how it is built and how the 
 | Web app | React + Vite | Browser on the big screen | Live team tree, event log, timeline, relay feed, workstreams and the record, fed by server-sent events. Design system in `design/`. |
 | Elasticsearch | Elastic Cloud | Hosted | Store of record for events, incidents and records, with embeddings for recall. |
 | Dash0 | SaaS | Hosted | Alerts that open incidents, telemetry through its MCP server, deep questions handed to Agent0. |
-| Radar | In-cluster install | Demo cluster | Topology, Kubernetes events and team labels through its MCP server. |
+| Radar | Radar Cloud (`radar-cloud` MCP) over the team's vcluster | Hosted | Topology, Kubernetes events, team labels, Prometheus queries, GitOps through Argo CD, and hosted AI investigations. Every call passes the `captainmorgue` cluster id. |
 | Gitar | GitHub app | Demo app repository | Reviews fix and improvement pull requests and confirms CI is green. |
-| Chaos Mesh | Kubernetes operator | Demo cluster | Injects the demo faults from declarative experiments. |
+| Fault switches | Built into the demo app | Demo cluster | Bounded faults turned on and off from CaptainMorgue: crash the checkout service, exhaust the database connection pool, slow payments. |
 
 Libraries, chosen up front so nobody re-litigates them:
 
@@ -26,10 +26,21 @@ Libraries, chosen up front so nobody re-litigates them:
 | MCP client and server | `github.com/modelcontextprotocol/go-sdk` | Official Go SDK. Used for Dash0 and Radar from the service, and for the `cm` local server. |
 | Model calls | `github.com/anthropics/anthropic-sdk-go` | Conflict judgement, routing reasons, record writing. |
 | Secret scrubbing | gitleaks rules (`github.com/zricethezav/gitleaks/v8` detect package) | Maintained rule set for tokens, keys and connection strings. The same rules run on the laptop and in the service. |
-| Fault injection | Chaos Mesh experiments | Solved problem; declarative, repeatable, and resets cleanly between demo runs. |
+| Fault injection | Switches in the demo app, not a chaos tool | The hackathon cluster refuses privileged and host-access pods, which chaos tools such as Chaos Mesh need, and its rules forbid unbounded breakage. App-level switches stay inside our namespace and budget and reset instantly. |
 | Embeddings | Elasticsearch `semantic_text` | Elasticsearch embeds on write through its own inference endpoint, so there is no embedding code. |
 
-## 2. Team tree
+## 2. Hackathon cluster
+
+The cluster comes from the Cloud Native Hackathon starter (repo `tiemma/captainmorgue-cluster`, from `skyhook-io/cnh-starter`). What it gives and what it limits:
+
+- A vcluster named `captainmorgue`, namespace `team-captainmorgue`, where the team is cluster-admin. Public URL `https://captainmorgue.cnh.radarhq.io`, routed to Service `app` on port 80.
+- Deploys are GitOps: push to `main` of the cluster repo and Argo CD syncs. Images come from public GHCR.
+- Pre-installed: Argo CD, Argo Rollouts, Prometheus, the CloudNativePG operator and Radar. The demo database is a CloudNativePG cluster from the starter's example.
+- Budget across the whole cluster: 2 CPU and 4 GiB of requests, 4 CPU and 8 GiB of limits, 4 PVCs, 20 GiB of storage. Elasticsearch does not fit, so it runs on Elastic Cloud.
+- No privileged, hostPath, hostNetwork or hostPID pods, and no LoadBalancer or NodePort services.
+- The rules say not to break things on purpose or generate unbounded load. Our faults are bounded, live inside our namespace, and switch off instantly. Confirm with the organisers at the Radar table that this counts as allowed before the demo.
+
+## 2a. Team tree
 
 - Teams nest. A team holds people and sub-teams, and has exactly one manager.
 - The first person to join or be assigned to a team becomes its manager. The incident manager is the manager at the top and has no special powers.
@@ -126,9 +137,9 @@ It sends a join prompt to the owners' agents with the team already set. Later, P
 
 ## 11. The demo
 
-Setup: a small microservice app on the demo cluster (frontend, checkout, payments, a database), instrumented to Dash0, Radar installed, team labels on every workload, the app repository with Gitar installed, and one seeded past record.
+Setup: a small microservice app in `team-captainmorgue` (frontend, checkout, payments, a CloudNativePG database) with fault switches, instrumented to Dash0, team labels on every workload, the app repository with Gitar installed, and one seeded past record.
 
-1. A Chaos Mesh experiment crashes the checkout service. The restarts and retries take down the database, and payments fails next.
+1. CaptainMorgue flips a fault switch that crashes the checkout service. The restarts and retries take down the database, and payments fails next.
 2. Dash0 alerts. CaptainMorgue opens the incident, finds the owners and pulls in three teams. The seeded past incident shows as a match.
 3. Responders work it from Claude Code on their own laptops. The web app streams every event, the tree fills in, and relays show why each person was told.
 4. Two people act on the database at once. CaptainMorgue flags the conflict with the model's explanation.
@@ -146,7 +157,7 @@ Fallback: a recorded run of a full rehearsal.
 | Agent | `cm` binary, plugin hooks, scrubbing, local MCP tools | A Claude Code session produces events and can broadcast. |
 | Web app | Tree, event log, timeline, relay feed, workstreams, record, from the design system | Renders a live incident from SSE. |
 | Intelligence | Recall, ownership, routing reasons, conflict model, progress scoring, record writer | The demo's match, routing, conflict and record all appear. |
-| Demo world | App, cluster, Dash0 and Radar, Chaos Mesh experiments, Gitar, seeded record, recorded fallback | The fault reproduces on demand and resets cleanly. |
+| Demo world | App with fault switches, cluster repo and Argo CD, Dash0 and Radar Cloud, Gitar, seeded record, recorded fallback | The fault reproduces on demand and resets cleanly. |
 
 Suggested order: service core and agent first, since everything depends on events flowing; then the web app and demo world in parallel; intelligence last, layered on real events.
 
