@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { Check, Circle, X } from "lucide-react";
+import { Check, Circle, LoaderCircle, Clock3, X } from "lucide-react";
 
 export type Tone = "neutral" | "amber" | "danger" | "success" | "info";
 export function Button({
@@ -109,9 +109,11 @@ export function Dialog({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const opener = useRef(document.activeElement as HTMLElement | null);
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    ref.current?.focus();
+    const previous = opener.current;
+    const input = ref.current?.querySelector<HTMLElement>("textarea, input");
+    (input ?? ref.current)?.focus();
     function key(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
       if (event.key !== "Tab") return;
@@ -179,6 +181,19 @@ export function Receipt({ children }: { children: ReactNode }) {
     <span className="cm-receipt">
       <Check size={13} />
       {children}
+    </span>
+  );
+}
+
+export function ProgressStatus({ state, children }: {
+  state: "working" | "waiting" | "done";
+  children: ReactNode;
+}) {
+  const StateIcon = state === "working" ? LoaderCircle : state === "waiting" ? Clock3 : Check;
+  return (
+    <span className={`cm-progress-status cm-progress-${state}`} role="status">
+      <StateIcon size={14} aria-hidden="true" />
+      <span>{children}</span>
     </span>
   );
 }

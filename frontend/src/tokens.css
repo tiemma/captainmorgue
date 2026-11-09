@@ -1,25 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap");
+
 :root {
-  --cm-canvas: #f6f1e7;
-  --cm-paper: #fffdf7;
-  --cm-ink: #241d18;
-  --cm-secondary: #6c6054;
-  --cm-muted: #746655;
-  --cm-line: #ddd2bf;
-  --cm-line-strong: #8f7e67;
+  --cm-canvas: #f6f4ee;
+  --cm-paper: #fffefa;
+  --cm-layer: #efede6;
+  --cm-ink: #292621;
+  --cm-secondary: #625e55;
+  --cm-muted: #706b60;
+  --cm-line: #e4e0d6;
+  --cm-line-strong: #938879;
   --cm-amber: #a65e20;
-  --cm-amber-soft: #f1e3cd;
+  --cm-amber-soft: #f6ead9;
   --cm-brass: #a3874b;
   --cm-danger: #a33935;
-  --cm-danger-soft: #f9e9e2;
+  --cm-danger-soft: #faeae7;
   --cm-success: #397255;
-  --cm-success-soft: #e8eee3;
+  --cm-success-soft: #e9f2eb;
   --cm-info: #426a80;
-  --cm-info-soft: #e7edef;
-  --cm-nav: #241d18;
-  --cm-nav-line: #42372e;
-  --cm-radius: 8px;
-  --cm-font:
-    "Public Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  --cm-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --cm-info-soft: #eaf0f4;
+  --cm-nav: #25231f;
+  --cm-nav-surface: #39352e;
+  --cm-nav-line: #454039;
+  --cm-radius: 12px;
+  --cm-shadow-xs: 0 1px 2px #29262106;
+  --cm-font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --cm-display: "Funnel Display", "Geist", -apple-system, sans-serif;
+  --cm-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
