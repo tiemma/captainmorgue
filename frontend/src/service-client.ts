@@ -60,6 +60,7 @@ export interface PastMatch {
 }
 
 export interface IncidentState {
+  commander?: string;
   incident: {
     id: string;
     title: string;

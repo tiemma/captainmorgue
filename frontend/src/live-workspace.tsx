@@ -339,7 +339,10 @@ export function LiveWorkspace() {
       </aside>
       <div className="cm-live-shell">
         <header className="cm-live-topbar">
-          <span className="text-label-sm">{tab}</span>
+          <span className="text-label-sm">
+            {tab}
+            {state?.commander && <><br /><span className="text-paragraph-xs">Commander {state.commander}</span></>}
+          </span>
           <div>
             <span className="cm-live-connection text-paragraph-xs">
               <Radio size={13} aria-hidden="true" />

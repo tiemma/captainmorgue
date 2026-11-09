@@ -14,6 +14,7 @@ test.beforeAll(async ({ request }) => {
 test('real service feeds incident, claims, crew profiles and record', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Local verification', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Commander agent-checkin', { exact: true })).toBeVisible();
   await expect(page.getByText('Verified query contention in check-in.', { exact: true })).toBeVisible();
   await expect(page.getByText('conference/deployment/confdb', { exact: true })).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Workspace' });
