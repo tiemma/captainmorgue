@@ -36,9 +36,13 @@ Tagline: **Where incidents go to die.**
 | 15 | What goes in the record? | Text at launch. Images, audio and video come later. |
 | 16 | What is fault injection for? | Testing CaptainMorgue. It breaks a demo cluster on purpose, so the demo shows a real incident from the first alert to the finished record and proves CaptainMorgue works. It is a test harness, not a feature responders use. |
 | 17 | What is the agent on each laptop? | A Claude Code plugin. Responders already work in Claude Code, and the plugin sees every command and tool call the agent makes. |
-| 18 | What goes into the record? | Everything a person does: what their agent runs and reads, the commands they type, and their chat messages. |
+| 18 | What goes into the record? | Everything a person does: what their agent runs and reads, the commands they type, and the messages they send through their agent. |
 | 19 | Where are the screens? | A web app. One shared page shows the live tree, timeline, relay feed and record, and it goes on the big screen in the demo. |
 | 20 | Who is in the demo? | All real people, each on their own laptop with their own agent. CaptainMorgue shows the event log across all agents as the incident proceeds, streaming logs and other artifacts live. |
+| 21 | How does an incident start? | Three ways: a Dash0 alert fires, a person declares one from their agent, or a fault injection opens it. In the demo, the injected fault trips a Dash0 alert and CaptainMorgue opens the incident from that. |
+| 22 | How do people join? | CaptainMorgue pulls them in. It picks people from service ownership, and their agent gets a prompt to join with the team already set. Later, CaptainMorgue reads PagerDuty to know who is on call for each team. |
+| 23 | Which chat is in the record? | Messages sent through the agents: @mentions and broadcasts through CaptainMorgue. No outside chat tool is read. |
+| 24 | Sponsor technology | The build uses Elasticsearch, Dash0, A2A, Gitar and Radar. Section 7 says how each one is used. |
 
 ## 3. What people see
 
@@ -70,7 +74,8 @@ Tagline: **Where incidents go to die.**
 
 - CaptainMorgue injects a fault into the demo cluster. The fault shows up in Dash0 and Radar like a real incident would.
 - Several real people, each on their own laptop with their own Claude Code agent, join and work the incident live. The web app on the big screen streams the event log across every agent as they go, with logs and other artifacts as they arrive. CaptainMorgue pulls in the right teams, relays messages, and flags a conflict.
-- The incident is resolved, and the record is on screen at the end, written from the timeline.
+- The fix goes out as a pull request. Gitar reviews it and confirms CI is green, and the incident is resolved.
+- The record is on screen at the end, written from the timeline. It shows a past incident found in Elasticsearch, and its improvements open as pull requests for Gitar to check.
 
 ## 4. Hackathon scope
 
@@ -109,15 +114,23 @@ Proposed, for review.
 | 11 | Who closes the incident: CaptainMorgue or a manager.                                                                                                               |
 | 12 | Whether improvements are only suggested, or also filed and tracked to done.                                                                                        |
 | 13 | Whether CaptainMorgue is part of CostGraph or a separate product.                                                                                                  |
-| 14 | Which incident tools it connects to (paging, chat, status page), or whether it replaces them.                                                                      |
-| 15 | How an incident starts: a Dash0 alert, a person declaring it, or the injected fault setting it off. |
-| 16 | How a person joins an incident and lands in the right team: an invite link, an @mention, or CaptainMorgue pulling them in. |
-| 17 | How CaptainMorgue judges how much a step moved the incident forward. |
-| 18 | How CaptainMorgue spots that two actions conflict. For the demo, one written rule for the scripted case may be enough. |
-| 19 | The demo script: which fault, who does what, where the conflict happens, and when the record appears. |
-| 20 | The fallback if the live demo fails: a recorded run, a local copy of the services, or both. |
-| 21 | Who CaptainMorgue is for, and why existing incident tools (incident.io, Rootly, PagerDuty, Radar Cloud, Dash0 Agent0) do not already do this. |
-| 22 | The hackathon itself: judging criteria, deadline, team size, and any sponsor technology the build must use. |
-| 23 | How secrets in recorded commands and output are kept out of the record. |
+| 14 | Which other incident tools it connects to after the hackathon (PagerDuty for on-call is planned; chat and status page are open), or whether it replaces them.                                                                      |
+| 15 | How CaptainMorgue judges how much a step moved the incident forward. |
+| 16 | How CaptainMorgue spots that two actions conflict. For the demo, one written rule for the scripted case may be enough. |
+| 17 | The demo script: which fault, who does what, where the conflict happens, and when the record appears. |
+| 18 | The fallback if the live demo fails: a recorded run, a local copy of the services, or both. |
+| 19 | Who CaptainMorgue is for, and why existing incident tools (incident.io, Rootly, PagerDuty, Radar Cloud, Dash0 Agent0) do not already do this. |
+| 20 | The hackathon itself: judging criteria, deadline and team size. |
+| 21 | How secrets in recorded commands and output are kept out of the record. |
+
+## 7. Sponsor technology
+
+| Technology | What it does in CaptainMorgue |
+|---|---|
+| Dash0 | Starts incidents: an alert opens one. Agents read telemetry through its MCP server, and deep questions go to Agent0. The demo fault shows up here first. |
+| Radar | Shows the cluster: topology, Kubernetes events and what changed, read by agents through its MCP server. Its event timeline feeds the incident record, and the web app links to Radar views as evidence. |
+| Elasticsearch | Stores the incident record and makes it searchable. Search over past records is how CaptainMorgue spots "this has happened before" and finds who fixed it last time. |
+| A2A | How agents talk to each other and to CaptainMorgue. Each person's agent describes what it can do, and dispatched work moves as A2A tasks whose state is the status that flows up the tree. |
+| Gitar | Verifies the fix. When a part of the incident is fixed in code, Gitar reviews the pull request, separates real CI failures from flaky ones, and confirms CI is green before it ships. Its findings land in the record, and improvements from the record become pull requests that Gitar checks. |
 
 The architecture document will follow as a sibling of this PRD.
