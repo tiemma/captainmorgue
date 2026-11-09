@@ -16,6 +16,7 @@ npm run storybook
 Open http://127.0.0.1:6006. The sidebar contains:
 
 - Screens / Workspace: Incident, Requests, Crew, Record, Postmortems, Join and Wall Screen.
+- Screens / Team graph: the team tree with relationship arcs, plus loading and unavailable states.
 - States / Incident: conflict, reconnecting, resolved and no active incident.
 - Design system / Foundations: palette, typography and shared components.
 
@@ -42,6 +43,10 @@ Browser tests expect Chromium: install with `npx playwright install chromium`. `
 - `.storybook/`: local review configuration; telemetry disabled.
 
 Current decisions: monochrome neutrals, one blue accent for focus, selection and links, status as a dot or glyph plus text, Funnel Display / Geist / Geist Mono typography, and light and dark themes. Emmanuel/team supplies the real action APIs. See [the frontend plan](../docs/frontend-design-plan.md) for screen behavior and integration handoffs.
+
+## Team graph
+
+The live Teams tab reads `GET /api/graph` (optional `start` and `end`, RFC 3339). The service builds it at read time from the roster and the incident events: the team tree (`part_of`, `member_of`, `manages`, `owns`) plus team-to-team arcs for `depends_on` (a team acted on a resource another team owns, inferred), `messaged` (asks, replies, relays and pages across teams) and `shared_incident` (teams pulled in together). Arcs stay hidden until a team is hovered or selected; the selected team is kept in `?focus=`. This draft draws with SVG and needs no graph library; `calls` and `uses` arrive when Dash0 traces and Radar topology feed the service. Fonts are bundled from `@fontsource`, so the app works offline.
 
 ## Postmortems
 

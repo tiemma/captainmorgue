@@ -82,7 +82,7 @@ func quoted(evs []Event) string {
 }
 
 func plainDigest(teams string, unseen, asks []Event) string {
-	lines := []string{fmt.Sprintf("Catch-up: %d events since you last looked.", len(unseen))}
+	lines := []string{fmt.Sprintf("Catch-up: %s since you last looked.", countOf(len(unseen), "event"))}
 	if teams != "" {
 		lines = append(lines, "Teams: "+teams+".")
 	}
@@ -130,7 +130,7 @@ func (inc *Incident) sendDigest(actor string, since int) {
 		Type:  "digest",
 		To:    []string{actor},
 		Text:  text,
-		Why:   fmt.Sprintf("You missed %d events since seq %d.", len(unseen), since),
+		Why:   fmt.Sprintf("You missed %s since seq %d.", countOf(len(unseen), "event"), since),
 	})
 }
 
@@ -145,4 +145,11 @@ func (b *brain) writeDigest(ctx context.Context, actor, teams string, unseen, as
 		return "", err
 	}
 	return strings.Join(out.Lines[:min(len(out.Lines), digestLines)], "\n"), nil
+}
+
+func countOf(n int, noun string) string {
+	if n == 1 {
+		return "1 " + noun
+	}
+	return fmt.Sprintf("%d %ss", n, noun)
 }

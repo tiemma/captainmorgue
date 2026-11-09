@@ -302,3 +302,34 @@ export function updateTask(incidentId: string, actor: string, task: string) {
 export function leave(incidentId: string, actor: string) {
   return request<void>(`/incidents/${encodeURIComponent(incidentId)}/leave`, { actor });
 }
+
+export type GraphMeans = 'part_of' | 'member_of' | 'manages' | 'owns' | 'depends_on' | 'messaged' | 'shared_incident';
+
+export interface GraphNode {
+  id: string;
+  kind: 'org' | 'team' | 'person' | 'service';
+  name: string;
+  parent_id?: string;
+  child_count: number;
+  manager?: string;
+  status?: string;
+}
+
+export interface GraphLink {
+  a: string;
+  b: string;
+  means: GraphMeans;
+  source: 'configured' | 'observed' | 'inferred';
+  count: number;
+  evidence: string[];
+}
+
+export interface TeamGraph {
+  window: { start: string | null; end: string | null };
+  nodes: GraphNode[];
+  links: GraphLink[];
+}
+
+export function fetchGraph(signal?: AbortSignal) {
+  return request<TeamGraph>('/api/graph', undefined, signal);
+}

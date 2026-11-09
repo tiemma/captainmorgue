@@ -28,6 +28,20 @@ test('real service feeds incident, claims, crew profiles and record', async ({ p
   await expect(page.getByText('SAMPLE-2041')).toHaveCount(0);
 });
 
+test('team graph renders the roster tree and the arcs the service derives', async ({ page, request }) => {
+  const graph = await (await request.get('/api/graph')).json();
+  expect(graph.links.some((link: { means: string; a: string; b: string }) =>
+    link.means === 'shared_incident' && [link.a, link.b].sort().join() === 'team:platform,team:registration')).toBeTruthy();
+  await page.goto('/');
+  await page.getByRole('navigation', { name: 'Workspace' }).getByRole('button', { name: 'Teams', exact: true }).click();
+  const registration = page.getByRole('button', { name: /^Registration/ });
+  await expect(registration).toContainText('agent-checkin');
+  await expect(page.getByRole('button', { name: /^Platform/ })).toContainText('confdb');
+  await registration.click();
+  await expect(page.locator('.cm-graph-arc.is-shared_incident')).toHaveCount(1);
+  await expect(page.getByRole('complementary', { name: 'Team relationships' }).getByText('Shared incident with Platform')).toBeVisible();
+});
+
 test('explicit browser join sends a real ask and renders service delivery state', async ({ page, request }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Join', exact: true }).click();
