@@ -224,6 +224,7 @@ export function LiveWorkspace() {
   const [recipient, setRecipient] = useState("");
   const [kind, setKind] = useState<"ask" | "broadcast" | "relay">("ask");
   const [inbox, setInbox] = useState<Envelope[]>([]);
+  const [unread, setUnread] = useState(0);
   const [taskDraft, setTaskDraft] = useState("");
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState<IncidentEvent>();
@@ -243,6 +244,7 @@ export function LiveWorkspace() {
   const teams = state?.teams || [];
   const people = state?.people || {};
   const claims = state?.claims || [];
+  const counts = state?.counts;
   const connected = connection === "connected";
   const incidentId = state?.incident.id;
   const active = !!state?.incident.opened;
@@ -267,12 +269,14 @@ export function LiveWorkspace() {
     if (!identity) return;
     const controller = new AbortController();
     setInbox([]);
+    setUnread(0);
     (async () => {
       let after: number | undefined;
       while (!controller.signal.aborted) {
         try {
           const page = await fetchInbox(identity, after, controller.signal);
           after = page.cursor;
+          setUnread(page.unread ?? 0);
           if (page.messages?.length)
             setInbox((current) => [...current, ...page.messages!].slice(-50));
         } catch (reason) {
@@ -307,6 +311,7 @@ export function LiveWorkspace() {
       async () => {
         await ackInbox(identity, last.seq);
         setInbox([]);
+        setUnread(0);
       },
       "Inbox marked seen.",
       "Inbox could not be acknowledged.",
@@ -533,6 +538,11 @@ export function LiveWorkspace() {
             >
               <Icon size={17} aria-hidden="true" />
               {label}
+              {label === "Requests" && unread > 0 && (
+                <span className="cm-live-nav-count" aria-label={`${unread} unread`}>
+                  <Badge tone="danger" dot={false}>{unread}</Badge>
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -668,19 +678,31 @@ export function LiveWorkspace() {
                   <div className="cm-kpi-row">
                     <div className="cm-stat-card">
                       <span>Parts</span>
-                      <strong>{state.parts?.length || 0}</strong>
+                      <strong>{counts?.parts ?? 0}</strong>
                     </div>
                     <div className="cm-stat-card">
                       <span>Claims</span>
-                      <strong>{claims.length}</strong>
+                      <strong>{counts?.claims ?? 0}</strong>
                     </div>
                     <div className="cm-stat-card">
-                      <span>Crew</span>
-                      <strong>{Object.keys(people).length}</strong>
+                      <span>Crew online</span>
+                      <strong>{`${counts?.crew_online ?? 0} / ${counts?.crew_total ?? 0}`}</strong>
                     </div>
                     <div className="cm-stat-card">
                       <span>Events</span>
-                      <strong>{events.length}</strong>
+                      <strong>{counts?.events ?? 0}</strong>
+                    </div>
+                    <div className="cm-stat-card">
+                      <span>Open asks</span>
+                      <strong>{counts?.open_asks ?? 0}</strong>
+                    </div>
+                    <div className="cm-stat-card">
+                      <span>Pull requests</span>
+                      <strong>{counts?.open_prs ?? 0}</strong>
+                    </div>
+                    <div className="cm-stat-card">
+                      <span>Action items</span>
+                      <strong>{counts?.action_items ?? 0}</strong>
                     </div>
                     <div className="cm-stat-card">
                       <span>Elapsed</span>

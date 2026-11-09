@@ -1,9 +1,14 @@
 # Emmanuel (tiemma): service and plugin
 
 ## Now
-Joined the live incident as tiemma (platform, manager). Four crew agents on feat/roles, feat/claim, feat/digest, feat/notify. Demo data removed from main (`3fcebda`).
+17:30 - Demo-ready. Service live on sha-5994962 (deployed by pinning the image in the cluster repo; Radar restarts are Unauthorized), Elasticsearch persisting events, Dash0 receiving data with 5 check rules and the /alerts webhook. Plugin 0.2.9 restarted on my agent. Records, gaps and approvals branches landing next.
 
 ## Done
+- [x] Milestone: set up on my agent (joined INC-1 as commander, asks exchanged with Sammy and Jubril).
+- [x] Service: join, inbox, heartbeats, Raft-style elections, asks, broadcasts, claims, digest, roles, alerts and paging, incident states, close and RFO with steps taken, /records, live Dash0 signals.
+- [x] Plugin: console with completion and shell capture, quiet auto-rejoins, CM_NOTIFY=off for e2e (notification spam fixed).
+- [x] Merged feat/service-intel, feat/infra, fault PR #1, feat/dash0-checks; Jubril's UI branches and team graph merged; UI wired to every existing route.
+- [x] Elasticsearch key verified and set; Dash0 collector token, check rules, webhook and service token set.
 - Plugin receive side merged (join, leave, status @person, inbox, broadcast, ask, reply, poller, hooks inject messages). `scripts/e2e.sh`: 8 checks, ALL PASSED on `main`.
 - Merged to `main`: coordination layer (join, heartbeat, liveness, inbox, messages, replies, token auth, elections, auto-reply, escalation), Elasticsearch + Claude, live wall screen. Image `ghcr.io/tiemma/captainmorgue` is public and builds on every push to main.
 - `feat/infra` pushed to the cluster repo for Sammy (26bfbe8): conference app, confdb, CaptainMorgue as `app`, OTel collector to Dash0. Elastic Cloud chosen (ELSER does not fit the budget); Dash0 operator skipped (needs hostPath).
@@ -18,10 +23,8 @@ Joined the live incident as tiemma (platform, manager). Four crew agents on feat
 - Plan, contract and owners in `docs/hackathon-plan.md`.
 
 ## Next
-- [ ] **Milestone: set up on my agent** (AGENTS.md, "Milestone: set it up on your own agent") once the service is deployed: install the plugin, set the env, `/captainmorgue:join`, send and answer one ask. Tick and push when done.
-- Answer the open questions in `docs/dispatch.md` section 9, then build `/messages`, `/inbox`, heartbeats and the election.
-- Review and merge `feat/service-intel`, publish `ghcr.io/tiemma/captainmorgue`.
-- Review `feat/infra` in the cluster repo and hand it to Sammy.
+- [ ] Merge feat/records (per-incident ids, draft records), feat/gaps, feat/approvals; pin the new image in captainmorgue-cluster deploy/kustomization.yaml to deploy.
+- [ ] Rehearse the full run with Sammy and Jubril; close the incident to produce the first stored RFO.
 
 ## Blocked on
 - Nothing.

@@ -63,6 +63,9 @@
 .cm-live-sidebar nav button.is-selected > svg {
   color: var(--cm-accent);
 }
+.cm-live-nav-count {
+  margin-left: auto;
+}
 .cm-live-sidebar-context {
   margin-top: 24px;
   padding: 20px 12px;

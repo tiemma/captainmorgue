@@ -54,8 +54,20 @@ type Signal struct {
 	Spark   []float64 `json:"spark,omitempty"`
 }
 
+type Counts struct {
+	Parts       int `json:"parts"`
+	Claims      int `json:"claims"`
+	CrewOnline  int `json:"crew_online"`
+	CrewTotal   int `json:"crew_total"`
+	Events      int `json:"events"`
+	OpenAsks    int `json:"open_asks"`
+	OpenPRs     int `json:"open_prs"`
+	ActionItems int `json:"action_items"`
+}
+
 type State struct {
 	Incident  IncidentSummary   `json:"incident"`
+	Counts    Counts            `json:"counts"`
 	Teams     []TeamState       `json:"teams"`
 	People    map[string]Person `json:"people"`
 	Parts     []Part            `json:"parts"`
@@ -78,7 +90,7 @@ func (inc *Incident) state() State {
 	s := State{
 		Incident:  IncidentSummary{ID: inc.id, Title: inc.title, Status: status, Severity: severity},
 		People:    inc.people(now),
-		Parts:     []Part{},
+		Parts:     incidentParts(inc.events),
 		Signals:   maps.Clone(inc.signals),
 		PastMatch: inc.pastMatch,
 		Claims:    inc.activeClaims(now),
@@ -92,6 +104,7 @@ func (inc *Incident) state() State {
 	if len(inc.events) > 0 {
 		s.Incident.Opened = &inc.events[0].TS
 	}
+	openAsks := map[int]bool{}
 	inIncident := inc.teamsInIncident()
 	for _, t := range inc.liveRoster().Teams {
 		s.Teams = append(s.Teams, TeamState{Team: t, Term: inc.coord.team(t.ID).term, PulledIn: inIncident[t.ID]})
@@ -110,9 +123,52 @@ func (inc *Incident) state() State {
 			s.Conflict = ev
 		case "close":
 			s.Incident.Closed = &ev.TS
+		case "ask":
+			openAsks[ev.Seq] = true
+		case "reply":
+			delete(openAsks, ev.ReplyTo)
+		}
+	}
+	s.Counts = Counts{
+		Parts: len(s.Parts), Claims: len(s.Claims), CrewTotal: len(s.People), Events: len(inc.events),
+		OpenAsks: len(openAsks), OpenPRs: len(s.PRs), ActionItems: len(explicitActionItems(inc.events, severity)),
+	}
+	for _, p := range s.People {
+		if p.Status == "online" {
+			s.Counts.CrewOnline++
 		}
 	}
 	return s
+}
+
+var partProgress = map[string]int{"investigating": 0, "mitigated": 50, "resolved": 100}
+
+func incidentParts(events []Event) []Part {
+	out := []Part{}
+	index := map[string]int{}
+	for _, ev := range events {
+		if ev.Type == "open" {
+			out, index = []Part{}, map[string]int{}
+		}
+		if ev.Part == "" || (ev.Type != "note" && ev.Type != "status") {
+			continue
+		}
+		i, ok := index[ev.Part]
+		if !ok {
+			i, index[ev.Part] = len(out), len(out)
+			out = append(out, Part{ID: ev.Part, Name: ev.Part, Owner: ev.Actor, Status: "investigating"})
+		}
+		p := &out[i]
+		if ev.Type == "note" {
+			p.Note = ev.Text
+			continue
+		}
+		p.Status, p.Progress = ev.Status, partProgress[ev.Status]
+		if p.ResolvedAt == nil {
+			p.ResolvedAt = &ev.TS
+		}
+	}
+	return out
 }
 
 type RecordPart struct {
