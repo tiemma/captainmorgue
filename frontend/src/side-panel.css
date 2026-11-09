@@ -1,0 +1,106 @@
+.cm-side-panel {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+  height: calc(100dvh - 64px);
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--cm-line, #ddd2bf);
+  background: var(--cm-paper, #fffdf7);
+  box-sizing: border-box;
+}
+
+.cm-side-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--cm-line, #ddd2bf);
+}
+
+.cm-side-panel-header h2 {
+  margin: 0;
+  font-family: var(--cm-font, sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cm-side-panel-header button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.cm-side-panel-header button:hover {
+  background: var(--cm-layer, #f6f1e7);
+}
+
+.cm-side-panel-body {
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  padding: 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+
+.cm-side-panel-body pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.cm-side-panel-resize {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 1;
+}
+
+.cm-side-panel-resize::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 24px);
+  left: 2px;
+  width: 3px;
+  height: 48px;
+  border-radius: 999px;
+  background: #929292;
+  opacity: 0;
+}
+
+.cm-side-panel-resize:hover::after,
+.cm-side-panel-resize:focus-visible::after,
+.cm-side-panel-resize:active::after {
+  opacity: 1;
+}
+
+.cm-side-panel-resize:focus-visible,
+.cm-side-panel-header button:focus-visible {
+  outline: 2px solid var(--cm-amber, #a65e20);
+  outline-offset: -2px;
+}
+
+.cm-workspace:has(> .cm-side-panel[data-stacked="true"]) {
+  flex-direction: column;
+}
+
+.cm-side-panel[data-stacked="true"] {
+  height: auto;
+  max-height: 75dvh;
+  border-left: 0;
+  border-top: 1px solid var(--cm-line, #ddd2bf);
+}
