@@ -1,12 +1,16 @@
 CM_DIR="$HOME/.captainmorgue"
 LOG="$CM_DIR/hook.log"
-ACTOR="${CM_ACTOR:-$USER}"
+ACTOR="${CM_ACTOR:-${USER:-$USERNAME}}"
 INCIDENT="${CM_INCIDENT:-INC-1}"
 INBOX="$CM_DIR/inbox.jsonl"
 SEEN="$CM_DIR/seen"
 SESSION="$CM_DIR/session.json"
 
 mkdir -p "$CM_DIR"
+
+case "$(uname -s)" in
+MINGW* | MSYS* | CYGWIN*) jq() { command jq -b "$@"; } ;;
+esac
 
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >>"$LOG"
@@ -16,6 +20,16 @@ api() {
   local args=(-sSfN --max-time "${CM_MAX_TIME:-2}" -X "$1" -H 'Content-Type: application/json')
   [ -n "${3:-}" ] && args+=(-d "$3")
   { [ -n "${CM_TOKEN:-}" ] && printf 'header = "Authorization: Bearer %s"\n' "$CM_TOKEN"; } | curl --config - "${args[@]}" "${CM_URL%/}$2"
+}
+
+poller_alive() {
+  local cmd
+  [ -n "$1" ] || return 1
+  if cmd=$(ps -p "$1" -o command= 2>/dev/null); then
+    case $cmd in *cm-poll*) return 0 ;; esac
+    return 1
+  fi
+  kill -0 "$1" 2>/dev/null
 }
 
 write_file() {

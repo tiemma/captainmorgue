@@ -7,10 +7,7 @@ PID="$CM_DIR/poll.pid"
 CURSOR="$CM_DIR/cursor"
 OUT="$CM_DIR/poll.out"
 
-old=$(cat "$PID" 2>/dev/null)
-if [ -n "$old" ] && ps -p "$old" -o command= 2>/dev/null | grep -q cm-poll; then
-  exit 0
-fi
+poller_alive "$(cat "$PID" 2>/dev/null)" && exit 0
 echo $$ >"$PID"
 
 (
@@ -37,10 +34,21 @@ pause() {
   wait $!
 }
 
+WIN_NOTIFY='Add-Type -AssemblyName System.Windows.Forms, System.Drawing; $n = New-Object System.Windows.Forms.NotifyIcon; $n.Icon = [System.Drawing.SystemIcons]::Information; $n.Visible = $true; $n.ShowBalloonTip(10000, $env:CM_NOTE_TITLE, $env:CM_NOTE_TEXT, [System.Windows.Forms.ToolTipIcon]::Info); Start-Sleep -Seconds 10; $n.Dispose()'
+
 notify() {
-  command -v osascript >/dev/null 2>&1 || return 0
-  osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title (item 1 of argv)' -e 'end run' \
-    "CaptainMorgue: $1 from $2" "$3" >/dev/null 2>>"$LOG"
+  local title="CaptainMorgue: $1 from $2" text="${3:-(no text)}"
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title (item 1 of argv)' -e 'end run' \
+      "$title" "$text" >/dev/null 2>>"$LOG"
+  elif command -v powershell.exe >/dev/null 2>&1; then
+    CM_NOTE_TITLE=$title CM_NOTE_TEXT=$text WSLENV="CM_NOTE_TITLE:CM_NOTE_TEXT${WSLENV:+:$WSLENV}" \
+      powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -Command "$WIN_NOTIFY" >/dev/null 2>>"$LOG" &
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -- "$title" "$text" 2>>"$LOG"
+  else
+    printf '\a%s %s: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$title" "$text"
+  fi
 }
 
 vote() {
