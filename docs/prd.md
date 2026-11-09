@@ -43,6 +43,18 @@ Tagline: **Where incidents go to die.**
 | 22 | How do people join? | CaptainMorgue pulls them in. It picks people from service ownership, and their agent gets a prompt to join with the team already set. Later, CaptainMorgue reads PagerDuty to know who is on call for each team. |
 | 23 | Which chat is in the record? | Messages sent through the agents: @mentions and broadcasts through CaptainMorgue. No outside chat tool is read. |
 | 24 | Sponsor technology | The build uses Elasticsearch, Dash0, A2A, Gitar and Radar. Section 7 says how each one is used. |
+| 25 | Which fault does the demo inject? | A cascading failure that needs several teams to work together. The app crashes, the load takes down the database, and the failure spreads to the services that depend on it. Each team owns a different part, so routing, relays and conflicts all show up. |
+| 26 | How are conflicting actions spotted? | Two checks together. A rule flags two people acting on the same Kubernetes resource within a short window when one of the actions is a write. The model also checks each new action against earlier decisions, confirms or dismisses what the rule flagged, and explains why in plain words. |
+| 27 | How is progress judged? | By signal recovery. A step counts as progress when the alerting signal in Dash0, such as error rate or latency, moves back toward normal after it. |
+| 28 | What if the live demo fails? | Switch to a recorded run of a full rehearsal. |
+| 29 | How does CaptainMorgue know who owns a service? | It combines four sources: team labels on Kubernetes workloads read through Radar, the Dash0 service catalog, CODEOWNERS in the repository, and who fixed it in past incidents stored in Elasticsearch. |
+| 30 | Who closes the incident? | Any of three ways. CaptainMorgue proposes closing once signals recover and every part is resolved, and the top manager confirms. CaptainMorgue closes it alone once signals stay normal for a set time. Any manager can close it. |
+| 31 | What happens to improvements? | Code improvements open as pull requests that Gitar reviews. The rest become issues with owners. |
+| 32 | Is "this has happened before" in the hackathon build? | Yes. Elasticsearch is seeded with an earlier record of a similar failure, so the match appears in the demo. |
+| 33 | What can each person see? | Everything. During the hackathon, everyone in the incident sees all Radar and Dash0 data through CaptainMorgue. Limiting each person to their own access comes later. |
+| 34 | Is raw activity private? | No. Raw commands and output are visible to everyone in the incident, and anyone in the organisation can read the closed record. |
+| 35 | How are secrets kept out of the record? | Scrubbed twice: the plugin removes known secret patterns (tokens, keys, connection strings) before anything leaves the laptop, and CaptainMorgue scrubs again before storing. |
+| 36 | Can agents talk directly? | No. Every interaction between agents goes through CaptainMorgue as an event, so the record is complete. |
 
 ## 3. What people see
 
@@ -101,27 +113,15 @@ Proposed, for review.
 
 | #   | Question                                                                                                                                                           |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1 | Which faults the demo injects, on which cluster, and how the cluster is reset between demo runs.                                                                   |
-| 2 | How CaptainMorgue knows who owns a service: service catalog, code ownership files, on-call schedules or past incidents.                                            |
-| 3 | What happens to the incident if CaptainMorgue itself is unavailable.                                                                                               |
-| 4 | Whether agents may ever talk to each other directly without CaptainMorgue, and how such talk would reach the record.                                               |
-| 5 | Whether a person sees only what they could see on their own in Radar and Dash0, or everyone in the incident sees everything.                                       |
-| 6 | Whether a person's raw activity (commands and output) stays private, with only a summary going up. Who outside the incident can read the record once it is closed. |
-| 7 | Whether a person picked as manager by a vote must accept, and who takes it if they do not respond.                                                                 |
-| 8 | What happens to a team of one directly under CaptainMorgue, which has no team above to join.                                                                       |
-| 9 | Whether Agent0's findings are copied into the record or only linked. Who watches Agent0 credit use, and what happens when it runs out mid-incident.                |
-| 10 | Whether finding "this has happened before" is in the first release.                                                                                                |
-| 11 | Who closes the incident: CaptainMorgue or a manager.                                                                                                               |
-| 12 | Whether improvements are only suggested, or also filed and tracked to done.                                                                                        |
-| 13 | Whether CaptainMorgue is part of CostGraph or a separate product.                                                                                                  |
-| 14 | Which other incident tools it connects to after the hackathon (PagerDuty for on-call is planned; chat and status page are open), or whether it replaces them.                                                                      |
-| 15 | How CaptainMorgue judges how much a step moved the incident forward. |
-| 16 | How CaptainMorgue spots that two actions conflict. For the demo, one written rule for the scripted case may be enough. |
-| 17 | The demo script: which fault, who does what, where the conflict happens, and when the record appears. |
-| 18 | The fallback if the live demo fails: a recorded run, a local copy of the services, or both. |
-| 19 | Who CaptainMorgue is for, and why existing incident tools (incident.io, Rootly, PagerDuty, Radar Cloud, Dash0 Agent0) do not already do this. |
-| 20 | The hackathon itself: judging criteria, deadline and team size. |
-| 21 | How secrets in recorded commands and output are kept out of the record. |
+| 1 | What happens to the incident if CaptainMorgue itself is unavailable.                                                                                               |
+| 2 | Whether a person picked as manager by a vote must accept, and who takes it if they do not respond.                                                                 |
+| 3 | What happens to a team of one directly under CaptainMorgue, which has no team above to join.                                                                       |
+| 4 | Whether Agent0's findings are copied into the record or only linked. Who watches Agent0 credit use, and what happens when it runs out mid-incident.                |
+| 5 | Whether CaptainMorgue is part of CostGraph or a separate product.                                                                                                  |
+| 6 | Which other incident tools it connects to after the hackathon (PagerDuty for on-call is planned; chat and status page are open), or whether it replaces them.                                                                      |
+| 7 | The demo script: which fault, who does what, where the conflict happens, and when the record appears. |
+| 8 | Who CaptainMorgue is for, and why existing incident tools (incident.io, Rootly, PagerDuty, Radar Cloud, Dash0 Agent0) do not already do this. |
+| 9 | The hackathon itself: judging criteria, deadline and team size. |
 
 ## 7. Sponsor technology
 
