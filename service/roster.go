@@ -16,8 +16,14 @@ type Team struct {
 	Owns    []string `yaml:"owns" json:"owns"`
 }
 
+type Repo struct {
+	Repo  string   `yaml:"repo" json:"repo"`
+	Paths []string `yaml:"paths" json:"paths"`
+}
+
 type Roster struct {
-	Teams []Team `yaml:"teams"`
+	Teams    []Team          `yaml:"teams"`
+	Services map[string]Repo `yaml:"services"`
 }
 
 func loadRoster(path string) (Roster, error) {

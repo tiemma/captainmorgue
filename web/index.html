@@ -261,6 +261,10 @@ button { font: inherit; color: inherit; }
         <h2>Claims <span class="label">Who holds what</span></h2>
         <div class="parts" id="claims"><p class="empty">Nothing claimed.</p></div>
       </section>
+      <section class="panel" aria-label="Pull requests">
+        <h2>Pull requests <span class="label">Remediation</span></h2>
+        <div class="parts" id="prs"><p class="empty">No pull requests yet.</p></div>
+      </section>
       <section class="panel" aria-label="Investigation">
         <h2>Radar AI investigation</h2>
         <div id="inv"><p class="empty">Not started.</p></div>
@@ -272,7 +276,7 @@ button { font: inherit; color: inherit; }
 <script>
 const NAMES = { captainmorgue: "CaptainMorgue", dash0: "Dash0", radar: "Radar", gitar: "Gitar", argo: "Argo CD" };
 const ROLES = { captainmorgue: "root", dash0: "alert", radar: "cluster", gitar: "pull request", argo: "via Radar" };
-const KIND = { alert: "Alert", page: "Paged", recovered: "Recovered", open: "Opened", join: "Joined", leave: "Left", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", reply: "Reply", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", claim: "Claimed", ship: "Shipped", election: "Election", vote_request: "Vote request", digest: "Catch-up digest", task: "Task updated", investigation: "Investigation", signal: "Signal", close: "Closed" };
+const KIND = { alert: "Alert", page: "Paged", recovered: "Recovered", open: "Opened", join: "Joined", leave: "Left", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", reply: "Reply", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", claim: "Claimed", ship: "Shipped", election: "Election", vote_request: "Vote request", digest: "Catch-up digest", task: "Task updated", investigation: "Investigation", signal: "Signal", close: "Closed", status: "Status", note: "Note", action_item: "Action item", pr: "Pull request" };
 const STATUS = {
   online: ["on", "online", "p-resolved"],
   in_incident: ["on", "in incident", "p-resolved"],
@@ -329,7 +333,7 @@ function onEvent(ev) {
   if (ev.type === "investigation") lastInvestigation = ev;
   if (ev.type === "election") { $("bannerText").textContent = ev.text; $("banner").hidden = false; }
   appendRow(ev);
-  if (ev.type === "close") loadRecord(ev.incident_id || "INC-1");
+  if (ev.type === "close" || (ev.type === "action" && ev.actor === "captainmorgue")) loadRecord(ev.incident_id || "INC-1");
   renderAll();
 }
 
@@ -347,7 +351,7 @@ function appendRow(ev) {
 }
 
 function renderAll() {
-  renderHeader(); renderTree(); renderParts(); renderMessage(); renderConflict(); renderClaims(); renderInvestigation(); renderSignals();
+  renderHeader(); renderTree(); renderParts(); renderMessage(); renderConflict(); renderClaims(); renderPRs(); renderInvestigation(); renderSignals();
   document.querySelectorAll("[data-team]").forEach(el => { el.textContent = teamName(el.dataset.team); });
 }
 
@@ -355,9 +359,12 @@ function renderHeader() {
   const inc = state.incident || {};
   if (inc.title) $("incTitle").textContent = (inc.id ? inc.id + ": " : "") + inc.title;
   const pill = $("incStatus");
-  if (inc.status === "resolved") { pill.textContent = "Resolved " + timeOf(inc.closed); pill.className = "pill p-resolved"; }
-  else if (inc.status === "open") { pill.textContent = "open"; pill.className = "pill p-critical p-live"; }
-  else { pill.textContent = inc.status || "waiting"; pill.className = "pill p-quiet"; }
+  const sev = inc.severity ? " " + inc.severity : "";
+  if (inc.status === "closed") { pill.textContent = "Closed " + timeOf(inc.closed) + sev; pill.className = "pill p-resolved"; }
+  else if (inc.status === "resolved") { pill.textContent = "resolved" + sev; pill.className = "pill p-resolved"; }
+  else if (inc.status === "mitigated") { pill.textContent = "mitigated" + sev; pill.className = "pill p-investigating p-live"; }
+  else if (inc.status) { pill.textContent = inc.status + sev; pill.className = "pill p-critical p-live"; }
+  else { pill.textContent = "waiting"; pill.className = "pill p-quiet"; }
   $("opened").textContent = timeOf(inc.opened) || "-";
   $("closed").textContent = timeOf(inc.closed) || "-";
   const commander = state.commander;
@@ -378,7 +385,7 @@ function personRow(id, isMgr, teamOn) {
 }
 
 function renderTree() {
-  const resolved = (state.incident || {}).status === "resolved";
+  const resolved = (state.incident || {}).status === "closed";
   let h = '<li class="team-row"><span class="who">CaptainMorgue</span><span class="pill ' + (resolved ? "p-resolved" : "p-critical p-live") + '">' + (resolved ? "closed" : "running") + '</span></li>';
   for (const t of state.teams || []) {
     const term = t.term != null ? '<span class="label">term ' + esc(t.term) + '</span>' : "";
@@ -435,6 +442,16 @@ function renderClaims() {
   $("claims").innerHTML = claims.length ? claims.map(c => '<div class="part"><div class="part-top"><span class="mono" style="font-size:12px">' + esc(c.key) + '</span><span class="pill p-investigating">' + esc(nameOf(c.actor)) + '</span></div><small>' + esc(c.text) + ', since ' + timeOf(c.since) + ', until ' + timeOf(c.expires) + '</small></div>').join("") : '<p class="empty">Nothing claimed.</p>';
 }
 
+function prLink(url, label) {
+  const safe = url && safeUrl(url);
+  return safe ? '<a href="' + esc(safe) + '" target="_blank" rel="noopener">' + esc(label || url) + '</a>' : esc(url);
+}
+
+function renderPRs() {
+  const prs = state.prs || [];
+  $("prs").innerHTML = prs.length ? prs.map(p => '<div class="part"><div class="part-top"><span class="mono" style="font-size:12px">' + esc(p.service) + '</span><span class="pill p-investigating">' + esc(nameOf(p.author)) + '</span></div><small>' + prLink(p.url) + ', opened ' + timeOf(p.ts) + '</small></div>').join("") : '<p class="empty">No pull requests yet.</p>';
+}
+
 function renderInvestigation() {
   const v = lastInvestigation;
   $("inv").innerHTML = v ? '<div class="inv"><span class="pill p-investigating">' + esc(nameOf(v.actor)) + ' at ' + timeOf(v.ts) + '</span><span>' + esc(v.text) + '</span>' + artifacts(v.artifacts) + '</div>' : '<p class="empty">Not started.</p>';
@@ -462,22 +479,33 @@ function listSection(label, items) {
   return items.length ? '<span class="label">' + label + '</span><ul>' + items.map(i => '<li>' + i + '</li>').join("") + '</ul>' : "";
 }
 
+function momentItem(m) {
+  return '<span class="mono">' + timeOf(m.ts) + '</span> <b>' + esc(nameOf(m.actor)) + '</b> ' + esc(KIND[m.type] || m.type) + ': ' + esc(m.text);
+}
+
 function renderRecord(r) {
-  const facts = [["Opened", timeOf(r.opened)], ["Resolved", timeOf(r.resolved)], ["Duration", r.duration], ["People", r.people], ["Teams", r.teams], ["Conflicts caught", r.conflicts]]
+  const w = r.window || {};
+  const facts = [["Severity", r.severity], ["Detected", timeOf(w.detected)], ["Mitigated", timeOf(w.mitigated)], ["Resolved", timeOf(w.resolved)], ["To mitigate", w.to_mitigate], ["Duration", w.duration], ["People", r.people], ["Teams", r.teams], ["Conflicts caught", r.conflicts]]
     .filter(([, v]) => v !== undefined && v !== null && v !== "");
+  const plain = items => (items || []).map(esc);
+  const actions = (r.action_items || []).map(i => '<b>' + esc(nameOf(i.owner)) + '</b>: ' + esc(i.text) + (i.due ? ' <span class="label">due ' + esc(i.due) + '</span>' : "") + (i.link ? " " + prLink(i.link, "link") : ""));
+  const prs = (r.remediation || []).map(p => '<b>' + esc(p.service) + '</b>: ' + prLink(p.url) + ' by ' + esc(nameOf(p.author)));
   const parts = (r.parts || []).map(p => '<b>' + esc(p.name) + '</b>' + (p.how ? ": " + esc(p.how) : ""));
-  const improvements = (r.improvements || []).map(i => {
-    const url = i.link && safeUrl(i.link);
-    return esc(i.text) + (i.owner ? " Owner: " + esc(nameOf(i.owner)) + "." : "") + (url ? ' <a href="' + esc(url) + '" target="_blank" rel="noopener">link</a>' : "");
-  });
   const m = r.past_match;
   const match = m ? '<span class="label" style="margin-top:6px">Happened before</span><div class="match"><b>' + esc(m.id) + '</b><span class="note">' + esc(m.summary) + (m.fixed_by ? " Fixed by " + esc(m.fixed_by) + "." : "") + '</span></div>' : "";
-  const left = listSection("How each part was resolved", parts);
-  const right = listSection("Improvements", improvements) + match;
+  const left = (r.summary ? '<span class="label">Summary</span><div>' + esc(r.summary) + '</div>' : "") +
+    (r.root_cause ? '<span class="label">Root cause</span><div>' + esc(r.root_cause) + '</div>' : "") +
+    listSection("Contributing factors", plain(r.contributing_factors)) +
+    listSection("Timeline", (r.timeline || []).map(momentItem)) +
+    listSection("Errors during the incident", (r.errors || []).map(momentItem));
+  const right = listSection("Action items", actions) + listSection("Remediation", prs) +
+    listSection("What went well", plain(r.went_well)) + listSection("What went badly", plain(r.went_badly)) +
+    listSection("How each part was resolved", parts) + match +
+    '<a href="/record/' + encodeURIComponent(r.id) + '.md" target="_blank" rel="noopener">RFO as Markdown</a>';
   $("viewRecord").innerHTML =
-    '<div class="rec-head"><div style="display:grid;gap:4px"><span class="label">The record</span><h2>' + esc([r.id, r.title].filter(Boolean).join(": ")) + '</h2></div>' + (r.resolved ? '<span class="toe">closed ' + timeOf(r.resolved) + '</span>' : "") + '</div>' +
+    '<div class="rec-head"><div style="display:grid;gap:4px"><span class="label">Reason For Outage' + (r.written_by ? ", written by " + esc(nameOf(r.written_by)) : "") + '</span><h2>' + esc([r.id, r.title].filter(Boolean).join(": ")) + '</h2></div>' + (w.closed ? '<span class="toe">closed ' + timeOf(w.closed) + '</span>' : "") + '</div>' +
     (facts.length ? '<dl class="rec-facts">' + facts.map(([k, v]) => '<div><dt class="label">' + k + '</dt><dd>' + esc(v) + '</dd></div>').join("") + '</dl>' : "") +
-    (left || right ? '<div class="rec-cols"><section>' + left + '</section><section>' + right + '</section></div>' : "");
+    '<div class="rec-cols"><section>' + left + '</section><section>' + right + '</section></div>';
 }
 
 function showView(name) {

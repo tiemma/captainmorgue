@@ -17,5 +17,6 @@ Replace `sammy` and `jubril` with the real logins in every command.
 5. [Laptop goes silent: suspect, offline, election](05-silent-election.md)
 6. [Two people on one resource: conflict](06-conflict.md)
 7. [From a real alert to a closed incident](07-alert-to-triage.md)
+8. [Run the incident to the end: status, notes, fix PR, close and RFO](08-close-and-rfo.md)
 
 A service restart clears the incident. If someone's commands say "join first", rerun step 2 of runbook 1 for them.
