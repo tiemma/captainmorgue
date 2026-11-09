@@ -81,7 +81,7 @@ export CM_REPO=<the repo you work in>
 export CM_TOOLS=<tools you have connected, comma separated>
 ```
 
-With `CM_URL` unset the plugin does nothing. `CM_TEAM` is optional; the service looks it up from the roster. `CM_TOKEN` is sent as `Authorization: Bearer` on every call. `CM_INCIDENT` defaults to `INC-1`. `CM_ROLE`, `CM_TASK`, `CM_REPO` and `CM_TOOLS` are sent at join and shown to everyone; arguments to `/captainmorgue:join` override role and task.
+With `CM_URL` unset the plugin does nothing. `CM_TEAM` is optional; the service looks it up from the roster. `CM_TOKEN` is sent as `Authorization: Bearer` on every call. `CM_INCIDENT` defaults to the incident your last join returned, else `INC-1`; the service routes `INC-1` and unknown ids to the incident that is open now. `CM_ROLE`, `CM_TASK`, `CM_REPO` and `CM_TOOLS` are sent at join and shown to everyone; arguments to `/captainmorgue:join` override role and task.
 
 Then set up the MCP servers below, run `/captainmorgue:doctor`, and run `/captainmorgue:join` once in Claude Code. Outside Claude Code the same commands are `plugin/bin/cm join`, `plugin/bin/cm status`, `plugin/bin/cm doctor` and so on, with arguments on stdin.
 

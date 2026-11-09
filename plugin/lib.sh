@@ -1,7 +1,6 @@
 CM_DIR="$HOME/.captainmorgue"
 LOG="$CM_DIR/hook.log"
 ACTOR="${CM_ACTOR:-${USER:-$USERNAME}}"
-INCIDENT="${CM_INCIDENT:-INC-1}"
 INBOX="$CM_DIR/inbox.jsonl"
 SEEN="$CM_DIR/seen"
 SESSION="$CM_DIR/session.json"
@@ -13,6 +12,9 @@ mkdir -p "$CM_DIR"
 case "$(uname -s)" in
 MINGW* | MSYS* | CYGWIN*) jq() { command jq -b "$@"; } ;;
 esac
+
+INCIDENT="${CM_INCIDENT:-$(jq -r '.incident // empty' "$SESSION" 2>/dev/null)}"
+INCIDENT="${INCIDENT:-INC-1}"
 
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >>"$LOG"

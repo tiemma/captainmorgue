@@ -73,8 +73,12 @@ func eventStatus(ev Event) string {
 }
 
 func (inc *Incident) lifecycleStatus() (status, severity string) {
+	return lifecycleOf(inc.events)
+}
+
+func lifecycleOf(events []Event) (status, severity string) {
 	status = "open"
-	for _, ev := range inc.events {
+	for _, ev := range events {
 		if ev.Type == "open" {
 			severity = ""
 		}
@@ -102,8 +106,8 @@ func (inc *Incident) mayResolve(actor string) bool {
 }
 
 func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
-	if r.PathValue("id") != inc.id {
-		http.Error(w, "no such incident", http.StatusNotFound)
+	if !inc.routes(r.PathValue("id")) {
+		http.Error(w, "no such open incident", http.StatusNotFound)
 		return
 	}
 	var req struct {
@@ -130,6 +134,7 @@ func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	inc.mu.Lock()
+	id := inc.id
 	current, severity := inc.lifecycleStatus()
 	allowed := inc.mayResolve(req.Actor)
 	inc.mu.Unlock()
@@ -167,12 +172,16 @@ func (inc *Incident) handleStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	inc.append(ev)
-	writeJSON(w, map[string]string{"status": current, "severity": severity})
+	writeJSON(w, map[string]string{"incident": id, "status": current, "severity": severity})
 }
 
 func (inc *Incident) prs() []PR {
+	return prsOf(inc.currentEvents())
+}
+
+func prsOf(events []Event) []PR {
 	out := []PR{}
-	for _, ev := range inc.events {
+	for _, ev := range events {
 		if ev.Type == "pr" && ev.Resource != nil && len(ev.Artifacts) > 0 {
 			out = append(out, PR{Service: ev.Resource.Name, URL: ev.Artifacts[0].URL, Author: ev.Actor, TS: ev.TS})
 		}
@@ -475,8 +484,8 @@ func (inc *Incident) deliverActionItems(rec Record) {
 			Actor: captainMorgue,
 			Type:  "action",
 			To:    []string{owner},
-			Text:  "Action items for you from the " + inc.id + " RFO:\n" + strings.Join(byOwner[owner], "\n"),
-			Why:   "You own these follow-ups in the " + inc.id + " RFO.",
+			Text:  "Action items for you from the " + rec.ID + " RFO:\n" + strings.Join(byOwner[owner], "\n"),
+			Why:   "You own these follow-ups in the " + rec.ID + " RFO.",
 		})
 	}
 }
