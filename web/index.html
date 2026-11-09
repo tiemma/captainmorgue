@@ -103,6 +103,7 @@ button { font: inherit; color: inherit; }
 .tree .who { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .tree .team-row .who { font-family: var(--font-display); font-weight: 600; }
 .tree .d1 { padding-left: 20px; } .tree .d2 { padding-left: 38px; }
+.tree .task { color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; }
 .mgr { font-family: var(--font-mono); font-size: 9.5px; color: var(--tag-ink); background: var(--tag-paper); padding: 0 5px; border-radius: 3px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--quiet); }
 .dot.on { background: var(--resolved); box-shadow: 0 0 0 3px var(--resolved-bg); }
@@ -342,7 +343,11 @@ function personRow(id, isMgr, teamOn) {
   if (!id) return "";
   const [dot, label, pill] = statusOf(id);
   const flash = lastEvent && lastEvent.actor === id ? " flash" : "";
-  return '<li class="d2' + (teamOn ? "" : " off") + flash + '"><span class="who"><i class="dot ' + dot + '"></i>' + esc(nameOf(id)) + (isMgr ? '<span class="mgr">MGR</span>' : "") + '</span><span class="pill ' + pill + '">' + esc(label) + '</span></li>';
+  const p = (state.people || {})[id];
+  const prof = p && typeof p === "object" ? p : {};
+  const role = prof.role && prof.role !== "responder" ? '<span class="mgr">' + esc(prof.role.toUpperCase()) + '</span>' : "";
+  const detail = [prof.task, prof.repo && "repo " + prof.repo, prof.tools && prof.tools.length && "tools " + prof.tools.join(", ")].filter(Boolean).join(" | ");
+  return '<li class="d2' + (teamOn ? "" : " off") + flash + '"' + (detail ? ' title="' + esc(detail) + '"' : "") + '><span class="who"><i class="dot ' + dot + '"></i>' + esc(nameOf(id)) + (isMgr ? '<span class="mgr">MGR</span>' : "") + role + (prof.task ? '<small class="task">' + esc(prof.task) + '</small>' : "") + '</span><span class="pill ' + pill + '">' + esc(label) + '</span></li>';
 }
 
 function renderTree() {
