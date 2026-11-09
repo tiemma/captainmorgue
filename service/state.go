@@ -56,17 +56,20 @@ type State struct {
 	Conflict  *Event            `json:"conflict"`
 	Signals   map[string]Signal `json:"signals"`
 	PastMatch *PastMatch        `json:"past_match"`
+	Claims    []Claim           `json:"claims"`
 
 	Deliveries map[int]map[string]string `json:"deliveries"`
 }
 
 func (inc *Incident) state() State {
+	now := time.Now().UTC()
 	s := State{
 		Incident:  IncidentSummary{ID: inc.id, Title: inc.title, Status: "open"},
-		People:    inc.people(time.Now().UTC()),
+		People:    inc.people(now),
 		Parts:     []Part{},
 		Signals:   map[string]Signal{},
 		PastMatch: inc.pastMatch,
+		Claims:    inc.activeClaims(now),
 
 		Deliveries: inc.coord.deliveries,
 	}
