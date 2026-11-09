@@ -40,6 +40,7 @@ env -u CM_URL scripts/e2e.sh                                       # must print 
 `CM_URL` pointing at the live service makes e2e hit production; always unset it for e2e.
 
 ## Done
+- 15:02 - Sent Emmanuel (tiemma) a direct CaptainMorgue ask, seq 9, requesting ownership and API contract for the postmortem library. List plus complete historical document is the hackathon priority; frontend remains ours. Awaiting reply.
 - 15:00 - Reviewed postmortem support on main 7f93997: current-incident record exists; historical list/detail do not. Generated summary/fixed_by are stored but absent from GET record. No backend changes.
 - 14:54 - Typography (309cf23), inline panel (f61b6cb) and chronological timeline (e49a35e) integrated. Final app and static Storybook builds pass; all 14 browser tests pass, including inspector pointer/keyboard persistence, progressive disclosure, active/closed timeline and reduced motion. Desktop/mobile screenshots inspected; no overflow.
 - 14:49 - Main merged through 1eb6d6e (65009a7); preserved Emmanuel's plugin auto-install handoff. No backend or deployment changes.
