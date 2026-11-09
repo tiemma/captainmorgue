@@ -110,12 +110,14 @@ export function Dialog({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const opener = useRef(document.activeElement as HTMLElement | null);
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const previous = opener.current;
     const input = ref.current?.querySelector<HTMLElement>("textarea, input");
     (input ?? ref.current)?.focus();
     function key(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") close.current();
       if (event.key !== "Tab") return;
       const items = Array.from(
         ref.current?.querySelectorAll<HTMLElement>(
@@ -149,7 +151,7 @@ export function Dialog({
       document.removeEventListener("keydown", key);
       previous?.focus();
     };
-  }, [onClose]);
+  }, []);
   return (
     <div
       className="cm-modal-backdrop"

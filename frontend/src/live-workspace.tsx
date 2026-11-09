@@ -237,7 +237,7 @@ export function LiveWorkspace() {
         tools: previous?.tools,
       });
       setIdentity(actor.trim());
-      setBrowserPresence(!previous);
+      setBrowserPresence(!previous?.last_seen);
       setJoining(false);
       setNotice(`Joined as ${actor.trim()}.`);
     } catch (reason) {
@@ -507,6 +507,11 @@ export function LiveWorkspace() {
                     onReply={
                       identity
                         ? (event) => {
+                            if (busy) return;
+                            if (message.trim() && reply?.seq !== event.seq) {
+                              setNotice("Send or clear your current draft before replying to another ask.");
+                              return;
+                            }
                             setReply(event);
                             setRecipient(event.actor);
                           }
@@ -521,7 +526,13 @@ export function LiveWorkspace() {
                         {reply ? `Reply to ${reply.actor}` : "Message"}
                       </h2>
                       {reply && (
-                        <Button onClick={() => setReply(undefined)}>
+                        <Button disabled={busy} onClick={() => {
+                          if (message.trim()) {
+                            setNotice("Send or clear this draft before cancelling the reply.");
+                            return;
+                          }
+                          setReply(undefined);
+                        }}>
                           Cancel reply
                         </Button>
                       )}
@@ -535,6 +546,7 @@ export function LiveWorkspace() {
                         <label className="cm-field">
                           To
                           <input
+                            disabled={busy}
                             value={recipient}
                             onChange={(event) =>
                               setRecipient(event.target.value)
@@ -546,6 +558,7 @@ export function LiveWorkspace() {
                         <label className="cm-field">
                           Kind
                           <select
+                            disabled={busy}
                             value={kind}
                             onChange={(event) =>
                               setKind(event.target.value as "ask" | "broadcast")
@@ -560,6 +573,7 @@ export function LiveWorkspace() {
                     <label className="cm-field">
                       Message
                       <textarea
+                        disabled={busy}
                         rows={3}
                         value={message}
                         onChange={(event) => setMessage(event.target.value)}
@@ -847,6 +861,7 @@ export function LiveWorkspace() {
             <label className="cm-field">
               Actor
               <input
+                            disabled={busy}
                 value={actor}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -865,6 +880,7 @@ export function LiveWorkspace() {
             <label className="cm-field">
               Team
               <select
+                            disabled={busy}
                 value={team}
                 onChange={(event) => setTeam(event.target.value)}
                 required
@@ -880,6 +896,7 @@ export function LiveWorkspace() {
             <label className="cm-field">
               Role
               <select
+                            disabled={busy}
                 value={role}
                 onChange={(event) => setRole(event.target.value as typeof role)}
               >
@@ -891,6 +908,7 @@ export function LiveWorkspace() {
             <label className="cm-field">
               Task
               <input
+                            disabled={busy}
                 value={task}
                 onChange={(event) => setTask(event.target.value)}
                 placeholder="What are you working on?"

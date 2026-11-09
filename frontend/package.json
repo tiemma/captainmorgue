@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/copy-wall.mjs",
     "typecheck": "tsc --noEmit",
     "storybook": "storybook dev -p 6006 --host 127.0.0.1 --no-open --disable-telemetry",
     "build-storybook": "storybook build --disable-telemetry",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:live": "playwright test --config playwright.live.config.ts"
   },
   "dependencies": {
     "lucide-react": "1.70.0",
