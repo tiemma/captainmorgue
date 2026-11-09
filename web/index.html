@@ -1,0 +1,548 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CaptainMorgue Live Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* layout: wall-screen console. header strip, then tree | live log | side panels; Record and Teams views swap in place of the log */
+:root {
+  color-scheme: light;
+  --font-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --bg: #e9edeb; --surface: #ffffff; --surface-2: #f3f5f4; --surface-3: #e3e8e5;
+  --line: #d3dad6; --line-strong: #aeb9b4; --fg: #121816; --fg-2: #46524d; --fg-3: #5f6b66;
+  --brass: #8a5f12; --brass-soft: #f1e3c2; --tag-paper: #ecd6a4; --tag-ink: #3a2a0b; --tag-string: #8c7a57;
+  --critical: #c22f17; --critical-bg: #fbe7e2; --critical-line: #eeb3a6;
+  --investigating: #8f5d00; --investigating-bg: #fbf0d8; --investigating-line: #e6c784;
+  --resolved: #1b744b; --resolved-bg: #e0f2e8; --resolved-line: #9fd2b6;
+  --info: #1c5f9c; --info-bg: #e2edf8; --info-line: #a7c6e6;
+  --quiet: #5f6b66; --quiet-bg: #eceeed; --quiet-line: #aeb9b4;
+  --conflict: #b51d64; --conflict-bg: #fae4ee; --conflict-line: #eba9c8;
+  --focus: #1c5f9c;
+  --elev-2: 0 1px 0 rgba(18,24,22,0.04), 0 6px 16px -6px rgba(18,24,22,0.16);
+  --dur-press: 120ms; --dur-fast: 160ms; --dur-base: 220ms; --dur-enter: 280ms; --dur-tag: 800ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-spring: linear(0, 0.09, 0.296, 0.536, 0.758, 0.931, 1.046, 1.107, 1.126, 1.117, 1.091, 1.061, 1.033, 1.01, 0.995, 0.987, 0.984, 0.985, 0.988, 0.992, 0.996, 0.999, 1, 1.002, 1);
+  --press-scale: 0.97;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  color-scheme: dark;
+  --bg: #0b0f0e; --surface: #121816; --surface-2: #182020; --surface-3: #202a28;
+  --line: #26302e; --line-strong: #394643; --fg: #e3e9e6; --fg-2: #a3b0ab; --fg-3: #84918c;
+  --brass: #d9ac52; --brass-soft: #2e2615; --tag-paper: #dcc28a; --tag-ink: #2d200a; --tag-string: #7d6d50;
+  --critical: #ff6a4d; --critical-bg: #2c1611; --critical-line: #6b2b1f;
+  --investigating: #f0b444; --investigating-bg: #2a2111; --investigating-line: #5f4a1d;
+  --resolved: #4cc48a; --resolved-bg: #11251c; --resolved-line: #215640;
+  --info: #6eb3ee; --info-bg: #10202e; --info-line: #24486a;
+  --quiet: #8d9a95; --quiet-bg: #182020; --quiet-line: #43504c;
+  --conflict: #ff5d9e; --conflict-bg: #2c1220; --conflict-line: #6e2349;
+  --focus: #dcc28a; --elev-2: 0 8px 20px -8px rgba(0,0,0,0.7); } }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0f0e; --surface: #121816; --surface-2: #182020; --surface-3: #202a28;
+  --line: #26302e; --line-strong: #394643; --fg: #e3e9e6; --fg-2: #a3b0ab; --fg-3: #84918c;
+  --brass: #d9ac52; --brass-soft: #2e2615; --tag-paper: #dcc28a; --tag-ink: #2d200a; --tag-string: #7d6d50;
+  --critical: #ff6a4d; --critical-bg: #2c1611; --critical-line: #6b2b1f;
+  --investigating: #f0b444; --investigating-bg: #2a2111; --investigating-line: #5f4a1d;
+  --resolved: #4cc48a; --resolved-bg: #11251c; --resolved-line: #215640;
+  --info: #6eb3ee; --info-bg: #10202e; --info-line: #24486a;
+  --quiet: #8d9a95; --quiet-bg: #182020; --quiet-line: #43504c;
+  --conflict: #ff5d9e; --conflict-bg: #2c1220; --conflict-line: #6e2349;
+  --focus: #dcc28a; --elev-2: 0 8px 20px -8px rgba(0,0,0,0.7); }
+@media (prefers-reduced-motion: reduce) { :root { --press-scale: 1; --ease-spring: ease-out; } }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.app { max-width: 1600px; margin: 0 auto; padding-block: 16px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 14px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+
+.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+.inc { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; min-width: 0; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; color: var(--fg-2); }
+.brand i { width: 10px; height: 14px; background: var(--tag-paper); border-radius: 2px 2px 2px 2px; clip-path: polygon(0 22%, 50% 0, 100% 22%, 100% 100%, 0 100%); }
+.inc h1 { font-family: var(--font-display); font-size: 22px; line-height: 1.1; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+.clock { font-family: var(--font-mono); font-size: 26px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.facts { display: flex; gap: 18px; flex-wrap: wrap; }
+.fact { display: grid; gap: 0; }
+.fact b { font-family: var(--font-mono); font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--fg-2); white-space: nowrap; }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.p-critical { color: var(--critical); background: var(--critical-bg); border-color: var(--critical-line); }
+.p-investigating { color: var(--investigating); background: var(--investigating-bg); border-color: var(--investigating-line); }
+.p-resolved { color: var(--resolved); background: var(--resolved-bg); border-color: var(--resolved-line); }
+.p-info { color: var(--info); background: var(--info-bg); border-color: var(--info-line); }
+.p-quiet { color: var(--quiet); background: var(--quiet-bg); border-color: var(--quiet-line); }
+.p-conflict { color: var(--conflict); background: var(--conflict-bg); border-color: var(--conflict-line); }
+.p-live::before { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.25; } }
+
+.controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.btn { border: 1px solid var(--line-strong); background: var(--surface-2); border-radius: 6px; padding: 6px 11px; cursor: pointer; font-size: 13px; transition: transform var(--dur-press) var(--ease-out), background var(--dur-fast) ease; }
+.btn:hover { background: var(--surface-3); }
+.btn:active { transform: scale(var(--press-scale)); }
+.btn[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn.primary { background: var(--brass); color: var(--bg); border-color: var(--brass); font-weight: 600; }
+.btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+
+.tabs { display: flex; gap: 4px; }
+.grid { display: grid; grid-template-columns: 290px minmax(0, 1fr) 370px; gap: 14px; align-items: start; }
+@media (max-width: 1180px) { .grid { grid-template-columns: minmax(0, 1fr); } .top { grid-template-columns: minmax(0, 1fr); } .controls { justify-content: flex-start; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.panel h2 { font-family: var(--font-display); font-size: 15px; margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.side { display: grid; gap: 14px; }
+
+.tree { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.tree li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 6px; transition: background var(--dur-base) ease, opacity var(--dur-base) ease; }
+.tree li.off { opacity: 0.42; }
+.tree li.flash { background: var(--brass-soft); }
+.tree .who { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tree .team-row .who { font-family: var(--font-display); font-weight: 600; }
+.tree .d1 { padding-left: 20px; } .tree .d2 { padding-left: 38px; }
+.mgr { font-family: var(--font-mono); font-size: 9.5px; color: var(--tag-ink); background: var(--tag-paper); padding: 0 5px; border-radius: 3px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--quiet); }
+.dot.on { background: var(--resolved); box-shadow: 0 0 0 3px var(--resolved-bg); }
+.dot.busy { background: var(--investigating); box-shadow: 0 0 0 3px var(--investigating-bg); }
+.dot.gone { background: var(--critical); }
+
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 760px; overflow-y: auto; overscroll-behavior: contain; }
+.ev { display: grid; grid-template-columns: 64px 118px minmax(0, 1fr); gap: 10px; align-items: start; padding: 9px 10px; border: 1px solid var(--line); border-left: 3px solid var(--line-strong); border-radius: 6px; background: var(--surface-2); }
+.ev.enter { animation: enter var(--dur-enter) var(--ease-out) both; }
+@keyframes enter { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .ev.enter { animation: none; } }
+.ev time { font-family: var(--font-mono); font-size: 12px; color: var(--fg-3); padding-top: 1px; font-variant-numeric: tabular-nums; }
+.ev .actor { display: grid; gap: 1px; min-width: 0; }
+.ev .actor b { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev .actor span { font-size: 11px; color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev .body { display: grid; gap: 5px; min-width: 0; }
+.ev .kind { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+.ev .text { overflow-wrap: anywhere; }
+.arts { display: flex; flex-wrap: wrap; gap: 6px; }
+.art { font-family: var(--font-mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--surface-3); color: var(--fg-2); border: 1px solid var(--line); }
+.k-alert { border-left-color: var(--critical); } .k-alert .kind { color: var(--critical); }
+.k-recall, .k-investigation { border-left-color: var(--brass); } .k-recall .kind, .k-investigation .kind { color: var(--brass); }
+.k-join, .k-relay, .k-decision, .k-dispatch { border-left-color: var(--info); } .k-join .kind, .k-relay .kind, .k-decision .kind, .k-dispatch .kind { color: var(--info); }
+.k-action .kind { color: var(--fg-2); }
+.k-conflict { border-left-color: var(--conflict); background: var(--conflict-bg); } .k-conflict .kind { color: var(--conflict); }
+.k-signal, .k-close, .k-ship { border-left-color: var(--resolved); } .k-signal .kind, .k-close .kind, .k-ship .kind { color: var(--resolved); }
+.k-election { border-left-color: var(--investigating); } .k-election .kind { color: var(--investigating); }
+@media (max-width: 640px) { .ev { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+.relay { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--info-line); border-radius: 8px; background: var(--info-bg); }
+.route { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-3); }
+.hop { background: var(--surface); color: var(--fg); border: 1px solid var(--line); padding: 1px 7px; border-radius: 4px; }
+.hop.cm { background: var(--tag-paper); color: var(--tag-ink); border-color: var(--tag-string); }
+.why { font-size: 12.5px; color: var(--fg-2); }
+.conflict { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--conflict-line); border-radius: 8px; background: var(--conflict-bg); }
+.conflict .pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; font-size: 12.5px; }
+.conflict .pair div { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+.conflict .x { font-family: var(--font-mono); color: var(--conflict); font-weight: 600; }
+.empty { color: var(--fg-3); font-size: 13px; padding: 6px 0; }
+
+.parts { display: grid; gap: 10px; }
+.part { display: grid; gap: 6px; }
+.part-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.part-top b { font-weight: 600; font-size: 13.5px; }
+.part small { color: var(--fg-3); font-size: 12px; }
+.bar { height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--investigating); border-radius: 3px; transition: width 600ms var(--ease-out), background var(--dur-base) ease; }
+.bar i.done { background: var(--resolved); }
+.toe { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--tag-ink); background: var(--tag-paper); padding: 2px 9px 2px 7px; border-radius: 2px 9px 9px 2px; white-space: nowrap; }
+.toe::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--tag-string); background: var(--surface); }
+.toe.land { animation: tag var(--dur-tag) var(--ease-spring) both; transform-origin: 0 50%; }
+@keyframes tag { from { transform: rotate(-14deg) translateY(-6px); opacity: 0; } }
+.signals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sig { border: 1px solid var(--line); border-radius: 6px; padding: 8px; display: grid; gap: 2px; background: var(--surface-2); }
+.sig b { font-family: var(--font-mono); font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.sig.bad b { color: var(--critical); } .sig.good b { color: var(--resolved); }
+.inv { display: grid; gap: 6px; font-size: 13px; }
+
+.view[hidden] { display: none !important; }
+.record { display: grid; gap: 18px; }
+.rec-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px dashed var(--tag-string); }
+.rec-head h2 { font-family: var(--font-display); font-size: 24px; margin: 0; letter-spacing: -0.02em; }
+.rec-facts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin: 0; }
+@media (max-width: 900px) { .rec-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.rec-facts div { display: grid; gap: 2px; } .rec-facts dt, .rec-facts dd { margin: 0; }
+.rec-facts dd { font-family: var(--font-display); font-size: 22px; font-variant-numeric: tabular-nums; }
+.rec-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 900px) { .rec-cols { grid-template-columns: minmax(0, 1fr); } }
+.rec-cols section { display: grid; gap: 8px; align-content: start; }
+.rec-cols ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.match { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--surface-2); display: grid; gap: 4px; }
+
+.graph-wrap { overflow-x: auto; }
+.graph-wrap svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.g-team rect { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1.2; transition: opacity var(--dur-base) ease; }
+.g-team text, .g-svc text, .g-root text { fill: var(--fg); font-family: var(--font-body); }
+.g-team .nm { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+.g-team .sub, .g-svc .sub { font-size: 11px; fill: var(--fg-3); }
+.g-svc rect { fill: var(--surface); stroke: var(--line); }
+.g-root rect { fill: var(--tag-paper); stroke: var(--tag-string); }
+.g-root text { fill: var(--tag-ink); font-family: var(--font-display); font-weight: 700; }
+.tree-line { stroke: var(--line-strong); stroke-width: 1.2; fill: none; }
+.arc { fill: none; stroke-width: 2; opacity: 0; transition: opacity var(--dur-base) ease; }
+.arc-label { font-family: var(--font-mono); font-size: 10.5px; opacity: 0; transition: opacity var(--dur-base) ease; }
+.m-depends_on { stroke: var(--critical); } .l-depends_on { fill: var(--critical); }
+.m-messaged { stroke: var(--info); stroke-dasharray: 5 4; } .l-messaged { fill: var(--info); }
+.m-shared_incident { stroke: var(--brass); stroke-dasharray: 2 4; stroke-linecap: round; } .l-shared_incident { fill: var(--brass); }
+.m-calls, .m-uses { stroke: var(--fg-3); } .l-calls, .l-uses { fill: var(--fg-3); }
+svg.show-all .arc, svg.show-all .arc-label { opacity: 0.85; }
+svg .arc.hot, svg .arc-label.hot { opacity: 1; }
+svg.hovering .g-team:not(.hot) rect, svg.hovering .g-svc:not(.hot) rect { opacity: 0.4; }
+.g-team, .g-svc { cursor: pointer; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12.5px; color: var(--fg-2); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 22px; height: 0; border-top: 2px solid; }
+.note { font-size: 12px; color: var(--fg-3); }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="inc">
+      <span class="brand"><i aria-hidden="true"></i>CaptainMorgue</span>
+      <h1 id="incTitle">Check-in kiosks failing at Hall B</h1>
+      <span id="incStatus" class="pill p-critical p-live">SEV-1 open</span>
+      <div class="facts">
+        <div class="fact"><span class="label">Clock</span><b id="clock" class="clock">09:41:00</b></div>
+        <div class="fact"><span class="label">Elapsed</span><b id="elapsed">00:00</b></div>
+        <div class="fact"><span class="label">Teams</span><b id="teamCount">0</b></div>
+        <div class="fact"><span class="label">Open parts</span><b id="openParts">0</b></div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="tabs" role="tablist" aria-label="View">
+        <button class="btn" role="tab" id="tabLive" aria-pressed="true">Live</button>
+        <button class="btn" role="tab" id="tabRecord" aria-pressed="false" disabled>Record</button>
+        <button class="btn" role="tab" id="tabTeams" aria-pressed="false">Teams</button>
+      </div>
+      <button class="btn primary" id="play">Pause</button>
+      <button class="btn" id="step">Step</button>
+      <button class="btn" id="speed">1x</button>
+      <button class="btn" id="restart">Restart</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <aside class="panel" aria-label="Who is on it">
+      <h2>Who is on it <span class="label">Example</span></h2>
+      <ul class="tree" id="tree"></ul>
+    </aside>
+
+    <main class="panel" style="gap:12px">
+      <section class="view" id="viewLive" aria-label="Event log">
+        <h2 style="margin-bottom:10px">Event log across every agent <span class="label" id="evCount">0 events</span></h2>
+        <ol class="log" id="log" reversed></ol>
+      </section>
+
+      <section class="view record" id="viewRecord" hidden aria-label="The record"></section>
+
+      <section class="view" id="viewTeams" hidden aria-label="How teams relate">
+        <h2 style="margin-bottom:8px">How teams relate <span class="label">Hover a team</span></h2>
+        <div class="legend" style="margin-bottom:10px">
+          <span><i class="sw" style="border-color:var(--critical)"></i>depends on</span>
+          <span><i class="sw" style="border-top-style:dashed;border-color:var(--info)"></i>messaged</span>
+          <span><i class="sw" style="border-top-style:dotted;border-color:var(--brass)"></i>shared an incident</span>
+          <span><i class="sw" style="border-color:var(--fg-3)"></i>calls / uses</span>
+          <button class="btn" id="showAll" aria-pressed="false" style="padding:3px 9px;font-size:12px">Show all lines</button>
+        </div>
+        <div class="graph-wrap">
+          <svg id="graph" viewBox="0 0 980 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Team tree with relationship arcs">
+            <path class="tree-line" d="M490,62 L170,120 M490,62 L490,120 M490,62 L810,120"/>
+            <path class="tree-line" d="M130,186 L110,310 M210,186 L250,310 M450,186 L420,310 M530,186 L560,310 M810,186 L790,370"/>
+            <g class="g-root"><rect x="400" y="14" width="180" height="48" rx="8"/><text x="490" y="44" text-anchor="middle" font-size="15">CaptainMorgue</text></g>
+
+            <g class="g-team" data-id="reg"><rect x="70" y="120" width="200" height="66" rx="10"/><text class="nm" x="86" y="146">Registration</text><text class="sub" x="86" y="166">Dana, Ana, Cal</text></g>
+            <g class="g-team" data-id="tix"><rect x="390" y="120" width="200" height="66" rx="10"/><text class="nm" x="406" y="146">Ticketing and Payments</text><text class="sub" x="406" y="166">Eli, Gus, Fay</text></g>
+            <g class="g-team" data-id="plat"><rect x="710" y="120" width="200" height="66" rx="10"/><text class="nm" x="726" y="146">Platform</text><text class="sub" x="726" y="166">Dev (manager), Ben</text></g>
+
+            <g class="g-svc" data-id="checkin"><rect x="50" y="310" width="120" height="46" rx="8"/><text x="66" y="331" font-size="13">checkin</text><text class="sub" x="66" y="347">owned by Registration</text></g>
+            <g class="g-svc" data-id="schedule"><rect x="190" y="310" width="120" height="46" rx="8"/><text x="206" y="331" font-size="13">schedule</text><text class="sub" x="206" y="347">owned by Registration</text></g>
+            <g class="g-svc" data-id="tickets"><rect x="360" y="310" width="120" height="46" rx="8"/><text x="376" y="331" font-size="13">tickets</text><text class="sub" x="376" y="347">owned by Ticketing</text></g>
+            <g class="g-svc" data-id="payments"><rect x="500" y="310" width="120" height="46" rx="8"/><text x="516" y="331" font-size="13">payments</text><text class="sub" x="516" y="347">owned by Ticketing</text></g>
+            <g class="g-svc" data-id="confdb"><rect x="730" y="370" width="120" height="46" rx="8"/><text x="746" y="391" font-size="13">confdb</text><text class="sub" x="746" y="407">owned by Platform</text></g>
+
+            <path class="arc m-depends_on" data-a="reg" data-b="plat" d="M270,140 C 470,40 560,40 710,140"/>
+            <text class="arc-label l-depends_on" data-a="reg" data-b="plat" x="490" y="66" text-anchor="middle">depends on: checkin uses confdb</text>
+            <path class="arc m-depends_on" data-a="tix" data-b="plat" d="M590,170 C 640,210 670,210 710,170"/>
+            <text class="arc-label l-depends_on" data-a="tix" data-b="plat" x="650" y="226" text-anchor="middle">depends on: payments uses confdb</text>
+            <path class="arc m-messaged" data-a="tix" data-b="reg" d="M390,176 C 340,236 300,236 270,176"/>
+            <text class="arc-label l-messaged" data-a="tix" data-b="reg" x="330" y="248" text-anchor="middle">messaged: 4 today</text>
+            <path class="arc m-shared_incident" data-a="reg" data-b="tix" d="M260,120 C 310,96 360,96 400,120"/>
+            <text class="arc-label l-shared_incident" data-a="reg" data-b="tix" x="330" y="94" text-anchor="middle">shared incidents: 2</text>
+            <path class="arc m-calls" data-a="checkin" data-b="tickets" d="M170,333 C 250,290 300,290 360,333"/>
+            <text class="arc-label l-calls" data-a="checkin" data-b="tickets" x="265" y="290" text-anchor="middle">calls</text>
+            <path class="arc m-uses" data-a="checkin" data-b="confdb" d="M110,356 C 140,450 600,450 730,400"/>
+            <text class="arc-label l-uses" data-a="checkin" data-b="confdb" x="420" y="440" text-anchor="middle">uses</text>
+            <path class="arc m-uses" data-a="payments" data-b="confdb" d="M620,340 C 680,345 700,380 730,388"/>
+            <text class="arc-label l-uses" data-a="payments" data-b="confdb" x="690" y="352" text-anchor="middle">uses</text>
+          </svg>
+        </div>
+        <p class="note">Layout in the product comes from elkjs; positions here are fixed for the demo. Counts come from the service, the page only draws them.</p>
+      </section>
+    </main>
+
+    <div class="side">
+      <section class="panel" aria-label="Signals">
+        <h2>Signals <span class="label">Dash0</span></h2>
+        <div class="signals">
+          <div class="sig" id="sigCheckin"><span class="label">Check-in p95</span><b>-</b></div>
+          <div class="sig" id="sigPay"><span class="label">Payment errors</span><b>-</b></div>
+          <div class="sig" id="sigDb"><span class="label">confdb connections</span><b>-</b></div>
+          <div class="sig" id="sigQueue"><span class="label">Kiosk queue</span><b>-</b></div>
+        </div>
+      </section>
+      <section class="panel" aria-label="Open parts">
+        <h2>Parts of the incident</h2>
+        <div class="parts" id="parts"><p class="empty">No parts yet.</p></div>
+      </section>
+      <section class="panel" aria-label="Relay">
+        <h2>Latest relay <span class="label">Why them</span></h2>
+        <div id="relay"><p class="empty">No messages relayed yet.</p></div>
+      </section>
+      <section class="panel" aria-label="Conflict">
+        <h2>Conflicts</h2>
+        <div id="conflict"><p class="empty">None so far.</p></div>
+      </section>
+      <section class="panel" aria-label="Investigation">
+        <h2>Radar AI investigation</h2>
+        <div id="inv"><p class="empty">Not started.</p></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+const PEOPLE = {
+  dana: { name: "Dana", team: "Registration" }, ana: { name: "Ana", team: "Registration" }, cal: { name: "Cal", team: "Registration" },
+  eli: { name: "Eli", team: "Ticketing" }, gus: { name: "Gus", team: "Ticketing" }, fay: { name: "Fay", team: "Ticketing" },
+  ben: { name: "Ben", team: "Platform" }, dev: { name: "Dev", team: "Platform" },
+  cm: { name: "CaptainMorgue", team: "root" }, dash0: { name: "Dash0", team: "alert" }, radar: { name: "Radar", team: "cluster" },
+  gitar: { name: "Gitar", team: "pull request" }, argo: { name: "Argo CD", team: "via Radar" }
+};
+
+function initialState() {
+  return {
+    status: ["SEV-1 open", "p-critical p-live"], clock: "09:41:00", elapsed: "00:00", closed: false,
+    teams: {
+      reg: { name: "Registration", mgr: "dana", members: ["ana", "cal"], on: false },
+      tix: { name: "Ticketing and Payments", mgr: "eli", members: ["gus", "fay"], on: false },
+      plat: { name: "Platform", mgr: "ben", members: ["dev"], on: false }
+    },
+    people: {}, flash: null,
+    parts: [], relay: null, conflict: null, inv: null,
+    sig: { checkin: null, pay: null, db: null, queue: null }
+  };
+}
+
+const EVENTS = [
+  { t: "09:41:02", el: "00:02", a: "dash0", k: "alert", text: "Check-in p95 latency 4.2 s and 18% errors on checkin. Kiosk queue at Hall B growing.", arts: ["Dash0: checkin latency"],
+    fx: s => { s.sig.checkin = ["4.2 s", "bad"]; s.sig.queue = ["140 people", "bad"]; s.sig.db = ["71 / 100", ""]; s.sig.pay = ["0.2%", ""]; } },
+  { t: "09:41:04", el: "00:04", a: "cm", k: "dispatch", text: "Opened INC-2041. Affected: checkin, which uses confdb.",
+    fx: s => { s.parts.push({ id: "checkin", name: "Check-in slow at the kiosks", owner: "Registration", p: 5, done: false, note: "Waiting for owners" }); } },
+  { t: "09:41:05", el: "00:05", a: "cm", k: "recall", text: "This looks like INC-1877 from last year's event: slow check-in query after a release. Fixed by an index, by Priya on Registration.", arts: ["INC-1877 record"] },
+  { t: "09:41:07", el: "00:07", a: "cm", k: "join", text: "Pulled in Registration (team label on checkin) and Platform (owns confdb in CODEOWNERS).",
+    fx: s => { s.teams.reg.on = true; s.teams.plat.on = true; s.flash = "reg"; } },
+  { t: "09:41:31", el: "00:31", a: "dana", k: "join", text: "Joined as manager of Registration.", fx: s => { s.people.dana = "on"; s.flash = "dana"; } },
+  { t: "09:41:40", el: "00:40", a: "ben", k: "join", text: "Joined as manager of Platform.", fx: s => { s.people.ben = "on"; s.people.dev = "on"; s.flash = "ben"; } },
+  { t: "09:42:05", el: "01:05", a: "ana", k: "action", text: "Checked the checkin rollout through Radar: canary of v1.8 at 20% since 09:38.", arts: ["Radar: rollout checkin"],
+    fx: s => { s.people.ana = "busy"; s.parts[0].p = 15; s.parts[0].note = "Canary v1.8 started 09:38"; } },
+  { t: "09:42:40", el: "01:40", a: "dev", k: "action", text: "confdb has 96 of 100 connections busy, most of them held by checkin for about 3 s each.", arts: ["Dash0: confdb connections"],
+    fx: s => { s.people.dev = "busy"; s.sig.db = ["96 / 100", "bad"]; s.parts.push({ id: "db", name: "confdb connections exhausted", owner: "Platform", p: 10, done: false, note: "Held by checkin" }); } },
+  { t: "09:43:10", el: "02:10", a: "dash0", k: "alert", text: "Payment errors at 9% on payments. Card payments failing at the merch stand.", arts: ["Dash0: payments errors"],
+    fx: s => { s.sig.pay = ["9.1%", "bad"]; s.parts.push({ id: "pay", name: "Payments failing", owner: "Ticketing and Payments", p: 0, done: false, note: "Shares confdb with checkin" }); } },
+  { t: "09:43:12", el: "02:12", a: "cm", k: "join", text: "Pulled in Ticketing and Payments: payments shares confdb with checkin.", fx: s => { s.teams.tix.on = true; s.flash = "tix"; } },
+  { t: "09:43:25", el: "02:25", a: "eli", k: "join", text: "Joined as manager of Ticketing and Payments.", fx: s => { s.people.eli = "on"; s.people.gus = "on"; s.flash = "eli"; } },
+  { t: "09:43:40", el: "02:40", a: "gus", k: "relay", text: "Is confdb failing over? Card payments are timing out at the merch stand.",
+    fx: s => { s.people.gus = "busy"; s.relay = { from: "Gus", to: ["Dev", "Dana"], text: "Is confdb failing over? Card payments are timing out at the merch stand.", why: "Dev is reading confdb connections right now. Dana manages checkin, which holds most of them." }; } },
+  { t: "09:44:05", el: "03:05", a: "dana", k: "decision", text: "Abort the checkin canary and go back to v1.7.", arts: ["Radar: abort rollout"],
+    fx: s => { s.people.dana = "busy"; s.parts[0].p = 35; s.parts[0].note = "Aborting canary v1.8"; } },
+  { t: "09:44:20", el: "03:20", a: "cm", k: "conflict", text: "Dev is about to restart the confdb primary while Dana's canary abort is draining checkin. The restart would drop in-flight check-ins. Hold it until the abort finishes.",
+    fx: s => { s.conflict = { a: ["Dana", "Abort canary v1.8 (draining checkin)"], b: ["Dev", "Restart confdb primary"], res: "confdb + deployment/checkin", why: "Same resources within 2 minutes, one is a restart. The model agrees: the restart drops sessions the abort is draining." }; } },
+  { t: "09:44:31", el: "03:31", a: "dev", k: "action", text: "Holding the confdb restart.", fx: s => { s.conflict.held = true; } },
+  { t: "09:44:52", el: "03:52", a: "argo", k: "ship", text: "Rollout checkin aborted. v1.7 serving 100%.", arts: ["Radar: rollout checkin"],
+    fx: s => { s.parts[0].p = 60; s.parts[0].note = "v1.7 serving"; s.sig.checkin = ["1.1 s", ""]; s.sig.db = ["58 / 100", ""]; s.parts[1].p = 55; s.parts[1].note = "Connections draining"; } },
+  { t: "09:45:10", el: "04:10", a: "cm", k: "election", text: "Ben's agent stopped responding. Platform voted: Dev 2 of 3 (Dev, CaptainMorgue). Dev now manages Platform.",
+    fx: s => { s.people.ben = "gone"; s.teams.plat.mgr = "dev"; s.teams.plat.members = ["ben"]; s.flash = "dev"; } },
+  { t: "09:45:40", el: "04:40", a: "cm", k: "investigation", text: "Started a Radar AI investigation on deployment/checkin.", arts: ["Radar investigation"],
+    fx: s => { s.inv = { state: "running" }; } },
+  { t: "09:46:30", el: "05:30", a: "radar", k: "investigation", text: "Finding: v1.8 looks attendees up by badge email with no index. Every check-in scans 48k rows and holds a confdb connection for about 3 s.", arts: ["Radar investigation", "query plan"],
+    fx: s => { s.inv = { state: "done", text: "v1.8 looks attendees up by badge email with no index. Every check-in scans 48k rows and holds a confdb connection for about 3 s." }; } },
+  { t: "09:46:52", el: "05:52", a: "dash0", k: "signal", text: "Payment errors at 0.3%. confdb at 41 of 100 connections.",
+    fx: s => { s.sig.pay = ["0.3%", "good"]; s.sig.db = ["41 / 100", "good"]; s.parts[2].p = 100; s.parts[2].done = "09:46"; s.parts[2].note = "Recovered after the abort"; s.parts[1].p = 100; s.parts[1].done = "09:46"; s.parts[1].note = "Drained after the abort"; } },
+  { t: "09:47:30", el: "06:30", a: "cal", k: "action", text: "Opened PR #212: add an index on attendees(badge_email) and ship it as v1.8.1.", arts: ["PR #212"],
+    fx: s => { s.people.cal = "busy"; s.parts[0].p = 75; s.parts[0].note = "Fix in PR #212"; } },
+  { t: "09:48:40", el: "07:40", a: "gitar", k: "ship", text: "PR #212: no critical findings. One flaky test retried, CI green.", arts: ["PR #212 checks"] },
+  { t: "09:49:10", el: "08:10", a: "argo", k: "ship", text: "Synced checkin v1.8.1 as a canary through Radar. Canary healthy, promoted.", arts: ["Radar: rollout checkin"],
+    fx: s => { s.parts[0].p = 90; s.parts[0].note = "v1.8.1 promoted"; } },
+  { t: "09:50:30", el: "09:30", a: "dash0", k: "signal", text: "Check-in p95 180 ms, 0% errors. Kiosk queue at Hall B down to 12.",
+    fx: s => { s.sig.checkin = ["180 ms", "good"]; s.sig.queue = ["12 people", "good"]; s.parts[0].p = 100; s.parts[0].done = "09:50"; s.parts[0].note = "Index shipped in v1.8.1"; } },
+  { t: "09:51:00", el: "10:00", a: "cm", k: "dispatch", text: "All parts resolved and signals normal. Proposed closing INC-2041." },
+  { t: "09:51:12", el: "10:12", a: "dana", k: "close", text: "Confirmed close. Record written from 26 events.",
+    fx: s => { s.closed = true; s.status = ["Resolved 09:51", "p-resolved"]; for (const k in s.people) if (s.people[k] === "busy") s.people[k] = "on"; } }
+];
+
+const KIND = { alert: "Alert", dispatch: "CaptainMorgue", recall: "Happened before", join: "Joined", action: "Action", relay: "Broadcast, relayed", decision: "Decision", conflict: "Conflict", ship: "Shipped", election: "Election", investigation: "Investigation", signal: "Signal", close: "Closed" };
+
+let S, idx, timer = null, playing = true, speed = 1;
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function reset() {
+  S = initialState(); idx = 0; $("log").innerHTML = ""; $("tabRecord").disabled = true;
+  showView("Live"); renderAll();
+}
+
+function apply(ev, animate) {
+  if (ev.fx) ev.fx(S);
+  S.clock = ev.t; S.elapsed = ev.el;
+  const li = document.createElement("li");
+  li.className = "ev k-" + ev.k + (animate ? " enter" : "");
+  const who = PEOPLE[ev.a];
+  li.innerHTML = '<time>' + ev.t.slice(0, 5) + '</time><div class="actor"><b>' + esc(who.name) + '</b><span>' + esc(who.team) + '</span></div>' +
+    '<div class="body"><span class="kind">' + KIND[ev.k] + '</span><span class="text">' + esc(ev.text) + '</span>' +
+    (ev.arts ? '<div class="arts">' + ev.arts.map(x => '<span class="art">' + esc(x) + '</span>').join("") + '</div>' : "") + '</div>';
+  $("log").prepend(li);
+  $("evCount").textContent = (idx + 1) + " events";
+  if (S.closed) { $("tabRecord").disabled = false; renderRecord(); }
+}
+
+function renderAll() {
+  $("clock").textContent = S.clock; $("elapsed").textContent = S.elapsed;
+  $("incStatus").textContent = S.status[0]; $("incStatus").className = "pill " + S.status[1];
+  const onTeams = Object.values(S.teams).filter(t => t.on);
+  $("teamCount").textContent = onTeams.length;
+  $("openParts").textContent = S.parts.filter(p => !p.done).length;
+  renderTree(); renderParts(); renderRelay(); renderConflict(); renderInv(); renderSignals();
+}
+
+function personRow(id, depth, isMgr, teamOn) {
+  const st = S.people[id];
+  const dot = st === "gone" ? "gone" : st === "busy" ? "busy" : st === "on" ? "on" : "";
+  const label = st === "gone" ? ["offline", "p-critical"] : st === "busy" ? ["working", "p-investigating"] : st === "on" ? ["in incident", "p-resolved"] : ["not paged", "p-quiet"];
+  return '<li class="d' + depth + (teamOn ? "" : " off") + (S.flash === id ? " flash" : "") + '"><span class="who"><i class="dot ' + dot + '"></i>' + PEOPLE[id].name + (isMgr ? '<span class="mgr">MGR</span>' : "") + '</span><span class="pill ' + label[1] + '">' + label[0] + '</span></li>';
+}
+
+function renderTree() {
+  let h = '<li class="team-row"><span class="who">CaptainMorgue</span><span class="pill ' + S.status[1] + '">' + (S.closed ? "closed" : "running") + '</span></li>';
+  for (const [id, t] of Object.entries(S.teams)) {
+    h += '<li class="team-row d1' + (t.on ? "" : " off") + (S.flash === id ? " flash" : "") + '"><span class="who">' + t.name + '</span><span class="pill ' + (t.on ? "p-info" : "p-quiet") + '">' + (t.on ? "pulled in" : "standing by") + '</span></li>';
+    h += personRow(t.mgr, 2, true, t.on);
+    for (const m of t.members) h += personRow(m, 2, false, t.on);
+  }
+  $("tree").innerHTML = h;
+}
+
+function renderParts() {
+  if (!S.parts.length) { $("parts").innerHTML = '<p class="empty">No parts yet.</p>'; return; }
+  $("parts").innerHTML = S.parts.map(p => '<div class="part"><div class="part-top"><b>' + esc(p.name) + '</b>' +
+    (p.done ? '<span class="toe' + (p.landed ? "" : " land") + '">resolved ' + p.done + '</span>' : '<span class="pill p-investigating">open</span>') +
+    '</div><div class="bar"><i class="' + (p.done ? "done" : "") + '" style="width:' + p.p + '%"></i></div><small>' + esc(p.owner) + '. ' + esc(p.note) + '</small></div>').join("");
+  S.parts.forEach(p => { if (p.done) p.landed = true; });
+}
+
+function renderRelay() {
+  const r = S.relay;
+  $("relay").innerHTML = r ? '<div class="relay"><div class="route"><span class="hop">' + r.from + '</span>to<span class="hop cm">CaptainMorgue</span>to' + r.to.map(x => '<span class="hop">' + x + '</span>').join("") + '</div><div>' + esc(r.text) + '</div><div class="why">' + esc(r.why) + '</div></div>' : '<p class="empty">No messages relayed yet.</p>';
+}
+
+function renderConflict() {
+  const c = S.conflict;
+  $("conflict").innerHTML = c ? '<div class="conflict"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><span class="mono" style="font-size:12px">' + esc(c.res) + '</span><span class="pill ' + (c.held ? "p-resolved" : "p-conflict") + '">' + (c.held ? "held" : "flagged") + '</span></div><div class="pair"><div><b>' + c.a[0] + '</b><br>' + esc(c.a[1]) + '</div><span class="x">vs</span><div><b>' + c.b[0] + '</b><br>' + esc(c.b[1]) + '</div></div><div class="why">' + esc(c.why) + '</div></div>' : '<p class="empty">None so far.</p>';
+}
+
+function renderInv() {
+  const v = S.inv;
+  $("inv").innerHTML = !v ? '<p class="empty">Not started.</p>' : v.state === "running" ? '<div class="inv"><span class="pill p-investigating p-live">running on deployment/checkin</span></div>' : '<div class="inv"><span class="pill p-resolved">finding</span><span>' + esc(v.text) + '</span><span class="note">Summary copied into the record, with a link to the full investigation.</span></div>';
+}
+
+function renderSignals() {
+  const m = { checkin: "sigCheckin", pay: "sigPay", db: "sigDb", queue: "sigQueue" };
+  for (const [k, id] of Object.entries(m)) {
+    const v = S.sig[k]; const el = $(id);
+    el.className = "sig" + (v && v[1] ? " " + v[1] : ""); el.querySelector("b").textContent = v ? v[0] : "-";
+  }
+}
+
+function renderRecord() {
+  $("viewRecord").innerHTML = `
+    <div class="rec-head"><div style="display:grid;gap:4px"><span class="label">The record</span><h2>INC-2041: Check-in kiosks failing at Hall B</h2></div><span class="toe">closed 09:51 by Dana</span></div>
+    <dl class="rec-facts">
+      <div><dt class="label">Opened</dt><dd>09:41</dd></div>
+      <div><dt class="label">Resolved</dt><dd>09:51</dd></div>
+      <div><dt class="label">Duration</dt><dd>10 min</dd></div>
+      <div><dt class="label">People</dt><dd>7</dd></div>
+      <div><dt class="label">Teams</dt><dd>3</dd></div>
+      <div><dt class="label">Conflicts caught</dt><dd>1</dd></div>
+    </dl>
+    <div class="rec-cols">
+      <section><span class="label">How each part was resolved</span><ul>
+        <li><b>Payments failing</b> and <b>confdb connections exhausted</b>: recovered at 09:46 once Dana aborted the checkin canary and its connections drained.</li>
+        <li><b>Check-in slow at the kiosks</b>: v1.8 looked attendees up by badge email with no index. Cal shipped the index in PR #212 as v1.8.1 at 09:49.</li>
+        <li><b>Conflict at 09:44</b>: Dev held a confdb restart that would have dropped in-flight check-ins during the abort.</li>
+        <li><b>Platform manager</b>: Ben went offline at 09:45 and the team elected Dev.</li>
+      </ul></section>
+      <section><span class="label">Improvements</span><ul>
+        <li>Check query plans for new lookups in CI. PR #214, reviewed by Gitar. Owner: Cal.</li>
+        <li>Give checkin and payments separate confdb connection pools. Issue #57. Owner: Dev.</li>
+        <li>Alert when confdb connections pass 80%. Issue #58. Owner: Dev.</li>
+      </ul>
+      <span class="label" style="margin-top:6px">Happened before</span>
+      <div class="match"><b>INC-1877, last year's event</b><span class="note">Slow check-in query after a release, fixed with an index by Priya on Registration. Same cause, second time: the CI check above is how it stops coming back.</span></div>
+      </section>
+    </div>
+    <p class="note">Every line links back to the events it came from. Evidence: Radar investigation on deployment/checkin, Dash0 signals, PR #212.</p>`;
+}
+
+function next(animate = true) {
+  if (idx >= EVENTS.length) return false;
+  S.flash = null;
+  apply(EVENTS[idx], animate); idx++; renderAll();
+  if (idx >= EVENTS.length) setPlaying(false);
+  return true;
+}
+
+function schedule() {
+  clearTimeout(timer);
+  if (!playing) return;
+  timer = setTimeout(() => { if (next()) schedule(); }, 1700 / speed);
+}
+function setPlaying(p) { playing = p; $("play").textContent = p ? "Pause" : (idx >= EVENTS.length ? "Replay" : "Play"); schedule(); }
+
+function showView(name) {
+  for (const v of ["Live", "Record", "Teams"]) { $("view" + v).hidden = v !== name; $("tab" + v).setAttribute("aria-pressed", String(v === name)); }
+}
+
+$("play").onclick = () => { if (idx >= EVENTS.length) { reset(); setPlaying(true); } else setPlaying(!playing); };
+$("step").onclick = () => { setPlaying(false); next(); };
+$("speed").onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $("speed").textContent = speed + "x"; schedule(); };
+$("restart").onclick = () => { reset(); setPlaying(true); };
+$("tabLive").onclick = () => showView("Live");
+$("tabRecord").onclick = () => showView("Record");
+$("tabTeams").onclick = () => showView("Teams");
+
+const svg = $("graph");
+svg.querySelectorAll(".g-team, .g-svc").forEach(g => {
+  const id = g.dataset.id;
+  g.addEventListener("mouseenter", () => {
+    svg.classList.add("hovering"); g.classList.add("hot");
+    svg.querySelectorAll(".arc, .arc-label").forEach(a => {
+      if (a.dataset.a === id || a.dataset.b === id) {
+        a.classList.add("hot");
+        svg.querySelectorAll('[data-id="' + (a.dataset.a === id ? a.dataset.b : a.dataset.a) + '"]').forEach(n => n.classList.add("hot"));
+      }
+    });
+  });
+  g.addEventListener("mouseleave", () => { svg.classList.remove("hovering"); svg.querySelectorAll(".hot").forEach(n => n.classList.remove("hot")); });
+});
+$("showAll").onclick = e => { const on = svg.classList.toggle("show-all"); e.currentTarget.setAttribute("aria-pressed", String(on)); };
+
+reset();
+for (let i = 0; i < 4; i++) next(false);
+setPlaying(true);
+</script>

@@ -1,0 +1,16 @@
+teams:
+  - id: registration
+    name: Registration
+    manager: dana
+    members: [ana, cal]
+    owns: [checkin, schedule]
+  - id: ticketing
+    name: Ticketing and Payments
+    manager: eli
+    members: [gus, fay]
+    owns: [tickets, payments]
+  - id: platform
+    name: Platform
+    manager: ben
+    members: [dev]
+    owns: [confdb]
