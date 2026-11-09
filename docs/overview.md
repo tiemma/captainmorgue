@@ -57,6 +57,7 @@ Key constraints that shape it ([dispatch.md](dispatch.md) section 2):
 | Teams | Raft-style groups: voters = members + CaptainMorgue; manager holds a lease; heartbeat 5 s, suspect 15 s, election 30 s; vote for the highest cursor; terms on every decision | dispatch 3b |
 | Not responding | Suspect, offline, escalate unanswered asks member -> manager -> parent -> CaptainMorgue; digest on return; fold team into parent without quorum | dispatch 3c |
 | Communication | Upward by default, sideways only through CaptainMorgue, downward from managers and CaptainMorgue; every message has a why and a term | dispatch 3d |
+| Connections | Agents hold MCP connections to act with the person's identity; CaptainMorgue holds its own read-only connections (Dash0, Radar, GitHub) to open incidents, find owners, verify recovery and investigate. Not built yet. | dispatch 5a |
 | Failure modes | 20 listed with detection and mitigation; biggest: single point of failure, split brain on restart, false suspicion, spoofed actors, secrets in prompts | dispatch 7a |
 | Demo | A real canary release on the conference app, not an injected fault; a real laptop closed for the election | plan 0, dispatch 3e |
 

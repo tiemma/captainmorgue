@@ -255,6 +255,47 @@ Not available: a plugin cannot ship the main status line, so no unread count the
 
 Priority and noise **(proposed)**: conflicts and direct asks interrupt (notification + inject); relays and FYIs inject only; the raw activity of other people is never injected, only shown on the wall screen. Otherwise every agent's context fills with everyone else's tool calls.
 
+## 5a. Connections: agents and CaptainMorgue both reach the outside systems
+
+Two sides hold connections, for different jobs.
+
+| Side | Connections | Used for |
+|---|---|---|
+| **Each person's agent** (laptop) | Radar Cloud MCP, Dash0 MCP, GitHub, whatever else that person has | Doing the work: reading the cluster, rollouts, logs, opening PRs. The person's own identity and permissions. |
+| **CaptainMorgue** (cluster) | Dash0 (MCP or API, service token), Radar (MCP, service identity), GitHub (Gitar check results, CODEOWNERS), Elasticsearch, Claude | Coordinating: opening incidents from alerts, finding owners, checking that a part really recovered, starting the Radar AI investigation, enriching relays and the record. Read-only on the cluster. |
+
+```mermaid
+flowchart LR
+  subgraph Laptop
+    A["Agent (Claude Code)"]
+  end
+  subgraph Cluster
+    CM["CaptainMorgue"]
+  end
+  RADAR["Radar Cloud MCP"]
+  DASH0["Dash0 MCP / API"]
+  GH["GitHub + Gitar"]
+  A -->|"person's identity: act"| RADAR
+  A -->|"act"| DASH0
+  A -->|"act"| GH
+  CM -->|"service identity: read, verify, investigate"| RADAR
+  CM -->|"alerts in, signals read"| DASH0
+  CM -->|"owners, check results"| GH
+  A <-->|"events, messages"| CM
+```
+
+What CaptainMorgue does with its own connections (none of this is built yet):
+
+1. **Open incidents.** A Dash0 alert (webhook or poll) opens the incident and names the affected service.
+2. **Find owners.** Team labels from Radar resources and CODEOWNERS decide which teams are pulled in.
+3. **Verify progress.** A part is tagged resolved only when CaptainMorgue reads the recovered signal from Dash0 itself, not when someone says so (PRD: progress = signal recovery).
+4. **Investigate.** CaptainMorgue starts the Radar AI investigation on the affected workload and posts the finding.
+5. **Ground the router.** "Dev is reading confdb right now" comes from Dev's events; "checkin holds most connections" comes from CaptainMorgue's own Dash0 read.
+
+Rule: **agents act, CaptainMorgue reads and verifies.** CaptainMorgue never changes the cluster; it asks a person (or an agent in auto mode) to.
+
+Open: Radar Cloud MCP signs in interactively (OAuth). Whether a service in the cluster can hold its own Radar credential has to be checked with Radar; fallback is the in-cluster Radar API or the Kubernetes API with a read-only ServiceAccount. Dash0 accepts a bearer token, verified for OTLP ingest (region us-west-2).
+
 ## 6. Message model
 
 One envelope for everything **(proposed)**, A2A-shaped so swapping in A2A later is a transport change:
