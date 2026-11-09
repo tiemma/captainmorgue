@@ -100,10 +100,27 @@ button { font: inherit; color: inherit; }
 .tree li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 6px; transition: background var(--dur-base) ease, opacity var(--dur-base) ease; }
 .tree li.off { opacity: 0.42; }
 .tree li.flash { background: var(--brass-soft); }
-.tree .who { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tree .who { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-width: 0; overflow-wrap: anywhere; }
 .tree .team-row .who { font-family: var(--font-display); font-weight: 600; }
 .tree .d1 { padding-left: 20px; } .tree .d2 { padding-left: 38px; }
-.tree .task { color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; }
+.tree .task { display: block; flex-basis: 100%; color: var(--fg-3); overflow-wrap: anywhere; }
+.tree .team-row { grid-template-columns: minmax(0, 1fr); }
+.tree .team-row > .pill { justify-self: start; }
+.tree .team-owns { color: var(--fg-3); font-weight: 400; overflow-wrap: anywhere; }
+.tree li.person-row { display: block; padding-left: 20px; }
+.profile summary { display: grid; gap: 8px; cursor: pointer; border-radius: 4px; }
+.profile summary > .pill { justify-self: start; }
+.profile summary .profile-hint { color: var(--fg-3); font-size: 11px; font-weight: 400; }
+.profile[open] summary .profile-hint { color: var(--info); }
+.profile-body { display: grid; gap: 6px; margin-top: 8px; padding: 8px; background: var(--surface-2); border-radius: 4px; overflow-wrap: anywhere; }
+.profile-body dl, .profile-body dd { margin: 0; }
+.profile-body dt { color: var(--fg-3); font-size: 11px; margin-top: 6px; }
+#claims .part-top { flex-wrap: wrap; }
+#claims .mono, #claims small { min-width: 0; overflow-wrap: anywhere; }
+#claims .pill { white-space: normal; overflow-wrap: anywhere; }
+#commanderFact[hidden] { display: none; }
+#commander { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .ev { grid-template-columns: 52px minmax(0, 1fr); } .ev .body { grid-column: 1 / -1; } .tree .d1 { padding-left: 8px; } }
 .mgr { font-family: var(--font-mono); font-size: 9.5px; color: var(--tag-ink); background: var(--tag-paper); padding: 0 5px; border-radius: 3px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--quiet); }
 .dot.on { background: var(--resolved); box-shadow: 0 0 0 3px var(--resolved-bg); }
@@ -193,6 +210,7 @@ button { font: inherit; color: inherit; }
         <div class="fact"><span class="label">Clock</span><b id="clock" class="clock">--:--:--</b></div>
         <div class="fact"><span class="label">Opened</span><b id="opened">-</b></div>
         <div class="fact"><span class="label">Closed</span><b id="closed">-</b></div>
+        <div class="fact" id="commanderFact" hidden><span class="label">Commander</span><b id="commander"></b></div>
       </div>
     </div>
     <div class="controls">
@@ -254,7 +272,7 @@ button { font: inherit; color: inherit; }
 <script>
 const NAMES = { captainmorgue: "CaptainMorgue", dash0: "Dash0", radar: "Radar", gitar: "Gitar", argo: "Argo CD" };
 const ROLES = { captainmorgue: "root", dash0: "alert", radar: "cluster", gitar: "pull request", argo: "via Radar" };
-const KIND = { alert: "Alert", join: "Joined", leave: "Left", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", claim: "Claimed", ship: "Shipped", election: "Election", investigation: "Investigation", signal: "Signal", close: "Closed" };
+const KIND = { alert: "Alert", join: "Joined", leave: "Left", digest: "Catch-up digest", task: "Task updated", reply: "Reply", vote_request: "Vote requested", action: "Action", relay: "Broadcast, relayed", broadcast: "Broadcast", ask: "Ask", autoreply: "Auto-reply", escalation: "Escalation", decision: "Decision", conflict: "Conflict", claim: "Claimed", ship: "Shipped", election: "Election", investigation: "Investigation", signal: "Signal", close: "Closed" };
 const STATUS = {
   online: ["on", "online", "p-resolved"],
   in_incident: ["on", "in incident", "p-resolved"],
@@ -262,7 +280,7 @@ const STATUS = {
   suspect: ["busy", "suspect", "p-investigating"],
   offline: ["gone", "offline", "p-critical"]
 };
-const MESSAGE_TYPES = ["relay", "ask", "broadcast"];
+const MESSAGE_TYPES = ["relay", "ask", "broadcast", "reply", "autoreply", "escalation"];
 
 let state = {}, lastEvent = null, lastMessage = null, lastInvestigation = null;
 const landed = new Set();
@@ -316,11 +334,12 @@ function onEvent(ev) {
 }
 
 function appendRow(ev) {
+  const kind = ev.type === "action" && String(ev.text || "").startsWith("Working on: ") ? "task" : ev.type;
   const li = document.createElement("li");
-  li.className = "ev enter k-" + (KIND[ev.type] ? ev.type : "other");
+  li.className = "ev enter k-" + (KIND[kind] ? kind : "other");
   const sub = ev.team ? '<span data-team="' + esc(ev.team) + '">' + esc(teamName(ev.team)) + '</span>' : '<span>' + esc(ROLES[ev.actor] || "") + '</span>';
   li.innerHTML = '<time>' + timeOf(ev.ts) + '</time><div class="actor"><b>' + esc(nameOf(ev.actor)) + '</b>' + sub + '</div>' +
-    '<div class="body"><span class="kind">' + esc(KIND[ev.type] || ev.type) + '</span><span class="text">' + esc(ev.text) + '</span>' +
+    '<div class="body"><span class="kind">' + esc(KIND[kind] || kind) + '</span><span class="text">' + esc(ev.text) + '</span>' +
     (ev.to && ev.to.length ? '<span class="why">To ' + esc(ev.to.map(nameOf).join(", ")) + '</span>' : "") +
     artifacts(ev.artifacts) + '</div>';
   $("log").prepend(li);
@@ -341,17 +360,21 @@ function renderHeader() {
   else { pill.textContent = inc.status || "waiting"; pill.className = "pill p-quiet"; }
   $("opened").textContent = timeOf(inc.opened) || "-";
   $("closed").textContent = timeOf(inc.closed) || "-";
+  const commander = Object.entries(state.people || {}).find(([, p]) => p && typeof p === "object" && p.role === "commander");
+  $("commanderFact").hidden = !commander;
+  $("commander").textContent = commander ? nameOf(commander[0]) : "";
 }
 
 function personRow(id, isMgr, teamOn) {
   if (!id) return "";
   const [dot, label, pill] = statusOf(id);
-  const flash = lastEvent && lastEvent.actor === id ? " flash" : "";
   const p = (state.people || {})[id];
   const prof = p && typeof p === "object" ? p : {};
   const role = prof.role && prof.role !== "responder" ? '<span class="mgr">' + esc(prof.role.toUpperCase()) + '</span>' : "";
-  const detail = [prof.task, prof.repo && "repo " + prof.repo, prof.tools && prof.tools.length && "tools " + prof.tools.join(", ")].filter(Boolean).join(" | ");
-  return '<li class="d2' + (teamOn ? "" : " off") + flash + '"' + (detail ? ' title="' + esc(detail) + '"' : "") + '><span class="who"><i class="dot ' + dot + '"></i>' + esc(nameOf(id)) + (isMgr ? '<span class="mgr">MGR</span>' : "") + role + (prof.task ? '<small class="task">' + esc(prof.task) + '</small>' : "") + '</span><span class="pill ' + pill + '">' + esc(label) + '</span></li>';
+  const tools = Array.isArray(prof.tools) ? prof.tools : [];
+  const detail = [prof.repo && "repo " + prof.repo, tools.length && "tools " + tools.join(", ")].filter(Boolean).join(" | ");
+  const profile = '<dl><dt>Repository</dt><dd>' + esc(prof.repo || "Not reported") + '</dd><dt>Tools</dt><dd>' + esc(tools.length ? tools.join(", ") : "Not reported") + '</dd></dl>';
+  return '<li class="person-row' + (teamOn ? "" : " off") + '"><details class="profile" data-person="' + esc(id) + '"><summary' + (detail ? ' title="' + esc(detail) + '"' : "") + '><span class="who"><i class="dot ' + dot + '" aria-hidden="true"></i>' + esc(nameOf(id)) + (isMgr ? '<span class="mgr">MGR</span>' : "") + role + '<span class="profile-hint">Profile</span>' + (prof.task ? '<small class="task">' + esc(prof.task) + '</small>' : "") + '</span><span class="pill ' + pill + '">' + esc(label) + '</span></summary><div class="profile-body">' + profile + '</div></details></li>';
 }
 
 function renderTree() {
@@ -360,10 +383,16 @@ function renderTree() {
   for (const t of state.teams || []) {
     const term = t.term != null ? '<span class="label">term ' + esc(t.term) + '</span>' : "";
     h += '<li class="team-row d1' + (t.pulled_in ? "" : " off") + '"><span class="who">' + esc(t.name) + term + '</span><span class="pill ' + (t.pulled_in ? "p-info" : "p-quiet") + '">' + (t.pulled_in ? "pulled in" : "standing by") + '</span></li>';
+    if (Array.isArray(t.owns) && t.owns.length) h += '<li class="team-row d1"><small class="team-owns">Owns: ' + esc(t.owns.join(", ")) + '</small></li>';
     h += personRow(t.manager, true, t.pulled_in);
-    for (const m of t.members || []) h += personRow(m, false, t.pulled_in);
+    for (const m of new Set(t.members || [])) if (m !== t.manager) h += personRow(m, false, t.pulled_in);
   }
+  if ($("tree").dataset.rendered === h) return;
+  const expanded = new Set(Array.from($("tree").querySelectorAll("details[open]"), el => el.dataset.person));
+  const focused = $("tree").contains(document.activeElement) ? document.activeElement.closest("[data-person]")?.dataset.person : null;
   $("tree").innerHTML = h;
+  $("tree").dataset.rendered = h;
+  $("tree").querySelectorAll("details").forEach(el => { el.open = expanded.has(el.dataset.person); if (el.dataset.person === focused) el.querySelector("summary").focus({ preventScroll: true }); });
 }
 
 function renderParts() {
