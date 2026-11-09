@@ -1,9 +1,12 @@
 # Sammy: cluster, Radar and the story
 
 ## Now
-The corrected Radar Secrets are present; the reviewed infra merge is ready locally at cluster commit `c457141`, but GitHub rejected the push because Sammy lacks write access to `tiemma/captainmorgue-cluster`.
+The corrected Radar Secrets and Elastic URL are present; the latest infra merge is ready locally at cluster commit `5346806`, but GitHub write access is still blocking the public push.
 
 ## Done
+- Pulled latest repos; Emmanuel's latest `feat/infra` is `5fe5602` and adds optional `cm-token` wiring.
+- Added Emmanuel's Elastic Cloud URL as `elastic-url` on the Radar `captainmorgue` Secret.
+- Merged the latest infra changes locally as `5346806`.
 - Created Radar Secret `captainmorgue` with key `anthropic-api-key` in `team-captainmorgue`.
 - Created Radar Secret `dash0` with keys `endpoint` and `token` in `team-captainmorgue`.
 - Merged `origin/feat/infra` (`26bfbe8`) locally into cluster `main` as `c457141`.
@@ -19,8 +22,8 @@ The corrected Radar Secrets are present; the reviewed infra merge is ready local
 
 ## Next
 - [ ] **Milestone: set up on my agent** (AGENTS.md, "Milestone: set it up on your own agent") once the service is deployed: install the plugin, set the env, `/captainmorgue:join`, send and answer one ask. Tick and push when done.
-- Review and merge `feat/infra` (`26bfbe8`), after confirming the service image is published.
-- Create the hand-made `dash0` and `captainmorgue` Secrets through Radar using values supplied directly by Emmanuel; never put values in git or chat.
+- Review and push the latest merged `feat/infra` after GitHub write access is granted.
+- Add `elastic-api-key` and `cm-token` to the Radar `captainmorgue` Secret when Emmanuel supplies them directly; never put values in git or chat.
 - Push the cluster repo, then sync and confirm workloads healthy through Radar.
 - Verify the public GHCR image once the service image is published.
 - Real canary release of check-in, Radar AI investigation, post the summary to `/events`.
@@ -28,5 +31,6 @@ The corrected Radar Secrets are present; the reviewed infra merge is ready local
 
 ## Blocked on
 - GitHub write permission for `SammyOina` on `tiemma/captainmorgue-cluster`; push of local merge `c457141` was rejected with HTTP 403.
+- Elastic API key and team `cm-token` are still missing from the Radar `captainmorgue` Secret.
 
 ## Handing off
