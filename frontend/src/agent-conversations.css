@@ -53,8 +53,7 @@
   }
 }
 .cm-agent-thread.is-selected {
-  background: var(--cm-bg-layer);
-  box-shadow: inset 2px 0 var(--cm-accent);
+  background: var(--cm-accent-soft);
 }
 .cm-agent-thread-owner {
   color: var(--cm-text-subtle);

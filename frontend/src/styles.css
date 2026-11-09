@@ -1887,6 +1887,14 @@ body {
   gap: 12px;
   margin: 24px 0 20px;
 }
+.cm-kpi-row > .cm-stat-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+@media (min-width: 561px) {
+  .cm-kpi-row > .cm-stat-card:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
 .cm-stat-card {
   display: flex;
   flex-direction: column;

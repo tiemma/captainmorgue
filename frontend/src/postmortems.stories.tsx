@@ -14,7 +14,6 @@ const meta = {
     (Story) => (
       <div className="cm-app">
         <main className="cm-page">
-          <p className="cm-eyebrow">Design preview / sample postmortems</p>
           <Story />
         </main>
       </div>
