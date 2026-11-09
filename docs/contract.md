@@ -72,7 +72,7 @@ Every `event` is followed by a `state`, so the wall can redraw panels from `stat
 |---|---|---|
 | `incident.id` | string | Incident id, `INC-1`. |
 | `incident.title` | string | Incident title (`INCIDENT_TITLE`). |
-| `incident.status` | `"open"` \| `"investigating"` \| `"mitigated"` \| `"resolved"` \| `"closed"` | The latest `status` event, `closed` once a `close` event exists. |
+| `incident.status` | `"open"` \| `"investigating"` \| `"mitigated"` \| `"resolved"` \| `"closed"` | The latest `status` event, `closed` once a `close` event exists. An `open` event (a new alert after close) starts over at `open` with no severity. |
 | `incident.severity` | `""` \| `"sev1"` \| `"sev2"` \| `"sev3"` | The latest severity set. |
 | `incident.opened` | RFC 3339 time or null | Timestamp of the first event. |
 | `incident.closed` | RFC 3339 time or null | Timestamp of the `close` event. |
