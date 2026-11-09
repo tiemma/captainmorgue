@@ -7,6 +7,7 @@ import {
   ChevronRight,
   FileText,
   MessageSquare,
+  Network,
   Send,
   Ship,
   Users,
@@ -16,17 +17,19 @@ import type { Tone } from "./ui";
 import { SidePanel } from "./side-panel";
 import { Postmortems } from "./postmortems";
 import { useIncident } from "./use-incident";
-import { fetchRecord, heartbeat, join, sendMessage } from "./service-client";
-import type { IncidentEvent, IncidentRecord, Person } from "./service-client";
+import { fetchGraph, fetchRecord, heartbeat, join, sendMessage } from "./service-client";
+import type { IncidentEvent, IncidentRecord, Person, TeamGraph } from "./service-client";
+import { TeamGraphView } from "./team-graph";
 import "./live-workspace.css";
 
-type Tab = "Incident" | "Requests" | "Crew" | "Record" | "Postmortems";
+type Tab = "Incident" | "Requests" | "Crew" | "Teams" | "Record" | "Postmortems";
 type Inspector =
   { kind: "event"; event: IncidentEvent } | { kind: "person"; actor: string };
 const navigation = [
   { label: "Incident", icon: Activity },
   { label: "Requests", icon: MessageSquare },
   { label: "Crew", icon: Users },
+  { label: "Teams", icon: Network },
   { label: "Record", icon: FileText },
   { label: "Postmortems", icon: BookOpen },
 ] as const;
@@ -152,6 +155,25 @@ function EventList({
   );
 }
 
+function clock(ms: number) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  return [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
+    .map((part) => String(part).padStart(2, "0"))
+    .join(":");
+}
+
+function Elapsed({ opened, closed }: { opened: string | null; closed: string | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!opened || closed) return;
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [opened, closed]);
+  if (!opened) return <>--:--:--</>;
+  const end = closed ? Date.parse(closed) : now;
+  return <time dateTime={opened}>{clock(end - Date.parse(opened))}</time>;
+}
+
 export function LiveWorkspace() {
   const { state, events, connection, error } = useIncident();
   const [tab, setTab] = useState<Tab>("Incident");
@@ -176,6 +198,9 @@ export function LiveWorkspace() {
   const [recordError, setRecordError] = useState("");
   const [recordLoading, setRecordLoading] = useState(false);
   const [recordAttempt, setRecordAttempt] = useState(0);
+  const [graph, setGraph] = useState<TeamGraph>();
+  const [graphError, setGraphError] = useState("");
+  const [graphAttempt, setGraphAttempt] = useState(0);
   const teams = state?.teams || [];
   const people = state?.people || {};
   const claims = state?.claims || [];
@@ -219,6 +244,23 @@ export function LiveWorkspace() {
       });
     return () => controller.abort();
   }, [tab, incidentId, state?.incident.closed, recordAttempt]);
+
+  useEffect(() => {
+    if (tab !== "Teams") return;
+    const controller = new AbortController();
+    setGraphError("");
+    fetchGraph(controller.signal)
+      .then(setGraph)
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted)
+          setGraphError(
+            reason instanceof Error
+              ? reason.message
+              : "The team graph could not be loaded.",
+          );
+      });
+    return () => controller.abort();
+  }, [tab, events.length, graphAttempt]);
 
   async function joinWorkspace(event: FormEvent) {
     event.preventDefault();
@@ -408,6 +450,8 @@ export function LiveWorkspace() {
                         ? "Agent messages and delivery receipts from the incident stream."
                         : tab === "Crew"
                           ? "Responders, their roles, and the work they own."
+                          : tab === "Teams"
+                            ? "The team tree, and how teams relate in this incident."
                           : "The incident record returned by CaptainMorgue."}
                   </p>
                 </div>
@@ -445,6 +489,15 @@ export function LiveWorkspace() {
                     <div className="cm-stat-card">
                       <span>Events</span>
                       <strong>{events.length}</strong>
+                    </div>
+                    <div className="cm-stat-card">
+                      <span>Elapsed</span>
+                      <strong>
+                        <Elapsed
+                          opened={state.incident.opened}
+                          closed={state.incident.closed}
+                        />
+                      </strong>
                     </div>
                   </div>
                 )}
@@ -786,6 +839,14 @@ export function LiveWorkspace() {
                   )
                 )}
               </>
+            )}
+            {tab === "Teams" && (
+              <TeamGraphView
+                graph={graph}
+                loading={!graph}
+                error={graphError}
+                onRetry={() => setGraphAttempt((attempt) => attempt + 1)}
+              />
             )}
             {tab === "Postmortems" && (
               <Postmortems error="The postmortem archive is not available from the service yet. Open Record for the current incident." />
