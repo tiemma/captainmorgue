@@ -112,10 +112,10 @@ func (inc *Incident) alertEvents(a alert, now time.Time) []Event {
 			Actor: a.source, Team: team.ID, Type: "recovered", To: everyone, Service: a.service,
 			Text:   fmt.Sprintf("%s recovered: %s", a.service, a.summary),
 			Why:    "Everyone in " + inc.id + " hears when an alerting service recovers.",
-			Signal: &Signal{Value: "recovered", Status: "good"},
+			Signal: &Signal{Value: "recovered", Status: "ok"},
 		}}
 	}
-	signal := &Signal{Value: a.summary, Status: "bad"}
+	signal := &Signal{Value: a.summary, Status: "critical"}
 	var evs []Event
 	if !inc.isOpen() {
 		inc.title = a.service + ": " + a.summary

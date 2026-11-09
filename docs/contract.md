@@ -93,7 +93,7 @@ Every `event` is followed by a `state`, so the wall can redraw panels from `stat
 | `claims[]` | array, oldest first | Active claims only: `{"key": "ns/kind/name", "actor", "text", "since", "expires"}`, times RFC 3339. |
 | `deliveries` | object, seq (as a string key) to object of login to status | Per recipient delivery of every `ask`, `broadcast`, `relay` and `conflict`: `sent` (queued), `delivered` (their poller fetched it), `seen` (they acked it, or replied to the ask). |
 | `parts[]` | array | Reserved for incident parts `{"id", "name", "owner", "progress", "status", "resolved_at", "note"}`. Always `[]` today. |
-| `signals` | object, `<service>_<metric>` to Signal | Live Dash0 signals, see [Signals](#signals). `{}` when Dash0 is not configured. |
+| `signals` | object, key to Signal | Two sources, one shape, see [Signals](#signals): `<service>` from the latest `alert`/`recovered` event carrying a `signal`, and `<service>_<metric>` from live Dash0 queries. `{}` when neither has happened. |
 | `past_match` | object or null | Closest past incident from Elasticsearch: `{"id", "summary", "fixed_by"}`. Null when Elasticsearch is not configured or nothing matches. |
 
 Live `state` from production, 2026-11-09 (before `commander` shipped):
@@ -116,7 +116,7 @@ Busier fields from a local run:
 
 ## Signals
 
-When the service runs with `DASH0_AUTH_TOKEN` set (and `DASH0_API_URL`, default `https://api.us-west-2.aws.dash0.com`), it runs three PromQL range queries against Dash0 every 30 s (`CM_SIGNAL_EVERY`) while the incident is open (at least one event, no `close`), over every service a roster team `owns`. `DASH0_DATASET` picks the dataset; unset uses the organization default. Unset or failing, `signals` stays as it was and the failure is logged once.
+When the service runs with `DASH0_AUTH_TOKEN` set (and `DASH0_API_URL`, default `https://api.us-west-2.aws.dash0.com`), it runs three PromQL range queries against Dash0 every 30 s (`CM_SIGNAL_EVERY`) while the incident is open (an `open` event after the last `close`), over every service a roster team `owns`. `DASH0_DATASET` picks the dataset; unset uses the organization default. Unset or failing, `signals` stays as it was and the failure is logged once.
 
 | Metric key | Query (per `service_name`, server spans, 2 m rate) | `warn` at | `critical` at |
 |---|---|---|---|
@@ -124,7 +124,7 @@ When the service runs with `DASH0_AUTH_TOKEN` set (and `DASH0_API_URL`, default 
 | `errors` | `dash0.spans` with `otel_span_status_code="ERROR"` over all, in percent | 1 % | 5 % |
 | `p95` | `histogram_quantile(0.95, dash0.spans.duration)`, in ms | 500 ms | 1000 ms |
 
-A service with no spans in Dash0 gets no entry. Each Signal:
+A service with no spans in Dash0 gets no entry. Each Signal (alert-derived ones carry only `value` and `status`, `critical` on alert and `ok` with value `recovered`):
 
 | Field | Type | Meaning |
 |---|---|---|

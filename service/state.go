@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -42,12 +43,12 @@ type Relay struct {
 }
 
 type Signal struct {
-	Label   string    `json:"label"`
-	Service string    `json:"service"`
+	Label   string    `json:"label,omitempty"`
+	Service string    `json:"service,omitempty"`
 	Value   string    `json:"value"`
 	Status  string    `json:"status"`
-	Series  []float64 `json:"series"`
-	Spark   []float64 `json:"spark"`
+	Series  []float64 `json:"series,omitempty"`
+	Spark   []float64 `json:"spark,omitempty"`
 }
 
 type State struct {
@@ -71,7 +72,7 @@ func (inc *Incident) state() State {
 		Incident:  IncidentSummary{ID: inc.id, Title: inc.title, Status: "open"},
 		People:    inc.people(now),
 		Parts:     []Part{},
-		Signals:   inc.signals,
+		Signals:   maps.Clone(inc.signals),
 		PastMatch: inc.pastMatch,
 		Claims:    inc.activeClaims(now),
 		Commander: inc.coord.commander,

@@ -484,7 +484,7 @@ export function LiveWorkspace() {
                               <span className="text-paragraph-sm">{name}</span>
                               <Badge
                                 tone={
-                                  signal.status === "bad" ? "danger" : "neutral"
+                                  signal.status === "critical" ? "danger" : signal.status === "warn" ? "amber" : "neutral"
                                 }
                               >
                                 {signal.value}

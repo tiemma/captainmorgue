@@ -144,15 +144,12 @@ func (inc *Incident) owned() []string {
 	return services
 }
 
-func (inc *Incident) isOpen() bool {
-	inc.mu.Lock()
-	defer inc.mu.Unlock()
-	return len(inc.events) > 0 && !slices.ContainsFunc(inc.events, func(ev Event) bool { return ev.Type == "close" })
-}
-
 func (inc *Incident) pollSignals(d *dash0, every time.Duration) {
 	for range time.Tick(every) {
-		if inc.isOpen() {
+		inc.mu.Lock()
+		open := inc.isOpen()
+		inc.mu.Unlock()
+		if open {
 			inc.refreshSignals(d)
 		}
 	}
@@ -202,7 +199,8 @@ func (inc *Incident) refreshSignals(d *dash0) {
 			was = prev.Status
 		}
 		if s.Status != was {
-			changed = append(changed, Event{Actor: "dash0", Team: inc.ownerOf(s.Service), Type: "signal",
+			owner, _ := inc.roster.owner(s.Service)
+			changed = append(changed, Event{Actor: "dash0", Team: owner.ID, Type: "signal",
 				Text: fmt.Sprintf("%s is %s at %s (was %s)", s.Label, s.Status, s.Value, was)})
 		}
 	}
@@ -216,13 +214,4 @@ func (inc *Incident) refreshSignals(d *dash0) {
 	if len(changed) == 0 {
 		inc.broadcast()
 	}
-}
-
-func (inc *Incident) ownerOf(service string) string {
-	for _, t := range inc.roster.Teams {
-		if slices.Contains(t.Owns, service) {
-			return t.ID
-		}
-	}
-	return ""
 }
