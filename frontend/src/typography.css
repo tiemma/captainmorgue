@@ -1,0 +1,373 @@
+.text-title-h1 {
+  font: 500 4.5rem/5.375rem var(--cm-display);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.text-title-h2 {
+  font: 500 3.75rem/4.5rem var(--cm-display);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.text-title-h3 {
+  font: 500 3rem/3.625rem var(--cm-display);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.text-title-h4,
+.cm-foundations-brand {
+  font: 500 2.25rem/2.75rem var(--cm-display);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.text-title-h5,
+.cm-crew-overview strong,
+.cm-join-story h1,
+.cm-empty h2,
+.cm-wall .cm-page-title h1,
+.cm-type-specimen strong.cm-serif-sample {
+  font: 500 1.875rem/2.375rem var(--cm-display);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.text-title-h6,
+.cm-brand > span:last-child,
+.cm-page-title h1,
+.cm-signal-row strong,
+.cm-record-top h2,
+.cm-join-card h2,
+.cm-inspector h2,
+.cm-agent-detail-heading h2 {
+  font: 500 1.5rem/2rem var(--cm-display);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.text-label-xl,
+.cm-type-specimen strong {
+  font: 500 1.5rem/2rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-label-lg,
+.cm-crew-person h2,
+.cm-record-facts b,
+.cm-wall .cm-attention-content h2,
+.cm-foundation-heading h2 {
+  font: 500 1.125rem/1.625rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-label-md,
+.cm-attention-content h2,
+.cm-resolved-banner h2,
+.cm-record-aside h3,
+.cm-modal > .cm-panel-heading h2 {
+  font: 500 1rem/1.5rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-label-sm,
+.cm-nav-item,
+.cm-nav-item.is-active,
+.cm-sidebar-incident button > span:nth-child(2),
+.cm-button,
+.cm-meta-owner b,
+.cm-section-heading h2,
+.cm-panel-heading h2,
+.cm-filter-tabs button,
+.cm-filter-tabs button.is-selected,
+.cm-event-heading strong,
+.cm-part h3,
+.cm-avatar,
+.cm-thread-list-title,
+.cm-thread strong,
+.cm-conversation-header h2,
+.cm-message-byline strong,
+.cm-route-status strong,
+.cm-crew-person .cm-avatar,
+.cm-crew-bottom h2,
+.cm-record-section h3,
+.cm-record-step b,
+.cm-field,
+.cm-join-card > .cm-text-button,
+.cm-wall .cm-event-heading strong,
+.cm-wall .cm-part h3,
+.cm-swatches strong,
+.cm-agent-inbox-heading h2,
+.cm-agent-thread > strong,
+.cm-agent-stage-heading h3,
+.cm-agent-task-title > strong,
+.cm-agent-proposal-label strong,
+.cm-agent-proposal-actions .cm-button,
+.cm-agent-working h3,
+.cm-agent-escalation strong,
+.cm-disclosure > summary {
+  font: 500 0.875rem/1.25rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-label-xs,
+.cm-agent-thread .cm-badge,
+.cm-agent-detail-heading .cm-badge,
+.cm-agent-tool-steps button,
+.cm-agent-proposal-label .cm-badge,
+.cm-agent-answer .cm-receipt,
+.cm-agent-ack-row button,
+.cm-agent-crew-task .cm-badge,
+.cm-workspace-switch > span:nth-child(2),
+.cm-nav-count,
+.cm-connection,
+.cm-badge,
+.cm-attention-footer button,
+.cm-part-footer button,
+.cm-text-button,
+.cm-route-receipt button,
+.cm-tiny-avatar,
+.cm-avatar-small,
+.cm-signal-row strong small,
+.cm-route-receipt,
+.cm-route-status .cm-button,
+.cm-receipt,
+.cm-compose-scope select,
+.cm-crew-team .cm-badge,
+.cm-crew-person h2 span,
+.cm-person-connections > div,
+.cm-improvement b,
+.cm-improvement .cm-badge,
+.cm-match-id,
+.cm-conflict-comparison strong,
+.cm-agent-route > div > span,
+.cm-agent-original-ask .cm-text-button,
+.cm-agent-escalation > span:not(.cm-badge),
+.cm-agent-outgoing-ask strong,
+.cm-agent-compose-toggle > span,
+.cm-agent-crew-task strong {
+  font: 500 0.75rem/1rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-label-xxs,
+.cm-count {
+  font: 500 0.625rem/0.75rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-paragraph-xl {
+  font: 400 1.5rem/2rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-paragraph-lg {
+  font: 400 1.125rem/1.625rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-paragraph-md,
+.cm-join-quote,
+.cm-foundations > header p,
+.cm-type-specimen code {
+  font: 400 1rem/1.625rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-paragraph-sm,
+.cm-app,
+.cm-foundations,
+.cm-sidebar-incident small,
+.cm-user > span:nth-child(2),
+.cm-breadcrumb,
+.cm-page-title p,
+.cm-attention-content p,
+.cm-event p,
+.cm-part p,
+.cm-signal-row > span,
+.cm-disconnect,
+.cm-resolved-banner p,
+.cm-thread-list-title > span,
+.cm-message-byline time,
+.cm-message-bubble,
+.cm-composer textarea,
+.cm-crew-overview-note p,
+.cm-crew-job,
+.cm-crew-bottom p,
+.cm-record-lede,
+.cm-record-section p,
+.cm-record-aside p,
+.cm-join-story p,
+.cm-join-facts,
+.cm-field input,
+.cm-field select,
+.cm-field textarea,
+.cm-inspector-summary,
+.cm-inspector-block > code,
+.cm-inspector-block p,
+.cm-close-check,
+.cm-toast,
+.cm-wall .cm-event p,
+.cm-wall .cm-attention-content p,
+.cm-foundation-heading > span,
+.cm-foundations > footer,
+.cm-agent-original-ask p,
+.cm-agent-proposed-text,
+.cm-agent-human-input > p,
+.cm-agent-answer > p,
+.cm-agent-outgoing-ask p {
+  font: 400 0.875rem/1.25rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-paragraph-xs,
+.cm-brand small,
+.cm-workspace-icon,
+.cm-workspace-switch small,
+.cm-preview-label,
+.cm-preview-label small,
+.cm-user small,
+.cm-incident-meta,
+.cm-mono,
+.cm-meta-owner,
+.cm-attention-footer,
+.cm-sort-label,
+.cm-event-heading,
+.cm-event-kind,
+.cm-event-heading time,
+.cm-evidence-link,
+.cm-timeline-origin,
+.cm-part-footer,
+.cm-signal-row > span small,
+.cm-panel-footnote,
+.cm-crew-summary > span:nth-child(2),
+.cm-crew-summary small,
+.cm-disconnect > span,
+.cm-thread small,
+.cm-thread p,
+.cm-thread-note,
+.cm-conversation-header > div > span,
+.cm-date-divider,
+.cm-message-byline,
+.cm-route-status > div,
+.cm-compose-scope,
+.cm-composer-footer > span,
+.cm-crew-overview > div > span,
+.cm-crew-overview-note p span,
+.cm-crew-person p,
+.cm-crew-presence > span:last-child,
+.cm-crew-card-footer > span,
+.cm-record-stamp span,
+.cm-record-facts span,
+.cm-section-number,
+.cm-record-step > span,
+.cm-improvement small,
+.cm-record-footer,
+.cm-inline-note,
+.cm-subtitle,
+.cm-inspector-byline,
+.cm-inspector-byline time,
+.cm-inspector-block small,
+.cm-inspector-block pre,
+.cm-inspector-disclaimer,
+.cm-conflict-comparison p,
+.cm-form-hint,
+.cm-modal-description,
+.cm-empty p,
+.cm-quiet-footer,
+.cm-wall .cm-part p,
+.cm-swatches code,
+.cm-swatches small,
+.cm-progress-status,
+.cm-agent-inbox-heading > span,
+.cm-agent-thread-top,
+.cm-agent-thread-owner,
+.cm-agent-inbox-note,
+.cm-agent-route small,
+.cm-agent-stage-heading > span,
+.cm-agent-task-meta,
+.cm-agent-tool-steps > div,
+.cm-agent-tool-steps time,
+.cm-agent-proposal-to,
+.cm-agent-review-note,
+.cm-agent-working p,
+.cm-agent-working span,
+.cm-agent-escalation p,
+.cm-agent-ack-row,
+.cm-agent-ack-row > small,
+.cm-agent-outgoing-ask > span,
+.cm-agent-compose-toggle small,
+.cm-agent-crew-task p,
+.cm-agent-quiet-traffic,
+.cm-disclosure > summary small {
+  font: 400 0.75rem/1rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-paragraph-xxs {
+  font: 400 0.625rem/0.75rem var(--cm-font);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.text-subheading-lg {
+  font: 500 1.25rem/2rem var(--cm-font);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.text-subheading-md {
+  font: 500 1rem/1.5rem var(--cm-font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.text-subheading-sm {
+  font: 500 0.875rem/1.25rem var(--cm-font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.text-subheading-xs {
+  font: 500 0.75rem/1rem var(--cm-font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.text-subheading-xxs,
+.cm-nav-label,
+.cm-preview-top,
+.cm-eyebrow,
+.cm-section-label,
+.cm-attention-kicker,
+.cm-sample-caption,
+.cm-crew-team > span:first-child,
+.cm-record-stamp strong,
+.cm-conflict-comparison span,
+.cm-type-specimen > div > span,
+.cm-agent-inbox-group {
+  font: 500 0.625rem/0.75rem var(--cm-font);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cm-mono,
+.cm-event-heading time,
+.cm-agent-tool-steps time,
+.cm-record-facts b,
+.cm-signal-row strong,
+.cm-nav-count {
+  font-variant-numeric: tabular-nums;
+}
