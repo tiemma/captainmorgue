@@ -24,6 +24,8 @@ Emmanuel's infra handoff is complete. Radar is synced and healthy; CaptainMorgue
 - Verified both repositories are clean on `main`; no `feat/infra` branch is present locally or on the cluster repo remote.
 - Public `https://captainmorgue.cnh.radarhq.io` verified reachable and serving the CaptainMorgue wall.
 - Emmanuel's final handoff says the team token is not needed on the cluster; `cm-token` is intentionally omitted from Radar.
+- Configured Sammy's local non-secret agent environment (`CM_URL`, actor `sammy`, team `platform`, ledger `sammy`) and joined `INC-1` through Codex; the service accepted Sammy as the Platform agent (term 5).
+- Claude Code and the plugin prerequisites are not installed on this Windows machine, so the local poller/heartbeat and ask/reply step remain pending.
 - `## Before` in `STORY.md` (cluster repo).
 
 ## Next
