@@ -1,9 +1,12 @@
 # Sammy: cluster, Radar and the story
 
 ## Now
-`feat/infra` is available at cluster commit `26bfbe8` and is under Sammy review; Radar is healthy on the current starter deployment, but required Secrets are not yet present.
+The corrected Radar Secrets are present; the reviewed infra merge is ready locally at cluster commit `c457141`, but GitHub rejected the push because Sammy lacks write access to `tiemma/captainmorgue-cluster`.
 
 ## Done
+- Created Radar Secret `captainmorgue` with key `anthropic-api-key` in `team-captainmorgue`.
+- Created Radar Secret `dash0` with keys `endpoint` and `token` in `team-captainmorgue`.
+- Merged `origin/feat/infra` (`26bfbe8`) locally into cluster `main` as `c457141`.
 - Pulled latest private and public repos; confirmed `origin/feat/infra` exists at `26bfbe8`.
 - Radar GitOps verified 1/1 Application synced and healthy; current live image remains `captainmorgue-cluster:370b934`.
 - Namespace-specific Radar Checks reviewed: 4 actionable medium findings remain on the starter `app` Deployment.
@@ -24,6 +27,6 @@
 - `## The story` in `STORY.md` by 4:00.
 
 ## Blocked on
-- Dash0 token and Elastic Cloud URL/key are not present in Radar; they must be supplied directly by Emmanuel/Sammy before Secret creation.
+- GitHub write permission for `SammyOina` on `tiemma/captainmorgue-cluster`; push of local merge `c457141` was rejected with HTTP 403.
 
 ## Handing off
