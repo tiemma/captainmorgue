@@ -2,6 +2,7 @@
 
 . "$(dirname "$0")/../lib.sh"
 BIN="$(cd "$(dirname "$0")" && pwd)"
+CLI_ARGS="${*:2}"
 [ "$1" = doctor ] && exec "$BIN/cm-doctor"
 
 shell_hook() {
@@ -50,6 +51,55 @@ HOOK
 }
 [ "$1" = shell-hook ] && { shell_hook "$2"; exit 0; }
 
+usage() {
+  cat <<'USAGE'
+CaptainMorgue: where incidents go to die.
+
+Usage: cm <command> [arguments]   (arguments can also be piped on stdin)
+
+Start and join
+  open <service> <what is wrong>        declare an incident and page the owning team
+  join [team] [role] [task]             join the open incident (role: commander|responder|scribe)
+  leave                                 leave the incident
+  task <what you are doing>             tell everyone what you are working on
+  status [@person|team]                 incident, team and people at a glance
+
+Talk
+  ask @person|@team <question>          ask someone; CaptainMorgue tracks the answer
+  reply <seq> <text>                    answer an ask (seq is shown on every message)
+  broadcast [root|@team] <text>         tell everyone, or one team
+  inbox                                 messages waiting for you
+
+Work the incident
+  status-set <state|sev1-3> [--part <name>] [why]
+                                        investigating, mitigated, resolved, closed
+  note [--part <name>] <finding>        record a finding, decision or evidence
+  action @owner <text>                  add an action item for the RFO
+  fix <service> <summary>               open a fix pull request for a service
+  pr <url> [service]                    record a pull request you opened
+  approve-request "<action>" "<why>"    ask your manager to approve a destructive action
+  approve <id> | deny <id> [why]        decide an approval (managers and the commander)
+  approvals                             list approvals
+  close [summary]                       close the incident; CaptainMorgue writes the RFO
+
+Tools
+  console                               shell on the left, live incident pane on the right (tmux)
+  pane                                  only the live incident pane
+  shell-hook zsh|bash                   record commands typed in this terminal: eval "$(cm shell-hook zsh)"
+  doctor                                check MCP servers and setup
+  help                                  this help
+
+Environment: CM_URL (service), CM_ACTOR (you), CM_TEAM, CM_ROLE, CM_TASK, CM_NOTIFY=off
+USAGE
+}
+
+case "$1" in
+"" | help | -h | --help)
+  usage
+  exit 0
+  ;;
+esac
+
 if [ -z "$CM_URL" ]; then
   echo "CM_URL is not set, so CaptainMorgue is off."
   exit 0
@@ -83,7 +133,13 @@ take_part() {
 }
 
 read_args() {
-  args=$(cat)
+  if [ -n "$CLI_ARGS" ]; then
+    args=$CLI_ARGS
+  elif [ -t 0 ]; then
+    args=""
+  else
+    args=$(cat)
+  fi
   args="${args#"${args%%[![:space:]]*}"}"
   args="${args%"${args##*[![:space:]]}"}"
   split_args
@@ -376,6 +432,9 @@ console | pane)
   exec "$BIN/cm-pane" "$1"
   ;;
 *)
-  echo "Usage: cm join|leave|task|status|status-set|note|action|close|fix|pr|inbox|broadcast|ask|reply|approve-request|approve|deny|approvals|console|pane|shell-hook|doctor"
+  echo "Unknown command: $1"
+  echo
+  usage
+  exit 2
   ;;
 esac
