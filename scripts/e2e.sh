@@ -112,7 +112,7 @@ sleep 3
 check "Dash0 webhook pages the owning manager" 'as "$plat" platform inbox | grep -q "\[page\] .* from dash0 .*: confdb alert: confdb p99 latency above 2s" && inject "$([ "$plat" = ben ] && echo dev || echo ben)" platform | grep -q "Platform owns it; $plat is paged"'
 trigger checkin 'Check-in error rate back to normal' resolved
 sleep 3
-check "recovery reaches everyone and turns the signal good" 'inject dev platform | grep -q "checkin recovered" && [ "$(jq -r .signals.checkin.status <<<"$(state)")" = good ]'
+check "recovery reaches everyone and turns the signal ok" 'inject dev platform | grep -q "checkin recovered" && [ "$(jq -r .signals.checkin.status <<<"$(state)")" = ok ]'
 
 if [ -n "${short:-}" ]; then
   kill "$(cat "$work/home-ben/.captainmorgue/poll.pid" 2>/dev/null)" 2>/dev/null
