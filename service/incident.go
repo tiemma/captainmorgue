@@ -35,6 +35,8 @@ type Event struct {
 	Artifacts  []Artifact `json:"artifacts,omitempty"`
 	To         []string   `json:"to,omitempty"`
 	Why        string     `json:"why,omitempty"`
+	Term       int        `json:"term,omitempty"`
+	ReplyTo    int        `json:"reply_to,omitempty"`
 }
 
 var eventTypes = map[string]bool{
@@ -63,6 +65,7 @@ type Incident struct {
 	pastMatch *PastMatch
 	written   *writtenRecord
 	matchReq  chan struct{}
+	coord     coord
 }
 
 func newIncident(id, title string, roster Roster, st *store, br *brain) *Incident {
@@ -87,7 +90,7 @@ func (inc *Incident) handleEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (inc *Incident) append(ev Event) {
+func (inc *Incident) append(ev Event) Event {
 	inc.mu.Lock()
 	ev.Seq = len(inc.events) + 1
 	ev.ID = fmt.Sprintf("%s-%d", inc.id, ev.Seq)
@@ -101,6 +104,7 @@ func (inc *Incident) append(ev Event) {
 		}
 	}
 	inc.events = append(inc.events, ev)
+	inc.deliver(ev)
 	prev, found := inc.conflictWith(ev)
 	inc.mu.Unlock()
 
@@ -111,14 +115,15 @@ func (inc *Incident) append(ev Event) {
 		go inc.writeRecord()
 	}
 	if !found {
-		return
+		return ev
 	}
 	conflict := conflictEvent(prev, ev)
 	if inc.brain == nil {
 		inc.append(conflict)
-		return
+		return ev
 	}
 	go inc.confirmConflict(prev, ev, conflict)
+	return ev
 }
 
 func looksLikeWrite(ev Event) bool {

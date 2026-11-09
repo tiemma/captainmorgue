@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 )
@@ -20,6 +21,7 @@ type IncidentSummary struct {
 
 type TeamState struct {
 	Team
+	Term     int  `json:"term"`
 	PulledIn bool `json:"pulled_in"`
 }
 
@@ -48,37 +50,40 @@ type Signal struct {
 type State struct {
 	Incident  IncidentSummary   `json:"incident"`
 	Teams     []TeamState       `json:"teams"`
-	People    map[string]string `json:"people"`
+	People    map[string]Person `json:"people"`
 	Parts     []Part            `json:"parts"`
 	Relay     *Relay            `json:"relay"`
 	Conflict  *Event            `json:"conflict"`
 	Signals   map[string]Signal `json:"signals"`
 	PastMatch *PastMatch        `json:"past_match"`
+
+	Deliveries map[int]map[string]string `json:"deliveries"`
 }
 
 func (inc *Incident) state() State {
 	s := State{
 		Incident:  IncidentSummary{ID: inc.id, Title: inc.title, Status: "open"},
-		People:    map[string]string{},
+		People:    inc.people(time.Now().UTC()),
 		Parts:     []Part{},
 		Signals:   map[string]Signal{},
 		PastMatch: inc.pastMatch,
+
+		Deliveries: inc.coord.deliveries,
 	}
 	if len(inc.events) > 0 {
 		s.Incident.Opened = &inc.events[0].TS
 	}
 	inIncident := inc.teamsInIncident()
 	for _, t := range inc.roster.Teams {
-		s.Teams = append(s.Teams, TeamState{Team: t, PulledIn: inIncident[t.ID]})
+		tc := inc.coord.team(t.ID)
+		t.Manager = tc.manager
+		t.Members = slices.DeleteFunc(inc.teamPeople(t.ID), func(name string) bool { return name == tc.manager })
+		s.Teams = append(s.Teams, TeamState{Team: t, Term: tc.term, PulledIn: inIncident[t.ID]})
 	}
 	for i := range inc.events {
 		ev := &inc.events[i]
 		switch ev.Type {
-		case "join":
-			s.People[ev.Actor] = "in_incident"
-		case "action", "decision":
-			s.People[ev.Actor] = "working"
-		case "relay":
+		case "relay", "broadcast":
 			s.Relay = &Relay{From: ev.Actor, To: ev.To, Text: ev.Text, Why: ev.Why}
 		case "conflict":
 			s.Conflict = ev

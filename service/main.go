@@ -30,17 +30,29 @@ func main() {
 		inc.refreshPastMatch()
 	}
 
+	if err := inc.startCoord(); err != nil {
+		slog.Error("coordination config", "err", err)
+		os.Exit(1)
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /events", inc.handleEvent)
 	mux.HandleFunc("POST /broadcast", inc.handleBroadcast)
 	mux.HandleFunc("GET /stream", inc.handleStream)
 	mux.HandleFunc("GET /record/{id}", inc.handleRecord)
+	mux.HandleFunc("POST /incidents/{id}/join", inc.handleJoin)
+	mux.HandleFunc("POST /incidents/{id}/leave", inc.handleLeave)
+	mux.HandleFunc("POST /incidents/{id}/vote", inc.handleVote)
+	mux.HandleFunc("POST /heartbeat", inc.handleHeartbeat)
+	mux.HandleFunc("GET /inbox/{actor}", inc.handleInbox)
+	mux.HandleFunc("POST /inbox/{actor}/ack", inc.handleAck)
+	mux.HandleFunc("POST /messages", inc.handleMessages)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /", http.FileServer(http.Dir(env("WEB_DIR", "web"))))
 
 	addr := ":" + env("PORT", "8080")
 	slog.Info("listening", "addr", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, requireToken(mux)); err != nil {
 		slog.Error("serve", "err", err)
 		os.Exit(1)
 	}
