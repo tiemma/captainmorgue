@@ -59,6 +59,28 @@ export interface PastMatch {
   fixed_by: string;
 }
 
+export interface Signal {
+  label?: string;
+  service?: string;
+  value: string;
+  status: string;
+  spark?: number[];
+}
+
+export interface Envelope {
+  id: string;
+  seq: number;
+  ts: string;
+  from: string;
+  to: string[] | null;
+  kind: string;
+  text: string;
+  why?: string;
+  term?: number;
+  priority: 'interrupt' | 'inject';
+  reply_to?: number;
+}
+
 export interface IncidentState {
   commander?: string;
   incident: {
@@ -73,7 +95,7 @@ export interface IncidentState {
   parts: { id: string; name: string; owner: string; progress: number; status: string; resolved_at: string | null; note: string }[] | null;
   relay: { from: string; to: string[] | null; text: string; why: string } | null;
   conflict: IncidentEvent | null;
-  signals: { [name: string]: { value: string; status: string } };
+  signals: { [name: string]: Signal };
   past_match: PastMatch | null;
   claims: Claim[] | null;
   deliveries: { [seq: string]: { [actor: string]: string } } | null;
@@ -140,7 +162,7 @@ export class ServiceError extends Error {
 async function request<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const headers = new Headers({ Accept: 'application/json' });
   if (body !== undefined) headers.set('Content-Type', 'application/json');
-  if (body !== undefined && sessionToken) headers.set('Authorization', `Bearer ${sessionToken}`);
+  if (sessionToken) headers.set('Authorization', `Bearer ${sessionToken}`);
   const response = await fetch(path, {
     method: body === undefined ? 'GET' : 'POST',
     headers,
@@ -151,8 +173,8 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
     const message = (await response.text()).trim();
     throw new ServiceError(message || `Request failed (${response.status})`, response.status);
   }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export function fetchRecord(id: string, signal?: AbortSignal) {
@@ -169,4 +191,25 @@ export function join(incidentId: string, profile: JoinRequest, signal?: AbortSig
 
 export function heartbeat(actor: string, signal?: AbortSignal) {
   return request<void>('/heartbeat', { actor }, signal);
+}
+
+export function fetchInbox(actor: string, after: number | undefined, signal?: AbortSignal) {
+  const query = after === undefined ? 'wait=25' : `after=${after}&wait=25`;
+  return request<{ messages: Envelope[] | null; cursor: number }>(`/inbox/${encodeURIComponent(actor)}?${query}`, undefined, signal);
+}
+
+export function ackInbox(actor: string, seq: number) {
+  return request<void>(`/inbox/${encodeURIComponent(actor)}/ack`, { seq });
+}
+
+export function broadcast(from: string, text: string) {
+  return request<void>('/broadcast', { from, text });
+}
+
+export function updateTask(incidentId: string, actor: string, task: string) {
+  return request<void>(`/incidents/${encodeURIComponent(incidentId)}/task`, { actor, task });
+}
+
+export function leave(incidentId: string, actor: string) {
+  return request<void>(`/incidents/${encodeURIComponent(incidentId)}/leave`, { actor });
 }
