@@ -1,6 +1,6 @@
 # CaptainMorgue screen preview
 
-Local React + Vite + Storybook review surface for the frontend redesign. The screens use sample incident data and local state. They do not call the service or change a real incident.
+React + Vite responder workspace connected to the Go service. The default entry uses real stream state and message APIs. Storybook and ?preview=1 retain clearly labeled sample workflows.
 
 For the live local service, plugin CLI and preview commands, see [Local development](../docs/local-development.md).
 
@@ -21,7 +21,7 @@ Open http://127.0.0.1:6006. The sidebar contains:
 
 Screen stories support local navigation and sample interactions. Reload a story to reset it. Storybook controls switch the entry view and scenario. The design preview label distinguishes fixture data from a live service.
 
-The standalone preview is available with `npm run dev`. It uses the same screen components. The existing Go-served `web/index.html` remains the live-integration starting point until the design and action APIs are agreed.
+Run `npm run dev` for the live app on5173 with an API proxy to localhost:8080. The production build is served by Go and included in Docker; /wall.html keeps the compact wall.
 
 ## Checks
 
@@ -31,7 +31,7 @@ npm run build-storybook
 npm test
 ```
 
-Browser tests expect a Chromium installation supported by Playwright; install it with `npx playwright install chromium` when necessary. They exercise local screens, not backend delivery or permissions.
+Browser tests expect Chromium: install with `npx playwright install chromium`. `npm test` covers sample screen behavior; `npm run test:live` starts an isolated Go service on18195 and verifies real stream data, joins, claims, records and message writes. Build first.
 
 ## Boundaries
 
