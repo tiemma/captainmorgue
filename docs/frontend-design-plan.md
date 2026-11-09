@@ -1,6 +1,6 @@
 # CaptainMorgue frontend design plan
 
-Status: draft for discussion, 2026-11-09. Owner: Jubril. Baseline: main at bfcb853, including coordination, replies, receive plugin, live wall screen and E2E checks.
+Status: draft for discussion, 2026-11-09. Owner: Jubril. Baseline: main at 1eb6d6e, including coordination, replies, receive plugin, live wall screen and E2E checks.
 
 ## Confirmed direction
 
@@ -152,7 +152,7 @@ Required for a complete responder workspace:
 
 The P0 coordination, receive plugin and live wall screen have landed and the wall-screen handoff to Jubril is recorded. Elections are P0. Older unassigned section 5a and elections-cut text are superseded. Our separate frontend/ preview leaves the working web/index.html available during design review.
 
-The new contract commits join/leave, heartbeat, inbox/ack, explicit messages and elections. It adds people[actor] = {status, team, last_seen}, teams[].term and deliveries[seq][actor] = sent|delivered|seen. Normalize legacy string people values and these objects at integration. These endpoints are implemented on baseline bfcb853, with the receive plugin and live-wall consumer merged. Shared bearer access does not by itself prove per-person browser identity, and actor-level presence does not distinguish browser from agent.
+The new contract commits join/leave, heartbeat, inbox/ack, explicit messages and elections. It adds people[actor] = {status, team, last_seen}, teams[].term and deliveries[seq][actor] = sent|delivered|seen. Normalize legacy string people values and these objects at integration. These endpoints are implemented on baseline 1eb6d6e, with the receive plugin and live-wall consumer merged. Shared bearer access does not by itself prove per-person browser identity, and actor-level presence does not distinguish browser from agent.
 
 Human-loop asks must show awaiting answer, answered, automated status response and escalation separately from delivery. An automated status response does not answer the human request. Dispatch says no reply in 60 seconds; the P0 table says not acknowledged in 60 seconds. Implementation now accepts kind reply with numeric reply_to and emits a reply event, although the P0 table still omits reply. Derive answered from that linked reply event, not from seen; approval state is not a service field. Current expireAsks skips recipients marked seen: a briefed but unanswered ask does not time out. The first linked reply also removes the whole ask from pending, even for multiple recipients. Emmanuel/team should reconcile these behaviors with the human-loop spec. Preview escalation demonstrates an unbriefed timeout; it must not promise a backend timeout after briefing. Model-picked recipients are P1; the P0 composer uses explicit person/team/root targets.
 
@@ -174,3 +174,18 @@ Acceptance: simultaneous claim has one winner; message scope and recipient statu
 1. Emmanuel/team owns browser-action APIs; which actions will land before rehearsal?
 2. Reconcile unanswered versus unacknowledged timeout and reply/answered schema with Emmanuel/team; elections are committed P0.
 3. Review the CostGraph-aligned, agent-first screens in local Storybook before production integration. Storybook interactions use explicit sample state and make no backend mutations.
+
+
+## Review refinement: concise agent workspace
+
+Confirmed with Jubril: destinations are Incident, Requests, Crew and Record. Activity filters are All, Decisions and Evidence. Decisions shows decisions only, rather than an ambiguous highlights feed.
+
+Requests prioritize the original ask, the agent's proposed answer or blocker, and the human's next action. Evidence (task and tool trace), History (acknowledgement and messages), and Details (routing) start collapsed. Switching requests resets these disclosures while preserving drafts. Recovery signals are expandable on Incident; conflicts and unfinished tasks stay visible. Opening detail must not hide an approval or failure that needs attention.
+
+Typography follows the exact named CostGraph utilities: Funnel Display titles, Geist medium labels, Geist regular paragraphs, and Geist medium uppercase subheadings. Choose a complete recipe; do not compose ad-hoc size, weight and tracking. See frontend/src/typography.css. Emil's design-engineering guidance informs bounded feedback and purposeful motion, not a replacement font system. See frontend-ui-guidance.md for the maintained rules and source.
+
+The context inspector occupies an in-page slot with its own scrolling body, a remembered width clamped to 360-720px, and a left resize handle usable with the pointer or arrow keys. Escape and Close return to the invoking control. Small screens use an inline stacked panel. It adds evidence/context rather than repeating the timeline. Native scrolling keeps the hackathon implementation small; no extra scroll library.
+
+Preview remains local sample state. Main's latest integration overview reports service and plugin deployment, but credential-dependent integrations and own-agent rehearsal have separate owners and checks. Incoming plugin auto-install task is retained in Jubril's ledger for follow-up; it is not part of this design refinement.
+
+Record uses a chronological response timeline with connected event markers and a small labeled Active glow while open; closed incidents use a static completion state. Prevention remains separate from the response history. Motion is disabled for reduced-motion users.
