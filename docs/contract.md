@@ -38,6 +38,9 @@ The incident id is `INC-1` unless the service sets `INCIDENT_ID`. Routes with `{
 | `POST /inbox/{actor}/ack` | `{"seq"}` | `204` | | marks every delivery up to `seq` `seen`, then a `state` |
 | `POST /messages` | `{"from", "to": [], "kind": "ask"\|"broadcast"\|"reply", "text", "reply_to"?}` | `200` `{"seq", "to": [], "why"}` | `400` missing fields, unknown recipient, no recipient, `reply_to` not an ask | `ask`, `broadcast` or `reply` |
 | `POST /claims` | `{"actor", "text", "resource": {"kind", "namespace"?, "name"}}` | `200` `{"granted": true, "key", "holder"}` or `{"granted": false, "key", "holder", "reason"}` | `400` missing actor, kind or name | `claim` on a new grant (not a renewal); `conflict` to the holder when refused |
+| `GET /approvals` | | `200` array of [Approval](#approvals), oldest first | | |
+| `POST /approvals` | `{"incident_id"?, "actor", "action", "resource"?: Resource, "why"}` | `200` the new [Approval](#approvals) | `400` missing actor, action or why; `404` wrong `incident_id`; `409` nobody can approve (no other manager or commander) | `approval_request` to the approver |
+| `POST /approvals/{id}` | `{"actor", "decision": "approve"\|"deny", "why"?}` | `200` the decided [Approval](#approvals) | `400` bad id or decision; `403` actor is neither the approver nor the commander; `404` no such approval; `409` not pending (decided or expired) | `approval` to the requester |
 
 Notes:
 
@@ -45,6 +48,7 @@ Notes:
 - `inbox`: without `after`, the actor's acked cursor is used. `wait` long-polls, capped at 25 s; it returns as soon as a message lands. An empty poll returns `{"messages": [], "cursor": <after>}`.
 - `messages` `to` entries are a login, a team id (everyone joined in that team), or `root` (everyone joined). The sender is never in `to`. A `reply` goes to the asker of `reply_to` and ignores `to`.
 - `status`: the incident only moves forward through `open investigating mitigated resolved closed` and may skip steps. Anyone may move it to `investigating` or `mitigated` and set severity. Only the commander, or any team manager when nobody is commander, may move it to `resolved` or `closed`. `POST /events` with `type: close` is not checked; prefer `status`.
+- `approvals`: the approver is the actor's team manager, or the commander when the actor manages the team (or has no manager). The commander may decide any approval. A pending approval expires 5 minutes after the request. The plugin's PreToolUse hook (`plugin/hooks/approve.sh`) denies destructive cluster writes unless `GET /approvals` has one for the same actor and exact action string with `usable: true`; `CM_APPROVALS=off` turns the hook off.
 - `claims`: the key is `namespace/kind/name`, kind lowercased. A grant holds for 5 minutes; the same actor claiming again renews it. A claim stops counting once it expires or its holder goes offline.
 
 ### Join response
@@ -96,7 +100,8 @@ Every `event` is followed by a `state`, so the wall can redraw panels from `stat
 | `relay` | object or null | The latest `relay` or `broadcast` event: `{"from", "to": [], "text", "why"}`. |
 | `conflict` | [Event](#event) or null | The latest `conflict` event, whole. |
 | `claims[]` | array, oldest first | Active claims only: `{"key": "ns/kind/name", "actor", "text", "since", "expires"}`, times RFC 3339. |
-| `deliveries` | object, seq (as a string key) to object of login to status | Per recipient delivery of every `ask`, `broadcast`, `relay` and `conflict`: `sent` (queued), `delivered` (their poller fetched it), `seen` (they acked it, or replied to the ask). |
+| `approvals[]` | array of [Approval](#approvals), oldest first | Every approval this incident, including decided and expired ones. |
+| `deliveries` | object, seq (as a string key) to object of login to status | Per recipient delivery of every `ask`, `broadcast`, `relay`, `conflict` and `approval_request`: `sent` (queued), `delivered` (their poller fetched it), `seen` (they acked it, or replied to the ask). |
 | `parts[]` | array | Reserved for incident parts `{"id", "name", "owner", "progress", "status", "resolved_at", "note"}`. Always `[]` today. |
 | `signals` | object, key to Signal | Two sources, one shape, see [Signals](#signals): `<service>` from the latest `alert`/`recovered` event carrying a `signal`, and `<service>_<metric>` from live Dash0 queries. `{}` when neither has happened. |
 | `prs[]` | array, oldest first | Pull requests opened for affected services: `{"service", "url", "author", "ts"}`, one per `pr` event. |
@@ -120,6 +125,24 @@ Busier fields from a local run:
  "claims":[{"key":"registration/deployment/kiosk","actor":"kemi","text":"rollout restart","since":"2026-11-09T22:08:57.646465Z","expires":"2026-11-09T22:13:57.646465Z"}],
  "deliveries":{"13":{"jubril":"delivered","kemi":"delivered","sammy":"delivered"},"14":{"sammy":"seen"}}}
 ```
+
+## Approvals
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | int | Approval id, from 1. `cm approve <id>`, `cm deny <id> [why]`. |
+| `actor` | string | Who asked to run the action. |
+| `approver` | string | Who must decide: the actor's team manager, or the commander. |
+| `action` | string | The exact action string the hook derived, `kubectl delete pod confdb-0 -n team-captainmorgue`. |
+| `resource` | Resource, omitted when unset | Optional target. |
+| `why` | string | Why the actor needs it. |
+| `status` | `"pending"` \| `"approved"` \| `"denied"` \| `"expired"` | `expired` once `expires` passes while pending. |
+| `requested`, `expires` | RFC 3339 time | Request time and request time plus 5 minutes. |
+| `decided_by`, `note` | string, omitted when unset | Who decided and their why. |
+| `decided` | RFC 3339 time or null | When it was decided. |
+| `usable` | bool | True while approved and within 10 minutes of the decision; the hook lets the action through only then. |
+
+Events: `approval_request` (actor is the requester, `to` the approver, delivered as an `interrupt`) and `approval` (actor is the decider, `to` the requester, `inject`). Both are in the record timeline; the RFO counts requests under what went well and lists denials under errors.
 
 ## Signals
 
@@ -235,10 +258,10 @@ What `GET /inbox/{actor}` returns per message. Only these kinds reach an inbox; 
 
 | Priority | Kinds |
 |---|---|
-| `interrupt` | `ask`, `conflict`, `vote_request`, `escalation` |
-| `inject` | `broadcast`, `relay`, `election`, `autoreply`, `reply`, `join`, `digest`, `action` (only `action` events that carry `to`) |
+| `interrupt` | `ask`, `conflict`, `vote_request`, `escalation`, `approval_request` |
+| `inject` | `broadcast`, `relay`, `election`, `autoreply`, `reply`, `join`, `digest`, `approval`, `action` (only `action` events that carry `to`) |
 
-Delivery of `ask`, `broadcast`, `relay` and `conflict` is tracked in `state.deliveries`.
+Delivery of `ask`, `broadcast`, `relay`, `conflict` and `approval_request` is tracked in `state.deliveries`.
 
 ```json
 {"id":"INC-1-7","seq":7,"ts":"2026-11-09T22:08:57.449134Z","from":"captainmorgue","to":["kemi"],"kind":"digest","text":"Catch-up: 3 events since you last looked.\nTeams: Registration managed by jubril (jubril, kemi); Platform managed by tiemma (sammy, tiemma).","why":"You missed 3 events since seq 0.","term":0,"priority":"inject"}
@@ -264,7 +287,7 @@ Delivery of `ask`, `broadcast`, `relay` and `conflict` is tracked in `state.deli
 | `contributing_factors[]` | string | Fallback: alerts, and two people acting on one resource. |
 | `timeline[]` | `{"ts", "actor", "type", "text"}` | Key events: alerts, signals, status changes, close, conflicts, escalations, elections, investigations, decisions, notes, ships, pull requests, action items. |
 | `went_well[]`, `went_badly[]` | string | Fallback: time to mitigate, conflicts caught, claims that blocked a write, auto-replies, elections, asks answered, pull requests; escalations, silent managers, failed actions, alerts. |
-| `errors[]` | as `timeline` | Alerts, signals, failed or interrupted actions, conflicts, escalations. |
+| `errors[]` | as `timeline` | Alerts, signals, failed or interrupted actions, conflicts, escalations, denied approvals. |
 | `fixed_by` | string | Who fixed it. Fallback: author of the latest `ship` or `pr`. |
 | `steps[]` | `{"actor", "steps": [Step]}` | Appendix: every `action` event, grouped into runs of consecutive steps by one person. Step: `{"ts", "actor", "text", "status" ("ok", "failed", "interrupted" or ""), "resource"?, "exit_code"?, "duration_ms"?, "failed", "change"}`. |
 | `changes[]` | [Step] | Steps that wrote to a cluster resource (a non-read action with a `resource`). |
