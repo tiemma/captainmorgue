@@ -6,6 +6,7 @@ Each responder gets an agent on their laptop, and CaptainMorgue coordinates all 
 
 ## Start here
 
+- [AGENTS.md](AGENTS.md): how we work together, the per-person ledger in `ledger/`, and how to run it locally.
 - [docs/hackathon-plan.md](docs/hackathon-plan.md): today's build. The contract, who does what, and the checkpoints. Read this first.
 - [docs/prd.md](docs/prd.md): what CaptainMorgue does, decisions so far, hackathon scope, and open questions (section 6).
 - [docs/architecture.md](docs/architecture.md): how it is built, covering components, messaging, the record and manager elections.
