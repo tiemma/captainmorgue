@@ -82,10 +82,8 @@ test("a postmortem exposes the complete summary, each resolution, timeline, and 
     page.getByText("Recovery verified and incident closed", { exact: true }),
   ).toBeVisible();
   const prevention = page
-    .locator("section")
-    .filter({
-      has: page.getByRole("heading", { name: "Prevention", exact: true }),
-    });
+    .getByRole("heading", { name: "Prevention", exact: true })
+    .locator("..");
   await expect(
     prevention.getByText(
       "Check query plans for new attendee lookups before release.",
@@ -98,7 +96,9 @@ test("a postmortem exposes the complete summary, each resolution, timeline, and 
       { exact: true },
     ),
   ).toBeVisible();
-  await expect(prevention.getByText("Platform", { exact: true })).toBeVisible();
+  await expect(
+    prevention.getByText("Owner: Platform", { exact: true }),
+  ).toBeVisible();
 });
 
 test("no search matches is distinct from an empty archive and can be cleared", async ({
