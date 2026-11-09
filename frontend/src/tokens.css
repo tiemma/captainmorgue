@@ -21,15 +21,7 @@
   --cm-shadow-xs: 0 1px 2px rgba(0,0,0,.04);
 
   --cm-accent-soft: color-mix(in srgb, var(--cm-accent) 10%, transparent);
-  --cm-info: var(--cm-accent);
-  --cm-investigating: var(--cm-warning);
-  --cm-quiet: var(--cm-text-soft);
-  --cm-status-soft: transparent;
-  --cm-critical-soft: var(--cm-status-soft);
-  --cm-warning-soft: var(--cm-status-soft);
-  --cm-resolved-soft: var(--cm-status-soft);
-  --cm-conflict-soft: var(--cm-status-soft);
-  --cm-info-soft: var(--cm-status-soft);
+  --cm-text-on-accent: #ffffff;
   --cm-tag: #e7d3a3;
   --cm-tag-ink: #3a2a0b;
 
@@ -42,25 +34,6 @@
   --cm-font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --cm-display: "Funnel Display", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --cm-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-
-  --cm-canvas: var(--cm-bg-page);
-  --cm-paper: var(--cm-bg-card);
-  --cm-layer: var(--cm-bg-layer);
-  --cm-ink: var(--cm-text-strong);
-  --cm-secondary: var(--cm-text-subtle);
-  --cm-muted: var(--cm-text-sub);
-  --cm-line: var(--cm-stroke-soft);
-  --cm-line-strong: var(--cm-stroke-strong);
-  --cm-amber: var(--cm-accent);
-  --cm-amber-soft: var(--cm-accent-soft);
-  --cm-danger: var(--cm-critical);
-  --cm-danger-soft: var(--cm-critical-soft);
-  --cm-success: var(--cm-resolved);
-  --cm-success-soft: var(--cm-resolved-soft);
-  --cm-nav: var(--cm-bg-page);
-  --cm-nav-surface: var(--cm-bg-card);
-  --cm-nav-line: var(--cm-stroke-soft);
-  --cm-radius: var(--cm-radius-card);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,6 +51,7 @@
     --cm-stroke-mild: rgba(255,255,255,.10);
     --cm-stroke-strong: rgba(255,255,255,.20);
     --cm-accent: #3b7dff;
+    --cm-accent-soft: color-mix(in srgb, var(--cm-accent) 10%, transparent);
     --cm-critical: #f87171;
     --cm-warning: #fbbf24;
     --cm-resolved: #4ade80;
@@ -86,7 +60,8 @@
   }
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+.cm-wall {
   color-scheme: dark;
   --cm-bg-page: #131313;
   --cm-bg-card: #1b1b1b;
@@ -100,6 +75,7 @@
   --cm-stroke-mild: rgba(255,255,255,.10);
   --cm-stroke-strong: rgba(255,255,255,.20);
   --cm-accent: #3b7dff;
+  --cm-accent-soft: color-mix(in srgb, var(--cm-accent) 10%, transparent);
   --cm-critical: #f87171;
   --cm-warning: #fbbf24;
   --cm-resolved: #4ade80;

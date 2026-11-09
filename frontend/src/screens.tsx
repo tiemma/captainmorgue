@@ -16,6 +16,7 @@ import {
   CircleHelp,
   Clock3,
   Command,
+  Diamond,
   Copy,
   FileText,
   Flag,
@@ -561,7 +562,7 @@ export function CaptainWorkspace({
               <Ship size={22} strokeWidth={1.4} />
             </span>
             <span>
-              CaptainMorgue<small>WHERE INCIDENTS GO TO DIE</small>
+              CaptainMorgue<small>Where incidents go to die</small>
             </span>
           </a>
           <div className="cm-workspace-switch">
@@ -571,7 +572,7 @@ export function CaptainWorkspace({
             </span>
             <ChevronDown size={14} />
           </div>
-          <div className="cm-nav-label">WORKSPACE</div>
+          <div className="cm-nav-label">Workspace</div>
           <nav aria-label="Workspace">
             {nav.map((item) => (
               <button
@@ -580,7 +581,7 @@ export function CaptainWorkspace({
                 aria-current={view === item.id ? "page" : undefined}
                 onClick={() => navigate(item.id)}
               >
-                <item.icon size={17} strokeWidth={1.7} />
+                <item.icon size={16} strokeWidth={1.7} />
                 <span>{item.label}</span>
                 {item.count && unreadRequests > 0 && (
                   <span className="cm-nav-count">{unreadRequests}</span>
@@ -589,7 +590,7 @@ export function CaptainWorkspace({
             ))}
           </nav>
           <div className="cm-sidebar-incident">
-            <span className="cm-nav-label">ON THE DESK</span>
+            <span className="cm-nav-label">On the desk</span>
             <button onClick={() => navigate("incident")}>
               <span
                 className={`cm-status-dot ${resolved || isEmpty ? "is-green" : "is-red"}`}
@@ -625,7 +626,8 @@ export function CaptainWorkspace({
       <div className="cm-main-shell">
         <header className="cm-topbar">
           <div className="cm-breadcrumb">
-            Conference operations <ChevronRight size={13} />
+            <span className="cm-breadcrumb-context">Conference operations</span>
+            <ChevronRight size={13} />
             <span>
               {view === "join"
                 ? "Join the incident"
@@ -633,7 +635,7 @@ export function CaptainWorkspace({
             </span>
           </div>
           <div className="cm-topbar-right">
-            <span className="cm-preview-top">DESIGN PREVIEW</span>
+            <span className="cm-preview-top">Design preview</span>
             <span className="cm-connection">
               <span className={`cm-status-dot${isStale ? " is-amber" : ""}`} />
               {isStale ? "Reconnect scenario" : "Sample data"}
@@ -662,7 +664,7 @@ export function CaptainWorkspace({
             {view === "join" ? (
               <div className="cm-join-layout">
                 <div className="cm-join-story">
-                  <span className="cm-eyebrow">A SHARED INCIDENT DESK</span>
+                  <span className="cm-eyebrow">A shared incident desk</span>
                   <h1>
                     Every responder.
                     <br />
@@ -753,21 +755,23 @@ export function CaptainWorkspace({
                             : "Decisions, evidence and resolution."}
                     </p>
                   </div>
-                  {view === "incident" && !isEmpty && !wall && (
+                  {view === "incident" && !isEmpty && (
                     <div className="cm-page-action">
                       <Badge tone={resolved ? "success" : "danger"} dot>
                         {resolved ? "Resolved" : "SEV 1 / Active"}
                       </Badge>
-                      <Button
-                        disabled={resolved || isStale}
-                        onClick={() => {
-                          setDialog({ kind: "close" });
-                          setReason("");
-                        }}
-                      >
-                        <CheckCheck size={16} />
-                        Close incident
-                      </Button>
+                      {!wall && (
+                        <Button
+                          disabled={resolved || isStale}
+                          onClick={() => {
+                            setDialog({ kind: "close" });
+                            setReason("");
+                          }}
+                        >
+                          <CheckCheck size={16} />
+                          Close incident
+                        </Button>
+                      )}
                     </div>
                   )}
                   {view === "record" && (
@@ -804,26 +808,41 @@ export function CaptainWorkspace({
                   <>
                     {view === "incident" && (
                       <>
-                        <div className="cm-incident-meta">
-                          <span className="cm-mono">INC-2041</span>
-                          <span>
-                            <Clock3 size={14} />
-                            Opened 14:41
-                          </span>
-                          <span>
-                            <Users size={14} />3 teams / 3 responders
-                          </span>
-                          <span>
-                            <Layers3 size={14} />
-                            {openParts.length} open parts
-                          </span>
-                          <span className="cm-meta-owner">
-                            Coordinated by <b>CaptainMorgue</b>
-                          </span>
-                        </div>
+                        <section className="cm-kpi-row" aria-label="Incident overview">
+                          <div className="cm-stat-card">
+                            <span>Open parts</span>
+                            <strong>{openParts.length}</strong>
+                            <small>INC-2041</small>
+                          </div>
+                          <div className="cm-stat-card">
+                            <span>People online</span>
+                            <strong>{crew.length}</strong>
+                            <small>3 teams / 3 responders</small>
+                          </div>
+                          <div className="cm-stat-card">
+                            <span>Open asks</span>
+                            <strong>{unreadRequests}</strong>
+                            <small>Needs your attention</small>
+                          </div>
+                          <div className="cm-stat-card">
+                            <span>Conflicts</span>
+                            <strong>{resolved || conflictDecision ? 0 : 1}</strong>
+                            <small>
+                              {resolved || conflictDecision ? "Coordinated" : "Decision needed"}
+                            </small>
+                          </div>
+                          <div className="cm-stat-card">
+                            <span>Elapsed</span>
+                            <strong>{resolved ? "00:10:00" : "00:14:20"}</strong>
+                            <small>Opened 14:41</small>
+                          </div>
+                        </section>
                         {resolved ? (
                           <div className="cm-resolved-banner">
-                            <CheckCheck size={24} />
+                            <span className="cm-toe-tag">
+                              <CheckCheck size={14} aria-hidden="true" />
+                              Resolved
+                            </span>
                             <div>
                               <h2>This one is in the morgue.</h2>
                               <p>
@@ -838,7 +857,7 @@ export function CaptainWorkspace({
                         ) : (
                           <section className="cm-attention">
                             <div className="cm-section-label">
-                              <span>NEEDS ATTENTION</span>
+                              <span>Needs attention</span>
                               <span className="cm-count">
                                 {(conflictDecision ? 0 : 1) +
                                   (approvedPayment ? 0 : 1)}
@@ -852,14 +871,14 @@ export function CaptainWorkspace({
                                   {conflictDecision ? (
                                     <Check size={20} />
                                   ) : (
-                                    <ShieldAlert size={20} />
+                                    <Diamond size={20} />
                                   )}
                                 </span>
                                 <div className="cm-attention-content">
                                   <div className="cm-attention-kicker">
                                     {conflictDecision
-                                      ? "COORDINATION DECISION RECORDED"
-                                      : "CONFLICT / CONFDB"}
+                                      ? "Coordination decision recorded"
+                                      : "Conflict / confdb"}
                                   </div>
                                   <h2>
                                     {conflictDecision
@@ -900,8 +919,8 @@ export function CaptainWorkspace({
                                 <div className="cm-attention-content">
                                   <div className="cm-attention-kicker">
                                     {approvedPayment
-                                      ? "REPLY APPROVED BY YOU"
-                                      : "YOUR AGENT / AWAITING APPROVAL"}
+                                      ? "Reply approved by you"
+                                      : "Your agent / awaiting approval"}
                                   </div>
                                   <h2>
                                     {approvedPayment
@@ -981,7 +1000,7 @@ export function CaptainWorkspace({
                                     {event.kind === "Investigation" ? (
                                       <Sparkles size={17} />
                                     ) : event.kind === "Conflict flagged" ? (
-                                      <ShieldAlert size={17} />
+                                      <Diamond size={17} />
                                     ) : event.kind === "Decision" ? (
                                       <GitBranch size={17} />
                                     ) : (
@@ -991,9 +1010,7 @@ export function CaptainWorkspace({
                                   <div className="cm-event-body">
                                     <div className="cm-event-heading">
                                       <strong>{event.actor}</strong>
-                                      <span
-                                        className={`cm-event-kind cm-text-${event.tone}`}
-                                      >
+                                      <span className="cm-event-kind">
                                         {event.kind}
                                       </span>
                                       <time>{event.time}</time>
@@ -1039,10 +1056,9 @@ export function CaptainWorkspace({
                                   <div className="cm-part-heading">
                                     <h3>{part.title}</h3>
                                     {part.done && (
-                                      <Badge tone="success">
-                                        <Check size={11} />
-                                        Resolved
-                                      </Badge>
+                                      <span className="cm-toe-tag">
+                                        <Badge tone="success">Resolved</Badge>
+                                      </span>
                                     )}
                                   </div>
                                   <p>{part.detail}</p>
@@ -1113,7 +1129,7 @@ export function CaptainWorkspace({
                               title="Recovery signals"
                               action={
                                 <span className="cm-sample-caption">
-                                  SAMPLE
+                                  Sample
                                 </span>
                               }
                             >
@@ -1182,7 +1198,7 @@ export function CaptainWorkspace({
                             <span>{coordinationThreads.length}</span>
                           </div>
                           <div className="cm-agent-inbox-group">
-                            NEEDS YOU <span>{unreadRequests}</span>
+                            Needs you <span>{unreadRequests}</span>
                           </div>
                           {coordinationThreads.map((thread) => (
                             <button
@@ -1232,7 +1248,7 @@ export function CaptainWorkspace({
                           <div className="cm-agent-detail-body">
                             <div className="cm-agent-original-ask">
                               <span className="cm-eyebrow">
-                                THE ASK / 14:44
+                                The ask / 14:44
                               </span>
                               <p>{currentThread.ask}</p>
                               <button
@@ -1857,7 +1873,7 @@ export function CaptainWorkspace({
                           <div className="cm-record-top">
                             <div>
                               <span className="cm-eyebrow">
-                                INCIDENT RECORD / INC-2041
+                                Incident record / INC-2041
                               </span>
                               <h2>
                                 Check-in kiosks failing
@@ -1870,12 +1886,12 @@ export function CaptainWorkspace({
                             >
                               <Ship size={22} />
                               <strong>
-                                {resolved ? "CLOSED" : "IN PROGRESS"}
+                                {resolved ? "CLOSED" : "In progress"}
                               </strong>
                               <span>
                                 {resolved
-                                  ? "14:51 / SAMPLE"
-                                  : "LIVE DRAFT / SAMPLE"}
+                                  ? "14:51 / Sample"
+                                  : "Live draft / Sample"}
                               </span>
                             </div>
                           </div>
@@ -1957,7 +1973,7 @@ export function CaptainWorkspace({
                         <aside className="cm-record-aside">
                           <Panel title="A familiar pattern">
                             <span className="cm-match-id">
-                              PAST INCIDENT / INC-1877
+                              Past incident / INC-1877
                             </span>
                             <h3>Same query. Last year's conference.</h3>
                             <p>
@@ -1965,7 +1981,7 @@ export function CaptainWorkspace({
                               service, but no query-plan check followed.
                             </p>
                             <div className="cm-record-aside-rule" />
-                            <span className="cm-eyebrow">THE LESSON</span>
+                            <span className="cm-eyebrow">The lesson</span>
                             <p>
                               Fix the query, then make the missing check part of
                               the release.
@@ -2006,7 +2022,7 @@ export function CaptainWorkspace({
               )}
               {inspector.actor === "Radar" && (
                 <div className="cm-inspector-block">
-                  <span className="cm-eyebrow">SAMPLE EVIDENCE</span>
+                  <span className="cm-eyebrow">Sample evidence</span>
                   <pre>
                     {
                       "Seq Scan on attendees\n  Filter: badge_email = $1\n  Rows scanned: 48,000\n  Duration: 3,042 ms"
@@ -2069,12 +2085,12 @@ export function CaptainWorkspace({
               <>
                 <div className="cm-conflict-comparison">
                   <div>
-                    <span>EMMANUEL / REGISTRATION</span>
+                    <span>Emmanuel / Registration</span>
                     <strong>Abort check-in canary</strong>
                     <p>Existing requests are draining.</p>
                   </div>
                   <div>
-                    <span>SAMMY / PLATFORM</span>
+                    <span>Sammy / Platform</span>
                     <strong>Restart confdb primary</strong>
                     <p>Would interrupt active connections.</p>
                   </div>

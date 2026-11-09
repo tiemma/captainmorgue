@@ -3,7 +3,7 @@
   flex: 0 0 auto;
   min-width: 0;
   max-width: 100%;
-  height: calc(100dvh - 64px);
+  height: calc(100dvh - 56px);
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--cm-stroke-soft);
@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px 24px;
+  padding: 20px;
   border-bottom: 1px solid var(--cm-stroke-soft);
 }
 
@@ -31,7 +31,7 @@
   flex: 0 0 36px;
   height: 36px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--cm-radius-control);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -45,7 +45,7 @@
   min-height: 0;
   min-width: 0;
   flex: 1;
-  padding: 24px;
+  padding: 20px;
   overflow: auto;
   overscroll-behavior: contain;
   overflow-wrap: anywhere;
@@ -75,7 +75,7 @@
   width: 3px;
   height: 48px;
   border-radius: 999px;
-  background: #929292;
+  background: var(--cm-text-soft);
   opacity: 0;
 }
 
@@ -88,7 +88,7 @@
 .cm-side-panel-resize:focus-visible,
 .cm-side-panel-header button:focus-visible {
   outline: 2px solid var(--cm-accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .cm-workspace:has(> .cm-side-panel[data-stacked="true"]) {

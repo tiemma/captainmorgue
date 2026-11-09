@@ -25,7 +25,7 @@ export function Button({
 export function Badge({
   children,
   tone = "neutral",
-  dot = false,
+  dot = true,
 }: {
   children: ReactNode;
   tone?: Tone;
@@ -33,7 +33,7 @@ export function Badge({
 }) {
   return (
     <span className={`cm-badge text-label-xs cm-tone-${tone}`}>
-      {dot && <span className="cm-status-dot" />}
+      {dot && <span className="cm-status-dot" aria-hidden="true" />}
       {children}
     </span>
   );
