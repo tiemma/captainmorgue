@@ -255,6 +255,17 @@ Not available: a plugin cannot ship the main status line, so no unread count the
 
 Priority and noise **(proposed)**: conflicts and direct asks interrupt (notification + inject); relays and FYIs inject only; the raw activity of other people is never injected, only shown on the wall screen. Otherwise every agent's context fills with everyone else's tool calls.
 
+## 5b. What an ask looks like in a session (human in the loop)
+
+1. Gus runs `/captainmorgue:ask @dana Is confdb failing over?`. CaptainMorgue delivers it to Dana as `interrupt`; her laptop pops a notification.
+2. On Dana's next prompt or tool call, the hook injects the ask with an instruction: show it to Dana verbatim (sender, text, why) and ask her how to answer.
+3. If answering needs digging (check confdb, read a rollout), Claude does it **in a subagent**, so Dana's own task is not derailed, and proposes a reply.
+4. Dana approves or edits; Claude sends `/captainmorgue:reply <seq> <text>`. The reply goes back to Gus, marks the ask answered, and the wall screen shows the ask as seen and answered.
+5. **Fallback is the timeout:** no reply in 60 s -> CaptainMorgue auto-replies to Gus with what Dana is doing right now and escalates to her manager. The wall screen shows the ask amber, then escalated, so it is always clear where an ask stands.
+6. If Claude is about to finish its turn with the ask unanswered, the Stop hook holds it once and repeats the instruction.
+
+Auto mode (P1) skips step 4's approval: the agent answers on its own.
+
 ## 5a. Connections: agents and CaptainMorgue both reach the outside systems
 
 Two sides hold connections, for different jobs.
