@@ -44,12 +44,14 @@ import {
   Panel,
   Receipt,
   ProgressStatus,
+  plural,
 } from "./ui";
 import { SidePanel } from "./side-panel";
 import { ResponseTimeline } from "./response-timeline";
 import { Postmortems } from "./postmortems";
 import { SAMPLE_POSTMORTEMS } from "./postmortems-fixtures";
 import "./tokens.css";
+import tokenSource from "./tokens.css?raw";
 import "./styles.css";
 import "./agent-conversations.css";
 
@@ -810,22 +812,22 @@ export function CaptainWorkspace({
                       <>
                         <section className="cm-kpi-row" aria-label="Incident overview">
                           <div className="cm-stat-card">
-                            <span>Open parts</span>
+                            <span>{plural(openParts.length, "Open part", "Open parts")}</span>
                             <strong>{openParts.length}</strong>
                             <small>INC-2041</small>
                           </div>
                           <div className="cm-stat-card">
-                            <span>People online</span>
+                            <span>{plural(crew.length, "Person online", "People online")}</span>
                             <strong>{crew.length}</strong>
-                            <small>3 teams / 3 responders</small>
+                            <small>3 teams / {crew.length} {plural(crew.length, "responder", "responders")}</small>
                           </div>
                           <div className="cm-stat-card">
-                            <span>Open asks</span>
+                            <span>{plural(unreadRequests, "Open ask", "Open asks")}</span>
                             <strong>{unreadRequests}</strong>
                             <small>Needs your attention</small>
                           </div>
                           <div className="cm-stat-card">
-                            <span>Conflicts</span>
+                            <span>{plural(resolved || conflictDecision ? 0 : 1, "Conflict", "Conflicts")}</span>
                             <strong>{resolved || conflictDecision ? 0 : 1}</strong>
                             <small>
                               {resolved || conflictDecision ? "Coordinated" : "Decision needed"}
@@ -1047,7 +1049,7 @@ export function CaptainWorkspace({
                               title="Tasks"
                               action={
                                 <span className="cm-mono cm-muted">
-                                  {openParts.length} open
+                                  {openParts.length} open {plural(openParts.length, "part", "parts")}
                                 </span>
                               }
                             >
@@ -1194,7 +1196,7 @@ export function CaptainWorkspace({
                           aria-label="Coordination threads"
                         >
                           <div className="cm-agent-inbox-heading">
-                            <h2>Incident asks</h2>
+                            <h2>{plural(coordinationThreads.length, "Incident ask", "Incident asks")}</h2>
                             <span>{coordinationThreads.length}</span>
                           </div>
                           <div className="cm-agent-inbox-group">
@@ -1731,7 +1733,7 @@ export function CaptainWorkspace({
                           </div>
                           <div>
                             <strong>{openParts.length}</strong>
-                            <span>Open parts</span>
+                            <span>{plural(openParts.length, "Open part", "Open parts")}</span>
                           </div>
                           <div className="cm-crew-overview-note">
                             <Ship size={23} />
@@ -2116,7 +2118,7 @@ export function CaptainWorkspace({
                   <Layers3 size={18} />
                   <span>
                     {openParts.length
-                      ? `${openParts.length} parts still open. Resolve them before closing.`
+                      ? `${openParts.length} ${plural(openParts.length, "part", "parts")} still open. Resolve them before closing.`
                       : "All incident parts are resolved."}
                   </span>
                 </div>
@@ -2176,16 +2178,50 @@ export function CaptainWorkspace({
 }
 
 export function Foundations() {
-  const colors = [
-    { name: "Warm ivory", hex: "#F6F1E7", use: "Workspace" },
-    { name: "Label paper", hex: "#FFFDF7", use: "Raised surface" },
-    { name: "Bottle ink", hex: "#241D18", use: "Navigation and text" },
-    { name: "Rum amber", hex: "#A65E20", use: "Primary action" },
-    { name: "Antique brass", hex: "#A3874B", use: "Brand detail" },
-    { name: "Label red", hex: "#A33935", use: "Urgent attention" },
-    { name: "Recovery green", hex: "#397255", use: "Resolved" },
-    { name: "Evidence blue", hex: "#426A80", use: "Information" },
+  const neutrals = [
+    "bg-page",
+    "bg-card",
+    "bg-layer",
+    "bg-subtle",
+    "text-strong",
+    "text-subtle",
+    "text-sub",
+    "text-soft",
+    "stroke-soft",
+    "stroke-mild",
+    "stroke-strong",
   ];
+  const statuses = [
+    { token: "critical", label: "Critical", shape: "is-critical" },
+    { token: "warning", label: "Investigating", shape: "is-warning" },
+    { token: "resolved", label: "Resolved", shape: "is-resolved" },
+    { token: "accent", label: "Information", shape: "is-info" },
+    { token: "text-soft", label: "Offline", shape: "is-offline" },
+    { token: "conflict", label: "Conflict", shape: "is-conflict" },
+  ];
+  function values(token: string) {
+    const matches = [
+      ...tokenSource.matchAll(new RegExp(`--cm-${token}:\\s*([^;]+);`, "g")),
+    ];
+    function hex(value: string) {
+      const rgba = value.match(/^rgba\((\d+),(\d+),(\d+),([\d.]+)\)$/);
+      if (!rgba) return value;
+      const channels = [
+        Number(rgba[1]),
+        Number(rgba[2]),
+        Number(rgba[3]),
+        Math.round(Number(rgba[4]) * 255),
+      ];
+      return "#" + channels.map((channel) => channel.toString(16).padStart(2, "0")).join("");
+    }
+    return (
+      <code>
+        Light {hex(matches[0][1])}
+        <br />
+        Dark {hex(matches.at(-1)![1])}
+      </code>
+    );
+  }
   return (
     <div className="cm-foundations">
       <header>
@@ -2195,25 +2231,43 @@ export function Foundations() {
           <br />A clear head.
         </div>
         <p>
-          Ivory paper, bottle ink, amber and brass. A restrained incident
-          workspace with warmth, character, and room to think.
+          Neutral surfaces, clear type, and one accent. Status has a shape and
+          a name; the toe tag marks resolved work.
         </p>
         <Badge tone="neutral">Hackathon library / 01</Badge>
       </header>
       <section>
         <div className="cm-foundation-heading">
           <span>01</span>
-          <h2>From the bottle to the workspace</h2>
+          <h2>Neutrals, one accent, and clear status</h2>
         </div>
         <div className="cm-swatches">
-          {colors.map((color) => (
-            <div key={color.name}>
-              <div style={{ background: color.hex }} />
-              <strong>{color.name}</strong>
-              <code>{color.hex}</code>
-              <small>{color.use}</small>
+          {[...neutrals, "accent"].map((token) => (
+            <div key={token}>
+              <div style={{ background: `var(--cm-${token})` }} />
+              <strong>--cm-{token}</strong>
+              {values(token)}
             </div>
           ))}
+        </div>
+        <div className="cm-foundation-statuses">
+          {statuses.map(({ token, label, shape }) => (
+            <div key={label}>
+              <span className="cm-badge">
+                <span className={`cm-status-dot ${shape}`} aria-hidden="true" />
+                {label}
+              </span>
+              <strong>--cm-{token}</strong>
+              {values(token)}
+            </div>
+          ))}
+          <div>
+            <span className="cm-toe-tag">Resolved</span>
+            <strong>--cm-tag</strong>
+            {values("tag")}
+            <strong>--cm-tag-ink</strong>
+            {values("tag-ink")}
+          </div>
         </div>
       </section>
       <section>
@@ -2236,9 +2290,10 @@ export function Foundations() {
           </Panel>
           <Panel title="Status, always with a name">
             <div className="cm-specimen-row">
-              <Badge tone="danger" dot>
+              <span className="cm-badge">
+                <span className="cm-status-dot is-conflict" aria-hidden="true" />
                 Conflict
-              </Badge>
+              </span>
               <Badge tone="amber" dot>
                 Investigating
               </Badge>
@@ -2279,20 +2334,20 @@ export function Foundations() {
         </div>
         <div className="cm-type-specimen">
           <div>
-            <span>BRAND / GEORGIA</span>
+            <span>DISPLAY / FUNNEL DISPLAY</span>
             <strong className="cm-serif-sample">CaptainMorgue</strong>
           </div>
           <div>
-            <span>INTERFACE / SYSTEM SANS</span>
+            <span>INTERFACE / GEIST</span>
             <strong>Every action has a person behind it.</strong>
           </div>
           <div>
-            <span>EVIDENCE / MONOSPACE</span>
+            <span>EVIDENCE / GEIST MONO</span>
             <code>14:44:20 / deployment/checkin / INC-2041</code>
           </div>
         </div>
       </section>
-      <footer>Warmth in the foundation. Urgency only where it belongs.</footer>
+      <footer>Quiet surfaces. Urgency only where it belongs.</footer>
     </div>
   );
 }

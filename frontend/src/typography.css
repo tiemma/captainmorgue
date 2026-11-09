@@ -1,22 +1,3 @@
-.text-title-h1 {
-  font: 600 28px/36px var(--cm-display);
-  letter-spacing: -0.02em;
-  text-transform: none;
-}
-
-.text-title-h2 {
-  font: 600 28px/36px var(--cm-display);
-  letter-spacing: -0.02em;
-  text-transform: none;
-}
-
-.text-title-h3 {
-  font: 600 28px/36px var(--cm-display);
-  letter-spacing: -0.02em;
-  text-transform: none;
-}
-
-.text-title-h4,
 .cm-foundations-brand {
   font: 600 28px/36px var(--cm-display);
   letter-spacing: -0.02em;
@@ -34,7 +15,6 @@
   text-transform: none;
 }
 
-.text-title-h6,
 .cm-brand > span:last-child,
 .cm-page-title h1,
 .cm-signal-row strong,
@@ -47,14 +27,12 @@
   text-transform: none;
 }
 
-.text-label-xl,
 .cm-type-specimen strong {
   font: 500 20px/28px var(--cm-font);
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
   text-transform: none;
 }
 
-.text-label-lg,
 .cm-crew-person h2,
 .cm-record-facts b,
 .cm-wall .cm-attention-content h2,
@@ -64,7 +42,6 @@
   text-transform: none;
 }
 
-.text-label-md,
 .cm-attention-content h2,
 .cm-resolved-banner h2,
 .cm-record-aside h3,
@@ -79,7 +56,6 @@
 .cm-nav-item.is-active,
 .cm-sidebar-incident button > span:nth-child(2),
 .cm-button,
-.cm-meta-owner b,
 .cm-section-heading h2,
 .cm-panel-heading h2,
 .cm-filter-tabs button,
@@ -87,15 +63,9 @@
 .cm-event-heading strong,
 .cm-part h3,
 .cm-avatar,
-.cm-thread-list-title,
-.cm-thread strong,
-.cm-conversation-header h2,
-.cm-message-byline strong,
-.cm-route-status strong,
 .cm-crew-person .cm-avatar,
 .cm-crew-bottom h2,
 .cm-record-section h3,
-.cm-record-step b,
 .cm-field,
 .cm-join-card > .cm-text-button,
 .cm-wall .cm-event-heading strong,
@@ -130,12 +100,9 @@
 .cm-attention-footer button,
 .cm-part-footer button,
 .cm-text-button,
-.cm-route-receipt button,
 .cm-tiny-avatar,
 .cm-avatar-small,
 .cm-signal-row strong small,
-.cm-route-receipt,
-.cm-route-status .cm-button,
 .cm-receipt,
 .cm-compose-scope select,
 .cm-crew-team .cm-badge,
@@ -156,26 +123,12 @@
   text-transform: none;
 }
 
-.text-label-xxs,
 .cm-count {
   font: 500 12px/16px var(--cm-font);
   letter-spacing: 0;
   text-transform: none;
 }
 
-.text-paragraph-xl {
-  font: 400 20px/28px var(--cm-font);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.text-paragraph-lg {
-  font: 400 16px/24px var(--cm-font);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.text-paragraph-md,
 .cm-join-quote,
 .cm-foundations > header p,
 .cm-type-specimen code {
@@ -197,12 +150,8 @@
 .cm-signal-row > span,
 .cm-disconnect,
 .cm-resolved-banner p,
-.cm-thread-list-title > span,
-.cm-message-byline time,
-.cm-message-bubble,
 .cm-composer textarea,
 .cm-crew-overview-note p,
-.cm-crew-job,
 .cm-crew-bottom p,
 .cm-record-lede,
 .cm-record-section p,
@@ -213,7 +162,6 @@
 .cm-field select,
 .cm-field textarea,
 .cm-inspector-summary,
-.cm-inspector-block > code,
 .cm-inspector-block p,
 .cm-close-check,
 .cm-toast,
@@ -238,9 +186,7 @@
 .cm-preview-label,
 .cm-preview-label small,
 .cm-user small,
-.cm-incident-meta,
 .cm-mono,
-.cm-meta-owner,
 .cm-attention-footer,
 .cm-sort-label,
 .cm-event-heading,
@@ -254,13 +200,6 @@
 .cm-crew-summary > span:nth-child(2),
 .cm-crew-summary small,
 .cm-disconnect > span,
-.cm-thread small,
-.cm-thread p,
-.cm-thread-note,
-.cm-conversation-header > div > span,
-.cm-date-divider,
-.cm-message-byline,
-.cm-route-status > div,
 .cm-compose-scope,
 .cm-composer-footer > span,
 .cm-crew-overview > div > span,
@@ -271,14 +210,12 @@
 .cm-record-stamp span,
 .cm-record-facts span,
 .cm-section-number,
-.cm-record-step > span,
 .cm-improvement small,
 .cm-record-footer,
 .cm-inline-note,
 .cm-subtitle,
 .cm-inspector-byline,
 .cm-inspector-byline time,
-.cm-inspector-block small,
 .cm-inspector-block pre,
 .cm-inspector-disclaimer,
 .cm-conflict-comparison p,
@@ -288,12 +225,9 @@
 .cm-quiet-footer,
 .cm-wall .cm-part p,
 .cm-swatches code,
-.cm-swatches small,
 .cm-progress-status,
 .cm-agent-inbox-heading > span,
-.cm-agent-thread-top,
 .cm-agent-thread-owner,
-.cm-agent-inbox-note,
 .cm-agent-route small,
 .cm-agent-stage-heading > span,
 .cm-agent-task-meta,
@@ -316,37 +250,6 @@
   text-transform: none;
 }
 
-.text-paragraph-xxs {
-  font: 400 12px/16px var(--cm-font);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.text-subheading-lg {
-  font: 500 12px/16px var(--cm-font);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.text-subheading-md {
-  font: 500 12px/16px var(--cm-font);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.text-subheading-sm {
-  font: 500 12px/16px var(--cm-font);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.text-subheading-xs {
-  font: 500 12px/16px var(--cm-font);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.text-subheading-xxs,
 .cm-nav-label,
 .cm-preview-top,
 .cm-eyebrow,
@@ -374,11 +277,9 @@
 
 .cm-mono,
 .cm-event-heading time,
-.cm-message-byline time,
 .cm-inspector-byline time,
 .cm-agent-tool-steps time,
 .cm-response-time,
-.cm-inspector-block > code,
 .cm-inspector-block pre,
 .cm-type-specimen code,
 .cm-swatches code {
@@ -390,4 +291,27 @@
   font: 600 20px/28px var(--cm-display);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+}
+
+.cm-app time,
+.cm-foundations code,
+.cm-count,
+.cm-badge,
+.cm-crew-overview strong,
+.cm-agent-inbox-heading > span,
+.cm-agent-inbox-group > span,
+.cm-agent-detail-heading .cm-eyebrow,
+.cm-part-footer,
+.cm-signal-row,
+.cm-signal-row > span small,
+.cm-signal-row strong small,
+.cm-stat-card > small,
+.cm-attention-footer,
+.cm-record-stamp span,
+.cm-disconnect > span,
+.cm-timeline-origin,
+.cm-panel-footnote,
+.cm-crew-presence > span:last-child,
+.cm-close-check {
+  font-variant-numeric: tabular-nums;
 }

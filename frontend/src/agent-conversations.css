@@ -47,19 +47,14 @@
   background: transparent;
   color: var(--cm-text-strong);
 }
-.cm-agent-thread:hover {
-  background: var(--cm-bg-layer);
+@media (hover: hover) and (pointer: fine) {
+  .cm-agent-thread:hover {
+    background: var(--cm-bg-layer);
+  }
 }
 .cm-agent-thread.is-selected {
   background: var(--cm-bg-layer);
   box-shadow: inset 2px 0 var(--cm-accent);
-}
-.cm-agent-thread-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  color: var(--cm-text-subtle);
 }
 .cm-agent-thread-owner {
   color: var(--cm-text-subtle);
@@ -67,19 +62,6 @@
 .cm-agent-thread-owner > span {
   margin: 0 4px;
   color: var(--cm-text-sub);
-}
-.cm-agent-inbox-note {
-  display: flex;
-  gap: 8px;
-  color: var(--cm-text-subtle);
-  padding: 24px 20px;
-  margin-top: auto;
-  border-top: 1px solid var(--cm-stroke-soft);
-}
-.cm-agent-inbox-note > svg {
-  flex-shrink: 0;
-  margin-top: 4px;
-  color: var(--cm-text-subtle);
 }
 .cm-agent-detail {
   min-width: 0;
@@ -184,6 +166,7 @@
   gap: 8px;
   padding-top: 8px;
   color: var(--cm-text-subtle);
+  flex-wrap: wrap;
 }
 .cm-agent-tool-steps > div > svg {
   flex-shrink: 0;
@@ -421,20 +404,12 @@
   .cm-agent-workspace {
     grid-template-columns: 235px minmax(0, 1fr);
   }
-  .cm-agent-detail-heading,
-  .cm-agent-detail-body {
-    padding: 20px;
-  }
   .cm-agent-route {
-    padding: 16px 20px;
     gap: 8px;
   }
   .cm-agent-stage-heading {
     flex-wrap: wrap;
     gap: 4px;
-  }
-  .cm-agent-secondary-compose {
-    padding: 16px 20px;
   }
   .cm-agent-detail-heading {
     flex-wrap: wrap;
@@ -456,8 +431,7 @@
     grid-column: 1 / -1;
     padding: 8px 8px 12px;
   }
-  .cm-agent-inbox-group,
-  .cm-agent-inbox-note {
+  .cm-agent-inbox-group {
     display: none;
   }
   .cm-agent-thread {
@@ -547,11 +521,6 @@
   border-radius: var(--cm-radius-card);
   padding: 16px;
   overflow-wrap: anywhere;
-}
-.cm-agent-thread-top,
-.cm-agent-tool-steps > div {
-  flex-wrap: wrap;
-  gap: 8px;
 }
 .cm-agent-thread .cm-badge {
   white-space: normal;
