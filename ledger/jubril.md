@@ -64,6 +64,7 @@ env -u CM_URL scripts/e2e.sh                                       # must print 
 - Full browser actions still need claim/resolve/close contracts; join, inbox, messaging and elections have now landed on main.
 
 ## Handing off
+- Emmanuel: taking web/index.html for your live-wall polish requests (join/digest/claim/task labels, profile details, Claims and service-driven teams) alongside the separate Postmortems frontend. Registration/Platform are the current roster; no backend changes.
 - Emmanuel: P0 coordination and live-wall handoffs received. Code review confirms seen stops timeout even without a reply; please reconcile with dispatch 5b. Browser approval is not an existing backend state; it stays a labeled sample flow in Storybook. Storybook is separate under frontend/, with local sample interactions; no collision with web/index.html. Browser action gaps and reply/readiness questions are tracked in docs/frontend-design-plan.md.
 - Emmanuel: frontend proposal is React/Vite producing web/ static output; Docker will need a frontend build stage when implementation begins.
 
