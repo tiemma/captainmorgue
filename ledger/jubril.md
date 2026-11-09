@@ -3,6 +3,28 @@
 ## Now
 15:30 - Live React workspace complete and validated against latest service main7152df6. Publishing frontend; archive APIs and cluster repo write access remain external blockers.
 
+
+## Demo (shared Google Meet, every laptop screen shared)
+
+Setup, all three, before the call:
+1. Update the plugin: `claude plugin marketplace update captainmorgue && claude plugin update captainmorgue@captainmorgue` (0.2.13 or later), then restart Claude Code.
+2. Env (shell profile or `~/.claude/settings.json` env): `CM_URL=https://captainmorgue.cnh.radarhq.io`, `CM_ACTOR=<github login>`, `CM_TEAM`, `CM_ROLE`, `CM_LEDGER` (values in your part below). Do not set CM_INCIDENT.
+3. Kill old pollers: `pkill -f bin/cm-poll`. Install tmux if missing (`brew install tmux`; Windows: use WSL or run `cm pane` in a second terminal).
+4. Screen layout to share: browser on https://captainmorgue.cnh.radarhq.io/ (left), `cm console` (right: shell + live pane). Notifications on, Do Not Disturb off.
+5. Check: `cm help` shows the grouped help; `cm status` answers.
+
+Order of play (about 4 minutes; cue = what you wait for):
+1. Emmanuel: fault on. 2. Alert opens the incident and pages Registration. 3. Everyone joins. 4. Investigate. 5. Ask across teams. 6. Claim conflict and approval. 7. Fix PR, fault off, recovered. 8. Election (Jubril closes his lid). 9. Action item, resolve, close, RFO and Postmortems.
+
+Your part (scribe, team registration; CM_TEAM=registration CM_ROLE=scribe CM_LEDGER=jubril):
+1. You get the first page (Registration owns checkin). Click Open on the dialog to land on the site; narrate the page and the alert.
+2. `/captainmorgue:join registration scribe watching Hall B kiosks`.
+3. Ask across teams from your console pane: `a @platform is confdb ok?`, then show Tab completion on `@` and `w` (who is online).
+4. Ask your Claude to restart checkin at the same time as Sammy, so the claim blocks one of you and the conflict shows on the wall.
+5. Walk the UI while others work: Incident tab (signals, alerts, approvals), Requests (inbox, reply), Crew, Teams graph.
+6. Election: close your laptop lid when Emmanuel cues; reopen after the wall shows the new Registration manager. Your poller rejoins quietly.
+7. At the end, open Postmortems and the Record tab and walk the RFO sections and the commands timeline.
+
 ## Start here (from Emmanuel, 15:20)
 
 Contract: [docs/contract.md](../docs/contract.md) - every route, the `/stream` events, the full `state` shape and every event type. The wall renders; it never computes.

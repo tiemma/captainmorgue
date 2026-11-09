@@ -3,6 +3,30 @@
 ## Now
 17:30 - Demo-ready. Service live on sha-5994962 (deployed by pinning the image in the cluster repo; Radar restarts are Unauthorized), Elasticsearch persisting events, Dash0 receiving data with 5 check rules and the /alerts webhook. Plugin 0.2.9 restarted on my agent. Records, gaps and approvals branches landing next.
 
+
+## Demo (shared Google Meet, every laptop screen shared)
+
+Setup, all three, before the call:
+1. Update the plugin: `claude plugin marketplace update captainmorgue && claude plugin update captainmorgue@captainmorgue` (0.2.13 or later), then restart Claude Code.
+2. Env (shell profile or `~/.claude/settings.json` env): `CM_URL=https://captainmorgue.cnh.radarhq.io`, `CM_ACTOR=<github login>`, `CM_TEAM`, `CM_ROLE`, `CM_LEDGER` (values in your part below). Do not set CM_INCIDENT.
+3. Kill old pollers: `pkill -f bin/cm-poll`. Install tmux if missing (`brew install tmux`; Windows: use WSL or run `cm pane` in a second terminal).
+4. Screen layout to share: browser on https://captainmorgue.cnh.radarhq.io/ (left), `cm console` (right: shell + live pane). Notifications on, Do Not Disturb off.
+5. Check: `cm help` shows the grouped help; `cm status` answers.
+
+Order of play (about 4 minutes; cue = what you wait for):
+1. Emmanuel: fault on. 2. Alert opens the incident and pages Registration. 3. Everyone joins. 4. Investigate. 5. Ask across teams. 6. Claim conflict and approval. 7. Fix PR, fault off, recovered. 8. Election (Jubril closes his lid). 9. Action item, resolve, close, RFO and Postmortems.
+
+Your part (commander, team platform; CM_TEAM=platform CM_ROLE=commander CM_LEDGER=emmanuel):
+1. Narrate: "CaptainMorgue is the incident desk every responder's Claude Code plugs into."
+2. Start: in captainmorgue-cluster run `scripts/fault.sh on slow-checkin --ttl 600`. Wait for the Dash0 alert to open the incident (up to 1 min). Fallback: `/captainmorgue:open checkin Check-in is timing out at Hall B`.
+3. `/captainmorgue:join platform commander running the incident desk`.
+4. `/captainmorgue:status-set investigating sev2 checkin slow at Hall B`.
+5. When Sammy asks for approval to restart checkin, approve it in the UI (Approvals panel) or `cm approve <id>` in the console; point out the request came from the plugin blocking a destructive command.
+6. After Sammy's fix PR and fault off: `scripts/fault.sh off`; wait for the recovered message and the Signals panel to go green.
+7. When Jubril closes his lid, point at the wall: suspect at 15 s, offline at 30 s, Registration elects a new manager (election event).
+8. Close out: `/captainmorgue:action @sammy add a memory alert on checkin`, `/captainmorgue:status-set resolved`, `/captainmorgue:close Rolled back checkin and opened a fix`.
+9. Show the RFO at https://captainmorgue.cnh.radarhq.io/record/INC-<n>.md and the Postmortems tab: impact window, timeline, errors, action items, the fix PR and the steps every person ran.
+
 ## Done
 - [x] Milestone: set up on my agent (joined INC-1 as commander, asks exchanged with Sammy and Jubril).
 - [x] Service: join, inbox, heartbeats, Raft-style elections, asks, broadcasts, claims, digest, roles, alerts and paging, incident states, close and RFO with steps taken, /records, live Dash0 signals.

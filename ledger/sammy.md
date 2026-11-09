@@ -3,6 +3,28 @@
 ## Now
 Emmanuel's infra handoff is complete. PR #1 is merged and public `main` deployed at `a7e8589`; Radar was synced to `c3cb01a`, the bounded `slow-checkin` fault was activated through Radar, and the five Dash0 rules plus webhook were applied.
 
+
+## Demo (shared Google Meet, every laptop screen shared)
+
+Setup, all three, before the call:
+1. Update the plugin: `claude plugin marketplace update captainmorgue && claude plugin update captainmorgue@captainmorgue` (0.2.13 or later), then restart Claude Code.
+2. Env (shell profile or `~/.claude/settings.json` env): `CM_URL=https://captainmorgue.cnh.radarhq.io`, `CM_ACTOR=<github login>`, `CM_TEAM`, `CM_ROLE`, `CM_LEDGER` (values in your part below). Do not set CM_INCIDENT.
+3. Kill old pollers: `pkill -f bin/cm-poll`. Install tmux if missing (`brew install tmux`; Windows: use WSL or run `cm pane` in a second terminal).
+4. Screen layout to share: browser on https://captainmorgue.cnh.radarhq.io/ (left), `cm console` (right: shell + live pane). Notifications on, Do Not Disturb off.
+5. Check: `cm help` shows the grouped help; `cm status` answers.
+
+Order of play (about 4 minutes; cue = what you wait for):
+1. Emmanuel: fault on. 2. Alert opens the incident and pages Registration. 3. Everyone joins. 4. Investigate. 5. Ask across teams. 6. Claim conflict and approval. 7. Fix PR, fault off, recovered. 8. Election (Jubril closes his lid). 9. Action item, resolve, close, RFO and Postmortems.
+
+Your part (responder, team platform; CM_TEAM=platform CM_ROLE=responder CM_LEDGER=sammy):
+1. When the page arrives (dialog; Open takes you to the site): `/captainmorgue:join platform responder investigating checkin latency`.
+2. Ask your Claude to investigate with Radar and Dash0 (both MCPs come with the plugin): "checkin is slow, find out why". Record what it finds: `/captainmorgue:note --part checkin-latency <finding>`.
+3. Answer Jubril's ask from your console pane: `<seq> <answer>` (or `<seq> on`).
+4. Ask your Claude to restart the checkin deployment. The plugin blocks it and tells it to run `cm approve-request "<action>" "<why>"`; let it. Wait for Emmanuel's approval, then let Claude retry. If Jubril's agent already holds the claim on checkin, show the conflict message naming the holder.
+5. `/captainmorgue:fix checkin <summary>`: your Claude opens a PR on tiemma/captainmorgue-cluster for Gitar to review (do not merge on stream), then records it with `cm pr <url> checkin`.
+6. `/captainmorgue:status-set mitigated --part checkin-latency restart and fix PR`.
+7. Screen-record the whole Meet as the rehearsal recording.
+
 ## Done
 - Pulled latest private repo (`1dfb941`) and cluster repo (`e3ea5b2`) on public `main`.
 - Added Emmanuel's Elastic API key as `elastic-api-key` on the Radar `captainmorgue` Secret.
