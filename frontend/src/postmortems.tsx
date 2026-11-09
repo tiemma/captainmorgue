@@ -9,7 +9,35 @@ import {
 } from "lucide-react";
 import { Badge, Button, ProgressStatus } from "./ui";
 import type { IncidentRecord, Moment, Step } from "./service-client";
+import { RecordTimeline } from "./record-timeline";
 import "./postmortems.css";
+
+export type PostmortemCommand = {
+  seq: number;
+  ts: string;
+  actor: string;
+  team?: string;
+  tool: string;
+  command: string;
+  outcome: string;
+  exit_code?: number;
+  duration_ms?: number;
+  cwd?: string;
+  resource?: { kind: string; namespace?: string; name: string };
+  changed: boolean;
+  led_to_resolution: boolean;
+};
+
+export type PostmortemStep = {
+  seq: number;
+  ts: string;
+  actor: string;
+  team?: string;
+  kind: string;
+  text: string;
+  command?: string;
+  outcome?: string;
+};
 
 export type PostmortemDocument = {
   id: string;
@@ -20,10 +48,34 @@ export type PostmortemDocument = {
   opened?: string;
   fixed_by?: string;
   parts: { name: string; resolution: string }[];
-  improvements: { text: string; owner?: string; link?: string }[];
+  improvements: { text: string; owner?: string; link?: string }[] | null;
   events?: { time: string; title: string; detail?: string }[];
   rfo?: IncidentRecord;
+  steps?: PostmortemStep[];
+  commands?: PostmortemCommand[];
 };
+
+function clockLabel(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf())
+    ? value
+    : date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+}
+
+function outcomeDot(outcome: string) {
+  return outcome === "ok" ? "is-green" : outcome === "failed" ? "is-critical" : "is-warning";
+}
+
+function runbook(document: PostmortemDocument, commands: PostmortemCommand[]) {
+  return [
+    `# ${document.id}: ${document.title}`,
+    "# Commands that changed the system on the way to the resolution, in order.",
+    ...commands.flatMap((run) => [
+      `# ${clockLabel(run.ts)} ${run.actor} via ${run.tool}${run.cwd ? ` in ${run.cwd}` : ""}`,
+      run.command,
+    ]),
+  ].join("\n");
+}
 
 export function recordToDocument(record: IncidentRecord): PostmortemDocument {
   const closed = record.status === "closed";
@@ -47,7 +99,19 @@ export function recordToDocument(record: IncidentRecord): PostmortemDocument {
       }),
     ),
     rfo: record,
+    steps: timelineSteps(record),
+    commands: record.commands || [],
   };
+}
+
+export function timelineSteps(record: IncidentRecord): PostmortemStep[] {
+  return (record.timeline || []).map((moment) => ({
+    seq: moment.seq,
+    ts: moment.ts,
+    actor: moment.actor,
+    kind: moment.type,
+    text: moment.text,
+  }));
 }
 
 function inProgress(document: PostmortemDocument) {
@@ -155,12 +219,6 @@ export function RfoSections({ record }: { record: IncidentRecord }) {
           <TextList items={record.contributing_factors} />
         </section>
       )}
-      {!!record.timeline?.length && (
-        <section className="cm-postmortem-section">
-          <h2 className="text-label-md">Timeline</h2>
-          <MomentList moments={record.timeline} />
-        </section>
-      )}
       <section className="cm-postmortem-section">
         <h2 className="text-label-md">What went well</h2>
         <TextList items={record.went_well} />
@@ -253,6 +311,8 @@ export function Postmortems({
 }: PostmortemsProps) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string>();
+  const [copied, setCopied] = useState(false);
+  useEffect(() => setCopied(false), [selectedId]);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
   const selected = documents.find((document) => document.id === selectedId);
@@ -364,7 +424,80 @@ export function Postmortems({
             )}
           </section>
           {selected.rfo && <RfoSections record={selected.rfo} />}
-          {!!selected.events?.length && (
+          {!!selected.commands?.some((run) => run.led_to_resolution) && (
+            <section className="cm-postmortem-section">
+              <div className="cm-postmortem-section-heading">
+                <h2 className="text-label-md">Commands that resolved it</h2>
+                <Button
+                  onClick={() => {
+                    const text = runbook(
+                      selected,
+                      selected.commands!.filter((run) => run.led_to_resolution),
+                    );
+                    navigator.clipboard?.writeText(text).then(
+                      () => setCopied(true),
+                      () => setCopied(false),
+                    );
+                  }}
+                >
+                  {copied ? "Copied" : "Copy as runbook"}
+                </Button>
+              </div>
+              <ol className="cm-postmortem-commands">
+                {selected.commands
+                  .filter((run) => run.led_to_resolution)
+                  .map((run) => (
+                    <li key={run.seq}>
+                      <div className="cm-postmortem-meta text-paragraph-xs">
+                        <time dateTime={run.ts}>{clockLabel(run.ts)}</time>
+                        <span>{run.actor}</span>
+                        <span>{run.tool}</span>
+                        {run.resource && (
+                          <span className="cm-postmortem-id">
+                            {[run.resource.namespace, run.resource.kind, run.resource.name].filter(Boolean).join("/")}
+                          </span>
+                        )}
+                      </div>
+                      <pre className="cm-postmortem-command">
+                        <code>{run.command}</code>
+                      </pre>
+                    </li>
+                  ))}
+              </ol>
+            </section>
+          )}
+          {!!selected.steps?.length && (
+            <section className="cm-postmortem-section">
+              <h2 className="text-label-md">Timeline</h2>
+              <RecordTimeline
+                steps={selected.steps}
+                commands={selected.commands || []}
+                opened={selected.opened}
+                resolved={selected.resolved}
+              />
+            </section>
+          )}
+          {!!selected.commands?.length && (
+            <details className="cm-disclosure">
+              <summary>
+                All commands run <small>{selected.commands.length}</small>
+              </summary>
+              <ol className="cm-postmortem-all-commands">
+                {selected.commands.map((run) => (
+                  <li key={run.seq}>
+                    <span className={`cm-status-dot ${outcomeDot(run.outcome)}`} aria-hidden="true" />
+                    <code>{run.command}</code>
+                    <span className="cm-postmortem-meta text-paragraph-xs">
+                      {run.actor} / {run.outcome}
+                      {run.exit_code !== undefined && ` / exit ${run.exit_code}`}
+                      {run.changed ? " / change" : " / read"}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+          {!selected.steps?.length && !!selected.events?.length && (
             <section className="cm-postmortem-section">
               <h2 className="text-label-md">Timeline</h2>
               <ol className="cm-postmortem-timeline">
@@ -386,7 +519,7 @@ export function Postmortems({
             <h2 className="text-label-md">
               {selected.rfo ? "Action items" : "Prevention"}
             </h2>
-            {selected.improvements.length ? (
+            {selected.improvements?.length ? (
               <ul className="cm-postmortem-prevention">
                 {selected.improvements.map((item, index) => {
                   const href = externalLink(item.link);

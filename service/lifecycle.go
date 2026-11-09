@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"net/http"
 	"slices"
@@ -21,6 +22,7 @@ var keyEvents = map[string]bool{
 }
 
 type Moment struct {
+	Seq   int       `json:"seq"`
 	TS    time.Time `json:"ts"`
 	Actor string    `json:"actor"`
 	Type  string    `json:"type"`
@@ -33,6 +35,8 @@ type Step struct {
 	Text       string    `json:"text"`
 	Status     string    `json:"status"`
 	Resource   string    `json:"resource,omitempty"`
+	Tool       string    `json:"tool,omitempty"`
+	Command    string    `json:"command,omitempty"`
 	ExitCode   *int      `json:"exit_code,omitempty"`
 	DurationMS int64     `json:"duration_ms,omitempty"`
 	Failed     bool      `json:"failed"`
@@ -258,7 +262,7 @@ func failedAction(ev Event) bool {
 	if ev.Type != "action" {
 		return false
 	}
-	st := actionStatus(ev.Text)
+	st := cmp.Or(ev.Outcome, actionStatus(ev.Text))
 	return st == "failed" || st == "interrupted" || (ev.ExitCode != nil && *ev.ExitCode != 0)
 }
 
@@ -269,7 +273,8 @@ func steps(events []Event) (groups []StepGroup, changes []Step) {
 			continue
 		}
 		st := Step{
-			TS: ev.TS, Actor: ev.Actor, Text: strings.TrimSuffix(ev.Text, " ("+actionStatus(ev.Text)+")"), Status: actionStatus(ev.Text),
+			TS: ev.TS, Actor: ev.Actor, Text: strings.TrimSuffix(ev.Text, " ("+actionStatus(ev.Text)+")"), Status: cmp.Or(ev.Outcome, actionStatus(ev.Text)),
+			Tool: ev.Tool, Command: ev.Command,
 			ExitCode: ev.ExitCode, DurationMS: ev.DurationMS, Failed: failedAction(ev), Change: ev.Resource != nil && looksLikeWrite(ev),
 		}
 		if ev.Resource != nil {
@@ -315,7 +320,7 @@ func moments(events []Event, keep func(Event) bool) []Moment {
 	out := []Moment{}
 	for _, ev := range events {
 		if keep(ev) {
-			out = append(out, Moment{TS: ev.TS, Actor: ev.Actor, Type: ev.Type, Text: ev.Text})
+			out = append(out, Moment{Seq: ev.Seq, TS: ev.TS, Actor: ev.Actor, Type: ev.Type, Text: ev.Text})
 		}
 	}
 	return out

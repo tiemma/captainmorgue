@@ -47,6 +47,9 @@ type Event struct {
 	Status     string     `json:"status,omitempty"`
 	Severity   string     `json:"severity,omitempty"`
 	Part       string     `json:"part,omitempty"`
+	Tool       string     `json:"tool,omitempty"`
+	Command    string     `json:"command,omitempty"`
+	Outcome    string     `json:"outcome,omitempty"`
 }
 
 var eventTypes = map[string]bool{
@@ -118,6 +121,7 @@ func (inc *Incident) restore(events []Event, records []Record) {
 		}
 	}
 	for _, rec := range records {
+		inc.records[rec.ID] = rec
 		inc.highest = max(inc.highest, incidentNumber(rec.ID))
 	}
 }

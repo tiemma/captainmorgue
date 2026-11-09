@@ -334,9 +334,10 @@ shell-event)
   grep -Eiq 'token|password|secret|authorization|api[_-]?key' <<<"$cmd" && exit 0
   [ "$2" = 0 ] && result=ok || result=failed
   CM_MAX_TIME=3 api POST /events "$(jq -nc --arg inc "$INCIDENT" --arg a "$ACTOR" --arg t "${CM_TEAM:-}" \
-    --arg text "Shell: ${cmd:0:300} ($result)" --argjson code "$2" --arg cwd "$PWD" \
+    --arg text "Shell: ${cmd:0:300} ($result)" --arg cmd "${cmd:0:2000}" --arg result "$result" --argjson code "$2" --arg cwd "$PWD" \
     --argjson ms "$(awk -v a="$3" -v b="$4" 'BEGIN { printf "%d", (b - a) * 1000 }')" '
-    {incident_id: $inc, actor: $a, type: "action", text: $text, exit_code: $code, duration_ms: $ms, cwd: $cwd}
+    {incident_id: $inc, actor: $a, type: "action", text: $text, exit_code: $code, duration_ms: $ms, cwd: $cwd,
+     tool: "Shell", command: $cmd, outcome: $result}
     + (if $t != "" then {team: $t} else {} end)')" >/dev/null 2>>"$LOG"
   ;;
 console | pane)

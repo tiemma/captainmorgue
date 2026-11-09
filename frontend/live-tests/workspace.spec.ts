@@ -9,6 +9,9 @@ test.beforeAll(async ({ request }) => {
   ]) expect((await request.post('/incidents/INC-LOCAL-VERIFY/join', { data: profile })).ok()).toBeTruthy();
   expect((await request.post('/events', { data: { actor: 'agent-checkin', team: 'registration', type: 'investigation', text: 'Verified query contention in check-in.', artifacts: [{ label: 'Query evidence', url: 'https://example.com/evidence' }] } })).ok()).toBeTruthy();
   expect((await request.post('/claims', { data: { actor: 'agent-platform', text: 'Review database configuration', resource: { namespace: 'conference', kind: 'Deployment', name: 'confdb' } } })).ok()).toBeTruthy();
+  for (const [command, outcome] of [['kubectl get pods -n conference', 'ok'], ['kubectl rollout restart deployment/confdb -n conference', 'ok']]) {
+    expect((await request.post('/events', { data: { actor: 'agent-platform', team: 'platform', type: 'action', tool: 'Bash', command, outcome, text: `Bash: ${command} (${outcome})` } })).ok()).toBeTruthy();
+  }
 });
 
 test('real service feeds incident, claims, crew profiles and record', async ({ page }) => {
@@ -23,9 +26,29 @@ test('real service feeds incident, claims, crew profiles and record', async ({ p
   await expect(page.getByText('Inspect confdb', { exact: true })).toBeVisible();
   await nav.getByRole('button', { name: 'Record', exact: true }).click();
   await expect(page.getByText('Verified query contention in check-in.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Incident timeline' }).getByRole('button')).not.toHaveCount(0);
   await nav.getByRole('button', { name: 'Postmortems', exact: true }).click();
-  await expect(page.getByText(/archive.*not|not.*archive|not.*available|not.*expose/i).first()).toBeVisible();
   await expect(page.getByText('SAMPLE-2041')).toHaveCount(0);
+  await page.getByRole('button', { name: /Local verification/ }).click();
+  await expect(page.getByRole('heading', { name: 'Commands that resolved it' })).toBeVisible();
+  const resolving = page.locator('.cm-postmortem-commands');
+  await expect(resolving.getByText('kubectl rollout restart deployment/confdb -n conference', { exact: true })).toBeVisible();
+  await expect(resolving.getByText('kubectl get pods -n conference', { exact: true })).toHaveCount(0);
+  await page.getByRole('group', { name: 'Incident timeline' }).getByRole('button', { name: /kubectl rollout restart deployment\/confdb/ }).hover();
+  await expect(page.getByRole('tooltip')).toContainText('kubectl rollout restart deployment/confdb -n conference');
+  await expect(page.getByRole('tooltip')).toContainText('led to the resolution');
+});
+
+test('postmortem and record APIs serve the recorded steps and commands', async ({ request }) => {
+  const [postmortem] = await (await request.get('/postmortems')).json();
+  expect(postmortem.id).toBe('INC-LOCAL-VERIFY');
+  const restart = postmortem.commands.find((run: { command: string }) => run.command === 'kubectl rollout restart deployment/confdb -n conference');
+  expect(restart).toMatchObject({ tool: 'Bash', outcome: 'ok', changed: true, led_to_resolution: true, actor: 'agent-platform' });
+  expect(postmortem.commands.find((run: { command: string }) => run.command === 'kubectl get pods -n conference')).toMatchObject({ changed: false, led_to_resolution: false });
+  expect(postmortem.steps.some((step: { kind: string; text: string }) => step.kind === 'investigated' && step.text === 'Verified query contention in check-in.')).toBeTruthy();
+  const record = await (await request.get('/record/INC-LOCAL-VERIFY')).json();
+  expect(record.commands.length).toBe(postmortem.commands.length);
+  expect((await request.get('/postmortems/INC-NOPE')).status()).toBe(404);
 });
 
 test('team graph renders the roster tree and the arcs the service derives', async ({ page, request }) => {

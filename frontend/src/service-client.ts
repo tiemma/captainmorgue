@@ -123,6 +123,7 @@ export interface PullRequest {
 }
 
 export interface Moment {
+  seq: number;
   ts: string;
   actor: string;
   type: string;
@@ -137,6 +138,8 @@ export interface Step {
   resource?: string;
   exit_code?: number;
   duration_ms?: number;
+  tool?: string;
+  command?: string;
   failed: boolean;
   change: boolean;
 }
@@ -188,9 +191,26 @@ export interface IncidentRecord {
   action_items?: ActionItem[] | null;
   steps?: { actor: string; steps: Step[] }[] | null;
   changes?: Step[] | null;
+  commands?: CommandRun[] | null;
 }
 
 export type Record = IncidentRecord;
+
+export interface CommandRun {
+  seq: number;
+  ts: string;
+  actor: string;
+  team?: string;
+  tool: string;
+  command: string;
+  outcome: string;
+  exit_code?: number;
+  duration_ms?: number;
+  cwd?: string;
+  resource?: Resource;
+  changed: boolean;
+  led_to_resolution: boolean;
+}
 
 export interface MessageRequest {
   from: string;

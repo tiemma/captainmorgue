@@ -209,6 +209,7 @@ type Record struct {
 	Changes             []Step        `json:"changes"`
 	Parts               []RecordPart  `json:"parts"`
 	PastMatch           *PastMatch    `json:"past_match"`
+	Commands            []CommandRun  `json:"commands"`
 	Events              []Event       `json:"events"`
 }
 
@@ -239,6 +240,7 @@ func (inc *Incident) recordOf(id, title string, events []Event, written *written
 		rec.PastMatch = inc.pastMatch
 	}
 	rec.Steps, rec.Changes = steps(events)
+	rec.Commands = commandRuns(events)
 	for _, a := range content.Improvements {
 		if a.Due == "" {
 			a.Due = dueBySeverity[severity]

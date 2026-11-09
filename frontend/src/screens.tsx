@@ -48,6 +48,7 @@ import {
 } from "./ui";
 import { SidePanel } from "./side-panel";
 import { ResponseTimeline } from "./response-timeline";
+import { EventLegend, eventCategory } from "./event-categories";
 import { Postmortems } from "./postmortems";
 import { SAMPLE_POSTMORTEMS } from "./postmortems-fixtures";
 import "./tokens.css";
@@ -993,9 +994,10 @@ export function CaptainWorkspace({
                                 Latest first <ArrowDown size={12} />
                               </span>
                             </div>
+                            <EventLegend types={visibleEvents.map((event) => event.kind)} />
                             <div className="cm-feed">
                               {visibleEvents.map((event) => (
-                                <article className="cm-event" key={event.id}>
+                                <article className="cm-event" key={event.id} data-category={eventCategory(event.kind)}>
                                   <div
                                     className={`cm-event-symbol cm-tone-${event.tone}`}
                                   >

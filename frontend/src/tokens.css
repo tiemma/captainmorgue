@@ -24,6 +24,8 @@
   --cm-warning: #d97706;
   --cm-resolved: #16a34a;
   --cm-conflict: #db2777;
+  --cm-investigate: #7c3aed;
+  --cm-work: #0d9488;
   --cm-shadow-xs: 0 1px 2px rgba(0,0,0,.04);
 
   --cm-accent-soft: color-mix(in srgb, var(--cm-accent) 10%, transparent);
@@ -61,6 +63,8 @@
     --cm-warning: #fbbf24;
     --cm-resolved: #4ade80;
     --cm-conflict: #f472b6;
+    --cm-investigate: #a78bfa;
+    --cm-work: #2dd4bf;
     --cm-shadow-xs: none;
   }
 }
@@ -85,5 +89,7 @@
   --cm-warning: #fbbf24;
   --cm-resolved: #4ade80;
   --cm-conflict: #f472b6;
+  --cm-investigate: #a78bfa;
+  --cm-work: #2dd4bf;
   --cm-shadow-xs: none;
 }
