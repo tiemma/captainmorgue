@@ -94,6 +94,26 @@ check "holder renews its own claim" '[ -z "$(pretool dana "$write")" ]'
 sleep 2
 check "holder is told someone was blocked" 'inject dana registration | grep -q "dev tried to"'
 
+trigger() { "$root/scripts/trigger.sh" "$@" >/dev/null; }
+trigger checkin 'Check-in 5xx rate at 40%'
+sleep 3
+s=$(state)
+manager() { jq -r --arg t "$1" '.teams[] | select(.id == $t) | .manager' <<<"$s"; }
+reg=$(manager registration) plat=$(manager platform)
+paged=$(inject "$reg" registration)
+check "alert opens the incident titled from the alert" '[ "$(jq -r .incident.title <<<"$s")" = "checkin: Check-in 5xx rate at 40%" ] && [ "$(jq -r .incident.status <<<"$s")" = open ]'
+check "alert pages the owning team's manager" 'grep -q "\[page\] .* from trigger" <<<"$paged" && grep -q "Let my agent investigate" <<<"$paged"'
+check "everyone else hears who is paged" 'inject dev platform | grep -q "checkin alert: Check-in 5xx rate at 40%. Registration owns it; $reg is paged."'
+trigger checkin 'Check-in 5xx rate at 55%'
+sleep 3
+check "repeat alert updates the signal without paging again" '[ "$(jq -r .signals.checkin.value <<<"$(state)")" = "Check-in 5xx rate at 55%" ] && ! inject "$reg" registration | grep -q "\[page\]"'
+curl -sf -X POST -H "Authorization: Bearer ${CM_TOKEN:-}" -H 'Content-Type: application/json' "$CM_URL/alerts" -d '{"type":"alert.ongoing","data":{"issue":{"status":"critical","summary":"confdb p99 latency above 2s","labels":[{"key":"service.name","value":{"stringValue":"confdb"}}]}}}' >/dev/null
+sleep 3
+check "Dash0 webhook pages the owning manager" 'as "$plat" platform inbox | grep -q "\[page\] .* from dash0 .*: confdb alert: confdb p99 latency above 2s" && inject "$([ "$plat" = ben ] && echo dev || echo ben)" platform | grep -q "Platform owns it; $plat is paged"'
+trigger checkin 'Check-in error rate back to normal' resolved
+sleep 3
+check "recovery reaches everyone and turns the signal good" 'inject dev platform | grep -q "checkin recovered" && [ "$(jq -r .signals.checkin.status <<<"$(state)")" = good ]'
+
 if [ -n "${short:-}" ]; then
   kill "$(cat "$work/home-ben/.captainmorgue/poll.pid" 2>/dev/null)" 2>/dev/null
   echo '@ben Are you there?' | as dana registration ask >/dev/null
