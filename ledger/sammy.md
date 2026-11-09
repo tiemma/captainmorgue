@@ -29,16 +29,19 @@ Emmanuel's infra handoff is complete. Radar is synced and healthy; CaptainMorgue
 - Communication test passed: Sammy sent Emmanuel (`tiemma`) a direct ask on `INC-1`; CaptainMorgue delivered it as inbox sequence `30`.
 - End-to-end receive test passed: Emmanuel replied through CaptainMorgue as sequence `31`; Sammy's inbox received it and acknowledged it, with heartbeat returning `204`.
 - Registered the local `CaptainMorgue-Sammy-Agent` Windows logon task for background heartbeats, inbox polling, local inbox storage and Windows notifications; Radar now sees Sammy online continuously.
+- Added the check-in attendee lookup and Argo Rollouts canary configuration in public cluster commit `fefc494`; fixed the Rollout ConfigMap reference in `aba247b`, with Radar confirming 17/17 resources healthy.
+- Started a Radar AI investigation for `confdb-ro`, posted the investigation, signal and ship evidence to `/events`, and verified the public wall renders the rehearsal timeline.
+- Completed `STORY.md` with the before/after Checks, deployment timeline, investigation evidence and Radar screenshot links in public commit `5b5fbd2`.
+- Ran the bounded live rehearsal: public `/healthz` returned 200, the incident record contained five events, and the wall displayed the investigation, signal and ship summary.
 - `## Before` in `STORY.md` (cluster repo).
 
 ## Next
-- [ ] **Milestone: set up on my agent** (AGENTS.md, "Milestone: set it up on your own agent") once the service is deployed: install the plugin, set the env, `/captainmorgue:join`, send and answer one ask. Tick and push when done.
-- Complete Sammy's local agent milestone: install the plugin, configure Sammy's roster actor/team and token, join, then send and answer one ask.
-- Verify the public GHCR image once the service image is published.
-- Real canary release of check-in, Radar AI investigation, post the summary to `/events`.
-- `## The story` in `STORY.md` by 4:00.
+- [ ] Grant the public cluster repository's GitHub Actions identity package-write access, rerun the failed `fefc494` image build, then verify the attendee-lookup image and promote the check-in canary.
+- [ ] Capture the final rehearsal screen recording.
+- [ ] Optional cleanup: review the remaining Radar Check findings and remove the unused legacy `my-secret` only with explicit approval.
 
 ## Blocked on
-- Sammy's roster actor/team and team token are not present in the repository or handoff; these are required only for the local-agent join milestone, not for the cluster deployment.
+- GHCR build for `fefc494` failed with `permission_denied: write_package`; the live Rollout remains healthy on image `a063365`.
+- Screen recording requires a local recording tool or user handoff; the live rehearsal verification itself passed.
 
 ## Handing off
