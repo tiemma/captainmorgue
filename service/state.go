@@ -130,6 +130,8 @@ type Record struct {
 	Improvements []Improvement `json:"improvements"`
 	PastMatch    *PastMatch    `json:"past_match"`
 	Events       []Event       `json:"events"`
+	Steps        []Step        `json:"steps"`
+	Commands     []CommandRun  `json:"commands"`
 }
 
 func (inc *Incident) record() Record {
@@ -138,6 +140,7 @@ func (inc *Incident) record() Record {
 		ID: inc.id, Title: inc.title, Opened: s.Incident.Opened, Resolved: s.Incident.Closed,
 		Parts: []RecordPart{}, Improvements: []Improvement{}, PastMatch: inc.pastMatch, Events: inc.events,
 	}
+	rec.Steps, rec.Commands = recordings(inc.events)
 	if inc.written != nil {
 		rec.Parts, rec.Improvements = inc.written.Parts, inc.written.Improvements
 	}
@@ -206,6 +209,8 @@ func (inc *Incident) writeRecord() {
 		Resolved:     rec.Resolved,
 		Parts:        written.Parts,
 		Improvements: written.Improvements,
+		Steps:        rec.Steps,
+		Commands:     rec.Commands,
 	})
 	if err != nil {
 		slog.Error("store record", "err", err)

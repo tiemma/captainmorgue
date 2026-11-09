@@ -37,6 +37,8 @@ type storedRecord struct {
 	Resolved     *time.Time    `json:"resolved,omitempty"`
 	Parts        []RecordPart  `json:"parts"`
 	Improvements []Improvement `json:"improvements"`
+	Steps        []Step        `json:"steps,omitempty"`
+	Commands     []CommandRun  `json:"commands,omitempty"`
 }
 
 func newStore(ctx context.Context) (*store, error) {
@@ -113,6 +115,15 @@ func recordsMapping() *types.TypeMapping {
 		}},
 		"improvements": &types.NestedProperty{Properties: map[string]types.Property{
 			"text": types.NewTextProperty(), "owner": keyword(), "link": keyword(),
+		}},
+		"steps": &types.NestedProperty{Properties: map[string]types.Property{
+			"ts": types.NewDateProperty(), "actor": keyword(), "team": keyword(), "kind": keyword(),
+			"text": types.NewTextProperty(), "command": types.NewTextProperty(),
+		}},
+		"commands": &types.NestedProperty{Properties: map[string]types.Property{
+			"ts": types.NewDateProperty(), "actor": keyword(), "team": keyword(), "tool": keyword(),
+			"command": types.NewTextProperty(), "outcome": keyword(), "changed": types.NewBooleanProperty(),
+			"led_to_resolution": types.NewBooleanProperty(),
 		}},
 	}}
 }

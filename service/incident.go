@@ -42,6 +42,9 @@ type Event struct {
 	ExitCode   *int       `json:"exit_code,omitempty"`
 	DurationMS int64      `json:"duration_ms,omitempty"`
 	Cwd        string     `json:"cwd,omitempty"`
+	Tool       string     `json:"tool,omitempty"`
+	Command    string     `json:"command,omitempty"`
+	Outcome    string     `json:"outcome,omitempty"`
 }
 
 var eventTypes = map[string]bool{

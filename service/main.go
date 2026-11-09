@@ -60,6 +60,8 @@ func main() {
 	mux.HandleFunc("POST /claims", inc.handleClaim)
 	mux.HandleFunc("POST /alerts", inc.handleAlert)
 	mux.HandleFunc("GET /api/graph", inc.handleGraph)
+	mux.HandleFunc("GET /postmortems", inc.handlePostmortems)
+	mux.HandleFunc("GET /postmortems/{id}", inc.handlePostmortem)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("GET /", http.FileServer(http.Dir(env("WEB_DIR", "web"))))
 
