@@ -15,18 +15,20 @@ Three people, each running Claude Code, building one product before the 5:30 dem
 
 Every session works the way Capy's captains do: one captain session plans and delegates, crew agents do the work in isolation, the captain reviews before anything lands.
 
-- **Your Claude Code session is the captain for your area.** It reads the ledger and the plan, splits the next piece of work into tasks that do not touch the same files, and hands each to a subagent.
+- **Your Claude Code or Codex session is the captain for your area.** It reads the ledger and the plan, splits the next piece of work into tasks that do not touch the same files, and hands each to a subagent.
 - **Each crew agent gets its own git worktree and branch** (`feat/<area>-<task>`). It builds, runs the real thing, does a simplify and correctness pass over its own diff, commits, and reports back. It does not push.
 - **The captain reviews the diff, then merges and pushes.** It updates the ledger with what landed.
 - Brief crew agents with the goal, the files to read, the contract section that applies, and what "done" means. Do not hand them credentials; run anything that needs a secret yourself.
 - CaptainMorgue does the same thing for an incident: it is the captain, each responder's agent is crew, every part of the incident has one owner, and the record is the review.
 
-## Staying in sync: hooks in `.claude/settings.json`
+## Staying in sync: Claude Code and Codex hooks
 
-This repo ships project hooks. Claude Code asks you to trust them the first time you open the repo; say yes.
+This repo ships project hooks in `.claude/settings.json` and `.codex/hooks.json`. Review and trust the hooks in your client. In Codex, use `/hooks` in the CLI or Settings > Hooks in the desktop app. See [docs/codex-hooks.md](docs/codex-hooks.md) for activation and manual equivalents.
 
 - **`scripts/hooks/team-context.sh`** runs on session start and on every prompt. It fetches `origin/main` in the background and, when there are commits you have not seen, hands Claude the new commit list, which docs and ledgers changed, and what others added to their ledgers. Your session always knows what the others just pushed. It never blocks: the fetch is backgrounded, so news shows up on the prompt after it lands.
 - **`scripts/hooks/ledger-reminder.sh`** runs when Claude finishes a turn. If you have committed since your `ledger/<name>.md` last changed, Claude is asked once to update and push it. Set `CM_LEDGER` to your ledger name (`emmanuel`, `jubril`, `sammy`) in your shell to turn it on.
+
+Codex uses the same scripts on `SessionStart`, `UserPromptSubmit`, and `Stop`. Markers are isolated by worktree and session so one agent does not consume another's updates. These hooks help coordinate repository work; they do not connect Codex to the CaptainMorgue incident plugin.
 
 Docs live in the repo. Anything written about the design (plans, specs, diagrams) goes into `docs/` and is pushed as it is written, so the hook carries it to everyone. `docs/dispatch.md` is the current draft for messaging, elections and liveness.
 
