@@ -103,7 +103,7 @@ while :; do
     IFS=$'\t' read -r kind from priority seq text < <(jq -r '[.kind, .from, .priority, .seq, .text] | @tsv' <<<"$m")
     if [ "$kind" = vote_request ]; then
       vote "$m"
-    elif [ "$priority" = interrupt ] || [ "$kind" = join ]; then
+    elif [ "$priority" = interrupt ] || [[ $kind =~ ^(join|alert|recovered)$ ]]; then
       alert "$kind" "$from" "$seq" "$text"
     fi
   done <<<"$new"

@@ -30,7 +30,7 @@ if [ -s "$INBOX" ]; then
     | ($shown | map(.kind) | unique) as $kinds
     | map(select(.kind == "ask" and .from != $me and .seq <= $seen and (handled | not))) as $pending
     | {upto: (if ($show | length) > $max then $shown[-1].seq else ($unread[-1].seq // $seen) end),
-       interrupt: any($kinds[]; IN("conflict", "ask", "escalation")),
+       interrupt: any($kinds[]; IN("conflict", "ask", "escalation", "page")),
        text: (if $shown == [] then "" else
          (["CaptainMorgue messages for you:"] + ($shown | map(msgline))
           + [$kinds[] | guidance[.] // empty]
