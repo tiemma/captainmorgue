@@ -1,0 +1,273 @@
+# CaptainMorgue message dispatch
+
+Draft for review. Nothing in here is built yet beyond what section 1 says. Decisions marked **(proposed)** need your yes or no; section 9 lists the questions.
+
+## 1. Where we are, and the gap
+
+What exists on `main` today:
+
+- Agents **send**: the plugin's hooks POST every prompt and tool call to `/events`; `/captainmorgue:broadcast` POSTs to `/broadcast`.
+- The service **orders** (one in-memory sequence per incident), **decides** (relay recipients, conflict rule) and **streams** everything to the wall screen over `/stream`.
+
+The gap: **nothing reaches an agent.** A relay names Dana and Dev as recipients, a conflict names Dana and Dev, and neither of their Claude Code sessions ever hears about it. Today dispatch is one-way, laptop to service. The product promise ("CaptainMorgue figures out who should get the message and tells them") needs the other half: a broker every agent can receive from.
+
+## 2. Constraints that shape the design
+
+| Constraint | Consequence |
+|---|---|
+| Laptops are outside the cluster, often behind NAT, sometimes asleep | Agents must **pull** (poll or hold a connection open). The service can never call a laptop. |
+| Only one public entry point: Service `app`, port 80, at `captainmorgue.cnh.radarhq.io` (HTTP through the gateway) | No public broker port (no NATS 4222, no Kafka, no Redis). Whatever broker we pick sits **behind the service**, which is the only door. |
+| Cluster budget 2 CPU / 4 GiB requests for everything | A broker must be small, or reuse something already there (CloudNativePG Postgres, Elasticsearch). |
+| Claude Code is turn-based: a session only reads new input when a turn starts or a tool finishes | Delivery into the model has to ride on hooks (section 5). An idle session needs a nudge to the human. |
+| The URL is public | Anyone can POST as anyone today. Needs at least a team token (section 7). |
+| One incident at a time, ~10 people, ~1 event per second at peak | Throughput is not the problem. Ordering, delivery and "did they see it" are. |
+
+## 3. Proposed shape
+
+```mermaid
+flowchart LR
+  subgraph Laptop["Each laptop"]
+    CC["Claude Code session"]
+    HK["plugin hooks<br/>send + receive"]
+    PL["cm poller<br/>(background)"]
+    CC <--> HK
+    PL -->|desktop notification| Human((person))
+  end
+  subgraph Cluster["Cluster: team-captainmorgue"]
+    SVC["CaptainMorgue service<br/>sequencer + router + broker front door"]
+    LOG[("Event log<br/>Elasticsearch cm-events")]
+    INBOX[("Deliveries + cursors<br/>(see section 4)")]
+    WEB["Wall screen"]
+    SVC --> LOG
+    SVC --> INBOX
+    SVC -->|SSE /stream| WEB
+  end
+  HK -->|POST /events, /messages| SVC
+  HK -->|GET /inbox?after=cursor| SVC
+  PL -->|long-poll /inbox| SVC
+```
+
+Three roles in one service **(proposed)**, all behind the one public door:
+
+1. **Sequencer.** Every accepted event gets the next `seq` for its incident. Single writer, so ordering is total and simple. This is the "full ordered record" from the PRD.
+2. **Router.** Decides who each event is for: explicit `@mentions`, the relay pick (rule, then Claude), conflict parties, the owning team's manager, and CaptainMorgue's own asks. Writes one **delivery** per recipient.
+3. **Broker front door.** Each agent reads its own inbox by cursor. The service is the only thing that talks to storage.
+
+### Message flow, end to end
+
+```mermaid
+sequenceDiagram
+  participant G as Gus's agent
+  participant S as Service
+  participant D as Dana's agent
+  participant P as Dana's poller
+  G->>S: POST /messages {from: gus, text, to: auto}
+  S->>S: seq=42, route -> [dana, dev], why
+  S-->>G: 202 {seq: 42, to: [dana, dev], why}
+  P->>S: GET /inbox/dana?after=41 (held open)
+  S-->>P: [{seq 42, from gus, text, why}]
+  P->>P: desktop notification "Gus asks: ..."
+  D->>S: (next prompt or tool call) GET /inbox/dana?after=41
+  S-->>D: [{seq 42 ...}] -> injected into Claude's context
+  D->>S: POST /inbox/dana/ack {seq: 42}
+  S->>S: delivery 42 for dana = seen
+```
+
+## 3a. The whole system at a glance
+
+```mermaid
+flowchart TB
+  subgraph Root["CaptainMorgue (cluster) - captain, sequencer, transport, voter in every team"]
+    SEQ["Sequencer<br/>one seq per incident"]
+    RT["Router<br/>mentions, relay pick, conflicts, escalation"]
+    LIVE["Liveness<br/>heartbeats, suspect / offline"]
+    RAFT["Election driver<br/>one group per team, terms, votes"]
+    BOX["Inboxes + cursors"]
+    ES[("Elasticsearch<br/>cm-events, cm-deliveries,<br/>cm-teams, cm-records")]
+    SEQ --> ES
+    RT --> BOX --> ES
+    LIVE --> RAFT --> SEQ
+  end
+
+  subgraph TReg["Team Registration (raft group: dana, ana, cal + CM)"]
+    DANA["dana - manager / leader<br/>term 1"]
+    ANA["ana - follower"]
+    CAL["cal - follower"]
+  end
+  subgraph TTix["Team Ticketing (eli, gus, fay + CM)"]
+    ELI["eli - manager"]
+    GUS["gus"]
+    FAY["fay"]
+  end
+  subgraph TPlat["Team Platform (ben, dev + CM)"]
+    BEN["ben - manager<br/>(laptop closed)"]
+    DEV["dev"]
+  end
+
+  DANA & ANA & CAL -- "heartbeat + long-poll /inbox<br/>POST /events" --> Root
+  ELI & GUS & FAY -- "same" --> Root
+  BEN -. "heartbeats stop" .-> Root
+  DEV -- "same" --> Root
+  Root -- "SSE /stream" --> WALL["Wall screen"]
+  Root -- "deliveries: ask, relay, conflict, vote_request" --> DANA & DEV & GUS
+```
+
+Every arrow is laptop-initiated HTTP to the one public door. Laptops never talk to each other: **CaptainMorgue is the transport for every message, including raft votes**, and it is also one voter in every team.
+
+## 3b. Teams as raft groups
+
+Mapping from the PRD onto Raft, so the election is real but small enough to build today:
+
+| Raft | CaptainMorgue |
+|---|---|
+| Cluster | One team |
+| Voters | Team members + CaptainMorgue (PRD decision). Ticketing = 4 voters, majority 3. Platform = 3 voters, majority 2. |
+| Leader | The team's manager. Holds a **lease** renewed by its heartbeats. |
+| Term | `term` per team, stored in `cm-teams`, stamped on every manager decision so a stale manager's orders are visibly old. |
+| Heartbeat | The poller's held `/inbox` connection plus a `POST /heartbeat` every 5 s. |
+| Election timeout | Manager missed 3 heartbeats (15 s) -> **suspect**; 30 s -> lease expired -> election. |
+| Log | The team's slice of the incident log. A member's **cursor** (last seq it has seen) is its log index. |
+| Vote rule | Grant a vote to a candidate whose cursor is at least as far as yours (Raft's "up-to-date log" rule), one vote per term. In practice: the person who has seen the most of the incident wins. |
+| Who asks for votes | CaptainMorgue starts the election (it sees the lease expire), nominates the online member with the highest cursor, sends `vote_request` to the others' inboxes. Each poller answers automatically by the rule; no human click needed. |
+| Result | Majority -> `election` event: "Platform elected Dev, term 2, 2 of 3 (Dev, CaptainMorgue)". Wall screen updates the tree. |
+| No majority (too few online) | Team folds into its parent team until enough members return (PRD: a one-person team joins the team above). |
+| Old manager comes back | Sees a higher term in its first inbox fetch, becomes a follower. Its queued decisions are marked `stale_term` instead of applied. |
+
+Honest framing for the judges: this is **Raft's election and term rules with CaptainMorgue as the network**, not a peer-to-peer Raft log. The log itself is CaptainMorgue's sequence. That is the right call when laptops cannot reach each other.
+
+```mermaid
+sequenceDiagram
+  participant B as Ben (manager, term 1)
+  participant CM as CaptainMorgue
+  participant D as Dev
+  B--xCM: heartbeats stop (laptop closed)
+  Note over CM: +15 s Ben suspect (wall screen: amber)
+  Note over CM: +30 s lease expired, Platform term 2
+  CM->>D: vote_request (term 2, candidate dev, cursor 118)
+  Note over CM: CM votes dev (cursor 118 >= own view)
+  D->>CM: vote granted (auto, by rule)
+  CM->>CM: 2 of 3 -> dev leads Platform, term 2
+  CM-->>D: you now manage Platform; 2 open parts handed to you
+  B->>CM: back online, fetch inbox
+  CM-->>B: term 2, dev manages; you are a member
+```
+
+## 3c. When someone does not respond
+
+| Situation | Detected by | What happens |
+|---|---|---|
+| Member's laptop asleep / offline | No heartbeat 15 s -> suspect, 30 s -> offline | Wall screen greys them. Messages keep queueing. Their open parts stay theirs for 2 min, then the manager is asked to reassign. |
+| Member online but not answering a direct ask | Delivery `delivered` but not `seen` after 60 s (interrupt) or 3 min (inject) | Escalate: to their manager; manager silent too -> to the parent manager -> to CaptainMorgue's dispatch, which pages the next owner of the resource. |
+| Manager offline | Lease expiry | Election (3b). |
+| Whole team offline | Every member offline | Team folds into parent; parent manager gets the team's open parts. |
+| Member returns after a long gap | First inbox fetch with an old cursor | A digest ("37 events, 3 for you, Platform now managed by Dev") instead of 37 injections. |
+| Conflict with someone offline | Router sees one party offline | Warning goes to the online party and that person's manager; the offline party gets it on return. |
+| CaptainMorgue itself down | Hooks get errors | Hooks spool events to `~/.captainmorgue/spool` and resend on recovery; wall screen reconnects with `Last-Event-ID`; sequencer resumes from max seq in Elasticsearch. No elections while it is down (it is the transport). Single replica for the demo; a second needs a lease before it sequences. |
+| Network partition (half the room loses Wi-Fi) | Same as offline, per person | Teams with a majority online keep their manager; others fold up. Rejoin by cursor. |
+
+## 3d. Communication rules
+
+- **Upward by default.** A member's event goes to the incident log; only their manager is *notified*. Managers summarise upward; CaptainMorgue sees everything. Matches the PRD's "dispatch upwards".
+- **Sideways only through CaptainMorgue.** `@dana` or `/captainmorgue:broadcast` go to CaptainMorgue, which routes and explains why. No agent-to-agent channel.
+- **Downward from managers and CaptainMorgue.** `dispatch` (do this part), `vote_request`, `conflict`, `election` result.
+- **Every message carries a reason** (`why`) and a term, so a person can tell who asked and whether that authority is still current.
+
+## 3e. Demo beats this enables (all real, nothing faked)
+
+1. Three laptops join three teams; wall screen tree fills in.
+2. Gus broadcasts; Dana's Claude session picks it up on her next prompt and her laptop pops a notification.
+3. Dana and Dev both act on the checkin rollout; both sessions get the conflict mid-task.
+4. Ben closes his laptop. 15 s later amber, 30 s later Platform elects Dev, term 2. Ben opens it again and becomes a member.
+5. Dev ignores a direct ask for 60 s; it escalates to his manager and shows on the wall screen.
+6. The record lists the election and the escalation alongside the fix.
+
+## 4. Broker options
+
+Everything below sits behind the service, so the agent-facing API does not change with the choice.
+
+| Option | What it gives | Cost here | Verdict |
+|---|---|---|---|
+| **A. Service + Elasticsearch** (event log already in ES; deliveries as docs keyed `actor+seq`; cursor per actor) | One store, already planned. Durable. Recall works on the same data. | ES is not a queue: reads see writes after refresh (~1 s). Fine for this load. No push, so the service holds long-polls itself. | **Proposed for today.** Least new moving parts. |
+| **B. Service + Postgres** (CNPG already in the cluster: `deliveries` table, `LISTEN/NOTIFY` to wake long-polls) | Transactions, exact cursors, instant wake-up. | One more schema; ES still needed for recall, so two stores. | Good if ES refresh lag bites. |
+| **C. NATS JetStream in-cluster** (subjects `cm.<incident>.team.<path>.<actor>`, durable consumer per agent) | Real broker: per-consumer ack, redelivery, subject wildcards map neatly onto the team tree (a manager subscribes to `team.registration.>`). | New component in a tight budget (~100m/128Mi works). Laptops still cannot reach it, so the service proxies anyway. | **Post-hackathon path**, and the honest answer to "what replaces the in-process router at scale". |
+| D. Redis Streams | Consumer groups, simple. | New component, no win over B or C. | No. |
+| E. Kafka | Ordered partitions. | Far too heavy for 2 CPU / 4 GiB. | No. |
+| F. A2A between agents directly | What the PRD names. | Laptops cannot reach each other; still needs a relay. A2A becomes the **envelope format**, not the transport. | Keep as the message schema (section 6), not the broker. |
+
+## 5. Getting a message into a Claude Code session
+
+Checked against the Claude Code docs (hooks, channels, plugins reference), 2026-11-09.
+
+| Moment | Mechanism (verified) | What the person sees |
+|---|---|---|
+| Session starts or resumes | `SessionStart` hook returns `hookSpecificOutput.additionalContext`: your team, manager, term, and a digest of what you missed | Claude opens already briefed |
+| Person types a prompt | `UserPromptSubmit` hook (synchronous, ~2 s budget) fetches the inbox, returns messages as `additionalContext` | Claude starts its answer knowing "Gus asked you about confdb at 09:43" |
+| Claude is mid-task | `PostToolUse` hook does the same after each tool call | Claude can change course mid-task (stop a restart after a conflict warning) |
+| Claude about to stop with an unseen interrupt | `Stop` hook returns `decision: "block"` with the message as `reason`, so Claude keeps going and handles it (capped at 8 continuations) | Claude does not finish its turn while a conflict is unread |
+| Session idle | Hooks cannot start a turn. A plugin **monitor** (`experimental.monitors`, starts with the session) runs the `cm` poller, holds `/inbox` open, and raises a desktop notification (OSC 777 terminal sequence or `osascript`) | Person sees "Gus asks you about confdb" and switches to the session |
+| Push into an idle session | **Claude Code channels** exist (research preview): an MCP server with capability `claude/channel` pushes `channel` events into an open session; started with `claude --channels plugin:captainmorgue@captainmorgue` (custom channels also need `--dangerously-load-development-channels`); needs claude.ai or Console auth; Team/Enterprise owners must enable it | Claude reacts with no human in the loop. Stretch goal: wire the plugin's MCP server as a channel; fall back to the monitor notification. |
+
+Not available: a plugin cannot ship the main status line, so no unread count there. Async hooks deliver their context on the *next* turn only.
+
+Priority and noise **(proposed)**: conflicts and direct asks interrupt (notification + inject); relays and FYIs inject only; the raw activity of other people is never injected, only shown on the wall screen. Otherwise every agent's context fills with everyone else's tool calls.
+
+## 6. Message model
+
+One envelope for everything **(proposed)**, A2A-shaped so swapping in A2A later is a transport change:
+
+```yaml
+id: INC-1-42            # incident + seq, also the dedupe key
+seq: 42
+incident_id: INC-1
+ts: 2026-11-09T16:43:40Z
+from: gus
+to: [dana, dev]          # resolved by the router; empty = record only
+kind: ask | relay | conflict | dispatch | fyi | ack | event
+text: Is confdb failing over?
+why: Dev is reading confdb right now; Dana manages checkin, which holds most connections
+reply_to: INC-1-40       # threads
+resource: {kind, namespace, name}
+priority: interrupt | inject | record
+```
+
+Delivery state per recipient: `pending -> delivered (fetched) -> seen (acked by the hook after injection)`. The wall screen can then show "Dana has not seen this yet", which is the thing a coordinator actually wants to know.
+
+Semantics: **at-least-once**, ordered per incident by `seq`, deduped on `id` by the hook. Cursor lives on the server (per actor) and in a file on the laptop (`~/.captainmorgue/cursor`), so a restarted laptop resumes where it left off.
+
+## 7. Things the implementation skipped that this has to answer
+
+- **Identity.** Anyone can POST as anyone. Proposed minimum: one team token per incident in a header, issued at join; actor taken from the token, not the body. GitHub OAuth later.
+- **Presence.** The poller's held connection is a heartbeat. No poll for N seconds = offline. That is also the trigger the PRD's manager election needs.
+- **Back-pressure.** A laptop that slept for an hour gets a summary ("37 events, 3 for you"), not 37 injections.
+- **Service restart.** Event log and cursors reload from storage; the in-memory sequencer resumes from max(seq). One replica only; a second replica needs a lease (ES or Postgres advisory lock) before it sequences.
+- **Clock.** Order by `seq`, never by laptop timestamps. Laptop `ts` is kept as "when they did it", server `ts` as "when we knew".
+- **Secrets.** Tool output is never sent. Prompt text and Bash commands are, so a pasted key in a command leaks. Scrub on the laptop before send (gitleaks rules) is the PRD answer; today it is not done.
+- **Hierarchy.** The PRD has per-team ordered subtrees carried upward and a raft-style manager election. This design is flat (one sequencer). The tree comes back as routing scopes (`team.registration.>`) and as the election's voter set, not as separate logs, until there is a reason to shard.
+
+## 8. Hackathon cut vs later
+
+| Today (4 h) | Later |
+|---|---|
+| Option A: service + Elasticsearch, long-poll `/inbox` | NATS JetStream behind the service; per-team subjects |
+| Inject on `UserPromptSubmit` and `PostToolUse`; desktop notification from a bash poller | Channels push into idle sessions, if supported; status line unread count |
+| Router = explicit `to`, conflict parties, rule-based relay; Claude pick when the key is set | Claude routing with team graph and history |
+| Team token in a header | GitHub OAuth, per-person tokens |
+| One sequencer, one replica | Lease-based failover; per-team logs if ever needed |
+| `ask` / `relay` / `conflict` delivered; everything else record-only | Full priority model, digests for returning people |
+
+## 9. Open questions for review
+
+1. **Channels as the push path:** worth the research-preview flags for the demo, or ship with monitor notifications only?
+2. Broker today: **A (Elasticsearch)** or **B (Postgres, already in the cluster)**? A keeps one store; B gives exact cursors and instant wake-up.
+3. Do conflicts **interrupt** (desktop notification) or only inject on the next prompt?
+4. Should a person's own agent auto-reply ("Dana is mid-rollback, will answer in 5 min") or always wait for the human?
+5. Who can broadcast to everyone, managers only or anyone?
+6. Team token per incident, or one shared token for the hackathon?
+7. Does the wall screen show delivery state (sent / seen) per recipient?
+
+## 10. Impact on what is already in flight
+
+- `feat/service-intel` (Elasticsearch storage, Claude relay, record writer): still valid; deliveries and cursors become an extra index there once option A or B is chosen.
+- `feat/infra` (cluster): unchanged under option A; option B needs a database and user for CaptainMorgue on the CNPG cluster; option C adds NATS.
+- The plugin: gains a receive path (hook output + poller). Send path unchanged.
+- The contract in `docs/hackathon-plan.md`: gains `POST /messages`, `GET /inbox/{actor}`, `POST /inbox/{actor}/ack`, and the envelope above. Nothing removed.
