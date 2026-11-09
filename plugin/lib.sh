@@ -52,9 +52,9 @@ ack() {
 join_incident() {
   local resp cursor
   resp=$(CM_MAX_TIME=5 api POST "/incidents/$INCIDENT/join" \
-    "$(jq -nc --arg a "$ACTOR" --arg t "$1" --arg role "$2" --arg task "$3" --arg repo "${CM_REPO:-}" --arg tools "${CM_TOOLS:-$(cat "$CM_DIR/tools" 2>/dev/null)}" '
+    "$(jq -nc --arg a "$ACTOR" --arg t "$1" --arg role "$2" --arg task "$3" --arg repo "${CM_REPO:-}" --arg tools "${CM_TOOLS:-$(cat "$CM_DIR/tools" 2>/dev/null)}" --arg quiet "${CM_QUIET_JOIN:-}" '
       {actor: $a, role: $role, task: $task, repo: $repo, tools: ($tools | [splits(",") | gsub("^\\s+|\\s+$"; "") | select(. != "")])}
-      + (if $t != "" then {team: $t} else {} end)')" 2>>"$LOG") || return 1
+      + (if $t != "" then {team: $t} else {} end) + (if $quiet != "" then {quiet: true} else {} end)')" 2>>"$LOG") || return 1
   cursor=$(jq -r '.cursor // 0' <<<"$resp")
   write_file "$SESSION" "$resp"
   write_file "$CM_DIR/cursor" "$cursor"
