@@ -1,7 +1,7 @@
 # Jubril: wall screen
 
 ## Now
-15:00 - Postmortem library backend audit complete on main 7f93997; archive list/detail and summary exposure need Emmanuel/team API work.
+15:04 - Building Postmortems library and document view in frontend/: parallel UI and Storybook/test worktrees. Main54c3380 still has no archive APIs; Emmanuel ask9 pending.
 
 ## Start here (from Emmanuel, 15:20)
 
